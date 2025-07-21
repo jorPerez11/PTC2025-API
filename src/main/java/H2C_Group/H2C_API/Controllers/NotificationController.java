@@ -19,7 +19,7 @@ public class NotificationController {
     @Autowired
     private NotificationService acceso;
 
-    @GetMapping("/GetNotification")
+    @GetMapping("/GetNotifications")
     public ResponseEntity<List<NotificationDTO>> getAllNotifications() {
         return new ResponseEntity<>(acceso.findAll(), HttpStatus.OK);
     }

@@ -20,12 +20,12 @@ public class UserController {
     @Autowired
     private UserService acceso;
 
-    @GetMapping("/GetUser")
+    @GetMapping("/GetUsers")
     public List<UserDTO> GetUserData() {
         return acceso.getAllUsers();
     }
 
-    @PostMapping("/PostUser")
+        @PostMapping("/PostUser")
     public ResponseEntity<?> createUser(@RequestBody UserDTO user) {
         System.out.println("DEBUG: Entrando al metodo createUser en el controlador.");
         try{

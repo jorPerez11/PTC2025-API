@@ -22,7 +22,7 @@ public class SurveyController {
     private SurveyService acceso;
 
 
-    @GetMapping("/GetSurvey")
+    @GetMapping("/GetSurveys")
     public ResponseEntity<List<SurveyDTO>> getSurvey(){
         return new ResponseEntity<>(acceso.getAllSurveys(), HttpStatus.OK);
     }

@@ -20,7 +20,7 @@ public class ResponseTemplateController {
     @Autowired
     private ResponseTemplateService acceso;
 
-    @GetMapping("/GetTemplate")
+    @GetMapping("/GetTemplates")
     public ResponseEntity<List<ResponseTemplateDTO>> getAllResponseTemplates() {
         return new ResponseEntity<>(acceso.findAllResponseTemplates(), HttpStatus.OK);
     }

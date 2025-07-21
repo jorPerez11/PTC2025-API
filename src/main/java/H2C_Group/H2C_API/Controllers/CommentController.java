@@ -21,7 +21,7 @@ public class CommentController {
     @Autowired
     private CommentService acceso;
 
-    @GetMapping("/GetComment")
+    @GetMapping("/GetComments")
     public List<CommentDTO> getComments() {return acceso.getAllComments();}
 
 

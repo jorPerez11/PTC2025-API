@@ -21,7 +21,7 @@ public class AuditTrailController {
     private AuditTrailService acceso;
 
 
-    @GetMapping("/GetAuditTrail")
+    @GetMapping("/GetAuditTrails")
     public List<AuditTrailDTO> getAuditTrail() {
         return acceso.getAllAuditTrails();
     }
