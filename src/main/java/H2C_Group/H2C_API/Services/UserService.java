@@ -76,11 +76,9 @@ public class UserService {
         }
 
         //ASIGNACION DE PRIMER ID DE COMPANIA ENCONTRADA (DESDE companyRepository) A USUARIO
-        Long foundCompanyId = companyRepository.findFirstCompanyId()
-                .orElseThrow(() -> new IllegalStateException("No se puede registrar el usuario: No hay compañías registradas."));
+        Long foundCompanyId = companyRepository.findFirstCompanyId().orElseThrow(() -> new IllegalStateException("No se puede registrar el usuario: No hay compañías registradas."));
 
-        CompanyEntity companyToAssign = companyRepository.findById(foundCompanyId)
-                .orElseThrow(() -> new IllegalStateException("La primera compañía (ID: " + firstCompanyId + ") no fue encontrada al intentar asignarla."));
+        CompanyEntity companyToAssign = companyRepository.findById(foundCompanyId).orElseThrow(() -> new IllegalStateException("La primera compañía (ID: " + firstCompanyId + ") no fue encontrada al intentar asignarla."));
 
         userEntity.setCompany(companyToAssign);
 

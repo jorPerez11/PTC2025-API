@@ -27,6 +27,7 @@ public class UserController {
 
     @PostMapping("/PostUser")
     public ResponseEntity<?> createUser(@RequestBody UserDTO user) {
+        System.out.println("DEBUG: Entrando al metodo createUser en el controlador.");
         try{
             UserDTO newUser = acceso.registerNewUser(user);
             return new ResponseEntity<>(newUser, HttpStatus.CREATED);
@@ -41,6 +42,7 @@ public class UserController {
             return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND); // Código 404
         }catch (Exception e) {
             Map<String, String> errors = new HashMap<>();
+            e.printStackTrace();
             errors.put("error", "Ocurrió un error interno del servidor al crear el usuario.");
             return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR); // Código 500
         }

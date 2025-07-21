@@ -20,7 +20,8 @@ import java.time.LocalDateTime;
 public class UserEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_seq_generator")
-    @SequenceGenerator(name = "user_seq_generator", sequenceName = "SEQ_USERSID", allocationSize = 1)    @Column(name="USERID")
+    @SequenceGenerator(name = "user_seq_generator", sequenceName = "SEQ_USERSID", allocationSize = 1)
+    @Column(name="USERID")
     private Long userId;
     @Column(name="ROLID")
     private Long rolId;
