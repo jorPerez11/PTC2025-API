@@ -17,6 +17,7 @@ public class CompanyService {
     @Autowired
     private CompanyRepository companyRepository;
 
+
     public List<CompanyDTO> findAll() {
         List<CompanyEntity> companies = repo.findAll();
         return companies.stream().map(this::convertToCompanyDTO).collect(Collectors.toList());

@@ -62,10 +62,10 @@ public class SolutionService {
             throw new IllegalArgumentException("El ID de la solucion a actualizar no puede ser nulo o no válido.");
         }
 
-        SolutionEntity existingSolution = solutionRepository.findById(solutionDTO.getUserId()).orElseThrow(() -> new IllegalArgumentException("El usuario con id" + solutionDTO.getUserId() + " no existe."));
+        SolutionEntity existingSolution = solutionRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("La solución con ID " + id + " no existe."));
 
         UserEntity existingUser = userRepository.findById(solutionDTO.getUserId()).orElseThrow(() -> new IllegalArgumentException("El usuario con id" + solutionDTO.getUserId() + " no existe"));
-
+        existingUser.setUserId(existingUser.getUserId());
 
         if (solutionDTO.getCategory() != null) {
             CategoryDTO categoryFromDTO = solutionDTO.getCategory();

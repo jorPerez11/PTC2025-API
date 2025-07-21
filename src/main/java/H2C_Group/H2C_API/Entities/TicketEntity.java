@@ -13,8 +13,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name="TBTICKETS")
 
-@ToString
-@EqualsAndHashCode
+@ToString(exclude = {"userCreator", "assignedTechUser"})
+@EqualsAndHashCode(exclude = {"userCreator", "assignedTechUser"})
 @Getter
 @Setter
 public class TicketEntity {

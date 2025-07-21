@@ -2,10 +2,9 @@ package H2C_Group.H2C_API.Controllers;
 
 import H2C_Group.H2C_API.Exceptions.TicketExceptions;
 import H2C_Group.H2C_API.Exceptions.UserExceptions;
+import H2C_Group.H2C_API.Models.DTO.ResponseTemplateDTO;
 import H2C_Group.H2C_API.Models.DTO.SolutionDTO;
-import H2C_Group.H2C_API.Models.DTO.TicketDTO;
-import H2C_Group.H2C_API.Repositories.SolutionRepository;
-import H2C_Group.H2C_API.Services.SolutionService;
+import H2C_Group.H2C_API.Services.ResponseTemplateService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,21 +16,20 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
-public class SolutionController {
+public class ResponseTemplateController {
     @Autowired
-    SolutionService acceso;
+    private ResponseTemplateService acceso;
 
-    @GetMapping("/GetSolutions")
-    public ResponseEntity<List<SolutionDTO>> getAllSolutions() {
-        return new ResponseEntity<>(acceso.getAllSolutions(), HttpStatus.OK);
+    @GetMapping("/GetTemplate")
+    public ResponseEntity<List<ResponseTemplateDTO>> getAllResponseTemplates() {
+        return new ResponseEntity<>(acceso.findAllResponseTemplates(), HttpStatus.OK);
     }
 
-
-    @PostMapping("/PostSolution")
-    public ResponseEntity<?> createSolution(@RequestBody SolutionDTO solutionDTO) {
-        try {
-            SolutionDTO newSolution = acceso.createSolution(solutionDTO);
-            return new ResponseEntity<>(newSolution, HttpStatus.CREATED);
+    @PostMapping("/PostTemplate")
+    public ResponseEntity<?> createResponseTemplate(@RequestBody ResponseTemplateDTO responseTemplateDTO) {
+        try{
+            ResponseTemplateDTO newTemplate = acceso.createResponseTemplate(responseTemplateDTO);
+            return new ResponseEntity<>(newTemplate, HttpStatus.CREATED);
         }catch (IllegalArgumentException e) {
             //Validación de argumentos invalidos
             Map<String, String> errors = new HashMap<>();
@@ -44,36 +42,34 @@ public class SolutionController {
         }catch (Exception e) {
             Map<String, String> errors = new HashMap<>();
             e.printStackTrace();
-            errors.put("error", "Ocurrió un error interno del servidor al crear la solucion.");
+            errors.put("error", "Ocurrió un error interno del servidor al crear la plantilla.");
             return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR); // Código 500
         }
+
     }
 
-
-    @PatchMapping("/UpdateSolution/{id}")
-    public ResponseEntity<?> updateSolution(@PathVariable Long id, @RequestBody SolutionDTO solutionDTO) {
+    @PatchMapping("/UpdateTemplate/{id}")
+    public ResponseEntity<?> updateResponseTemplate(@PathVariable Long id, @RequestBody ResponseTemplateDTO responseTemplateDTO) {
         try{
-            SolutionDTO newSolution = acceso.updateSolution(id, solutionDTO);
-            return new ResponseEntity<>(newSolution, HttpStatus.OK);
-        } catch (IllegalArgumentException e) {
+            ResponseTemplateDTO newTemplate = acceso.updateResponseTemplate(id, responseTemplateDTO);
+            return new ResponseEntity<>(newTemplate, HttpStatus.OK);
+        }catch (IllegalArgumentException e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors.toString(), HttpStatus.BAD_REQUEST);
 
-        } catch (Exception e) {
+        }catch (Exception e) {
             Map<String, String> errors = new HashMap<>();
             e.printStackTrace();
-            errors.put("error", "Ocurrió un error interno del servidor al actualizar la solucion.");
+            errors.put("error", "Ocurrió un error interno del servidor al actualizar la plantilla.");
             return new ResponseEntity<>(errors.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-
-
-    @DeleteMapping("/DeleteSolution/{id}")
-    public ResponseEntity<?> deleteSolution(@PathVariable Long id) {
-        try {
-            acceso.deleteSolution(id);
+    @DeleteMapping("/DeleteTemplate/{id}")
+    public ResponseEntity<?> deleteResponseTemplate(@PathVariable Long id) {
+        try{
+            acceso.deleteResponseTemplate(id);
             return new ResponseEntity<>(HttpStatus.OK);
         }catch (IllegalArgumentException e) {
             Map<String, String> errors = new HashMap<>();
@@ -85,7 +81,7 @@ public class SolutionController {
             return new ResponseEntity<>(errors.toString(), HttpStatus.NOT_FOUND);
         }catch (Exception e) {
             Map<String, String> errors = new HashMap<>();
-            errors.put("error", "Ocurrió un error interno del servidor al intentar eliminar la solucion.");
+            errors.put("error", "Ocurrió un error interno del servidor al intentar eliminar la plantilla.");
             return new ResponseEntity<>(errors.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

@@ -1,11 +1,11 @@
 package H2C_Group.H2C_API.Controllers;
 
+import H2C_Group.H2C_API.Exceptions.SurveyExceptions;
 import H2C_Group.H2C_API.Exceptions.TicketExceptions;
 import H2C_Group.H2C_API.Exceptions.UserExceptions;
-import H2C_Group.H2C_API.Models.DTO.SolutionDTO;
-import H2C_Group.H2C_API.Models.DTO.TicketDTO;
-import H2C_Group.H2C_API.Repositories.SolutionRepository;
-import H2C_Group.H2C_API.Services.SolutionService;
+import H2C_Group.H2C_API.Models.DTO.SurveyDTO;
+import H2C_Group.H2C_API.Services.SurveyService;
+import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,21 +17,21 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
-public class SolutionController {
+public class SurveyController {
     @Autowired
-    SolutionService acceso;
+    private SurveyService acceso;
 
-    @GetMapping("/GetSolutions")
-    public ResponseEntity<List<SolutionDTO>> getAllSolutions() {
-        return new ResponseEntity<>(acceso.getAllSolutions(), HttpStatus.OK);
+
+    @GetMapping("/GetSurvey")
+    public ResponseEntity<List<SurveyDTO>> getSurvey(){
+        return new ResponseEntity<>(acceso.getAllSurveys(), HttpStatus.OK);
     }
 
-
-    @PostMapping("/PostSolution")
-    public ResponseEntity<?> createSolution(@RequestBody SolutionDTO solutionDTO) {
-        try {
-            SolutionDTO newSolution = acceso.createSolution(solutionDTO);
-            return new ResponseEntity<>(newSolution, HttpStatus.CREATED);
+    @PostMapping("/PostSurvey")
+    public ResponseEntity<?> postSurvey(@RequestBody SurveyDTO surveyDTO) {
+        try{
+            SurveyDTO survey = acceso.createSurvey(surveyDTO);
+            return new ResponseEntity<>(survey, HttpStatus.CREATED);
         }catch (IllegalArgumentException e) {
             //Validación de argumentos invalidos
             Map<String, String> errors = new HashMap<>();
@@ -44,18 +44,17 @@ public class SolutionController {
         }catch (Exception e) {
             Map<String, String> errors = new HashMap<>();
             e.printStackTrace();
-            errors.put("error", "Ocurrió un error interno del servidor al crear la solucion.");
+            errors.put("error", "Ocurrió un error interno del servidor al crear la encuesta.");
             return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR); // Código 500
         }
     }
 
-
-    @PatchMapping("/UpdateSolution/{id}")
-    public ResponseEntity<?> updateSolution(@PathVariable Long id, @RequestBody SolutionDTO solutionDTO) {
+    @PatchMapping("/UpdateSurvey/{id}")
+    public ResponseEntity<?> updateSurvey(@RequestBody SurveyDTO surveyDTO, @PathVariable Long id) {
         try{
-            SolutionDTO newSolution = acceso.updateSolution(id, solutionDTO);
-            return new ResponseEntity<>(newSolution, HttpStatus.OK);
-        } catch (IllegalArgumentException e) {
+            SurveyDTO survey = acceso.updateSurvey(id, surveyDTO);
+            return new ResponseEntity<>(survey, HttpStatus.OK);
+        }catch (IllegalArgumentException e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors.toString(), HttpStatus.BAD_REQUEST);
@@ -63,30 +62,29 @@ public class SolutionController {
         } catch (Exception e) {
             Map<String, String> errors = new HashMap<>();
             e.printStackTrace();
-            errors.put("error", "Ocurrió un error interno del servidor al actualizar la solucion.");
+            errors.put("error", "Ocurrió un error interno del servidor al actualizar la encuesta.");
             return new ResponseEntity<>(errors.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-
-
-    @DeleteMapping("/DeleteSolution/{id}")
-    public ResponseEntity<?> deleteSolution(@PathVariable Long id) {
-        try {
-            acceso.deleteSolution(id);
+    @DeleteMapping("/DeleteSurvey/{id}")
+    public ResponseEntity<?> deleteSurvey(@PathVariable Long id) {
+        try{
+            acceso.deleteSurvey(id);
             return new ResponseEntity<>(HttpStatus.OK);
         }catch (IllegalArgumentException e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors.toString(), HttpStatus.BAD_REQUEST);
-        }catch (TicketExceptions.TicketNotFoundException e){
+        }catch (SurveyExceptions.SurveyNotFoundException e){
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors.toString(), HttpStatus.NOT_FOUND);
         }catch (Exception e) {
             Map<String, String> errors = new HashMap<>();
-            errors.put("error", "Ocurrió un error interno del servidor al intentar eliminar la solucion.");
+            errors.put("error", "Ocurrió un error interno del servidor al intentar eliminar la encuesta.");
             return new ResponseEntity<>(errors.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
 }
