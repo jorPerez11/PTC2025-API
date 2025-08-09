@@ -5,6 +5,7 @@ import H2C_Group.H2C_API.Enums.Category;
 import H2C_Group.H2C_API.Enums.TicketPriority;
 import H2C_Group.H2C_API.Enums.TicketStatus;
 import H2C_Group.H2C_API.Enums.TicketField;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -48,5 +49,8 @@ public class TicketDTO {
 
     //CAMPO closeDate
     private LocalDateTime closeDate;
+
+    @Max(value = 100, message = "El valor del porcentaje no puede ser mayor a 100")
+    private Integer percentage;
 
 }
