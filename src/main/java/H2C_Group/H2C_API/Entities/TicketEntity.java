@@ -44,4 +44,6 @@ public class TicketEntity {
     private LocalDateTime creationDate;
     @Column(name="CLOSEDATE")
     private LocalDateTime closeDate;
+    @Column(name="PERCENTAGE")
+    private Integer percentage;
 }

@@ -76,6 +76,8 @@ public class TicketService {
         //Asignacion de fecha de cierre como NULL al crearse. La fecha se asignara cuando se cierre la solicitud (es decir, ticketStatus = "Cerrado")
         ticketEntity.setCloseDate(null);
 
+        //Asignacion del procentaje
+        ticketEntity.setPercentage(ticketDTO.getPercentage());
 
         //Almacenamiento de ticket creado en la DB
         TicketEntity savedTicket = ticketRepository.save(ticketEntity);
@@ -197,6 +199,10 @@ public class TicketService {
             existingTicket.setCloseDate(ticketDTO.getCloseDate());
         }
 
+        if (ticketDTO.getPercentage() !=null){
+            existingTicket.setPercentage(ticketDTO.getPercentage());
+        }
+
         TicketEntity savedTicket = ticketRepository.save(existingTicket);
         return convertToTicketDTO(savedTicket);
 
@@ -251,11 +257,10 @@ public class TicketService {
 
         dto.setCloseDate(ticket.getCloseDate());
 
+        dto.setPercentage(ticket.getPercentage());
         return dto;
 
     }
-
-
 
 
 }
