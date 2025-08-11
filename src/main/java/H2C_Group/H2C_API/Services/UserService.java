@@ -11,18 +11,24 @@ import H2C_Group.H2C_API.Models.DTO.UserDTO;
 import H2C_Group.H2C_API.Models.DTO.RolDTO;
 import H2C_Group.H2C_API.Repositories.CompanyRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
+import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 
-
+import java.security.SecureRandom;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
-public class UserService {
+public class UserService implements UserDetailsService {
     @Autowired
     private UserRepository userRepository;
 
@@ -33,6 +39,62 @@ public class UserService {
     @Autowired
     private Argon2PasswordEncoder argon2PasswordEncoder;
 
+    @Autowired
+    private EmailService emailService;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    //Implementacion del metodo que requiere UserDetailsService si lo quito deja de funcionar :(
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException{
+        UserEntity userEntity = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario con el nombre: " + username + " no encontrado"));
+        return new User(
+                userEntity.getUsername(),
+                userEntity.getPasswordHash(),
+                Collections.emptyList()
+
+        );
+    }
+
+    //Metodo para generar una contraseña segura y aleatoria
+    private String generatedRandomPassword(){
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;':,./<>?";
+        SecureRandom random = new SecureRandom();
+        StringBuilder sb = new StringBuilder(12); //Longitud de 12 caracteres
+
+        for (int i = 0; i<12; i++){
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sb.toString();
+    }
+
+    public UserDTO changePassword(String username, String currentPassword, String newPassword){
+        //1.Encuentra el usuario por su nombre de usuario
+        UserEntity userEntity = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+
+        //2.Verifica si la contraseña actual es correcta
+        if (!argon2PasswordEncoder.matches(currentPassword, userEntity.getPasswordHash())){
+            throw new IllegalArgumentException("La contraseña actual es incorrecta");
+        }
+
+        //3.Cifra la nueva contraseña
+        String newHashedPassword = argon2PasswordEncoder.encode(newPassword);
+
+        //4.Actualiza la contraseña en la entidad del usuario
+        userEntity.setPasswordHash(newHashedPassword);
+
+        //5.Si la contraseña era temporal, marca la contraseña como no expirada (cambia de true a false)
+        if (userEntity.isPasswordExpired()){
+            userEntity.setPasswordExpired(false);
+        }
+
+        //6.Guarda los cambios en la base de datos
+        userRepository.save(userEntity);
+        return convertToUserDTO(userEntity);
+    }
 
 
     public List<UserDTO> findAll() {
@@ -42,10 +104,12 @@ public class UserService {
 
 
     public UserDTO registerNewUser(UserDTO dto) {
+        //Limpiar el cache antes de las validaciones esto es para que tenga que consultar la base y no guarde informacion innecesaria
+        entityManager.clear();
 
         //Validaciones de entrada
         //Busca en el userRepository si existe algun registro en la DB que repita el email / usuario / telefono a registrar
-        userRepository.findByEmail(dto.getEmail()).ifPresent(user -> {
+        userRepository.findByEmailIgnoreCase(dto.getEmail()).ifPresent(user -> {
             throw new IllegalArgumentException("El correo electrónico ya está registrado.");
         });
 
@@ -57,7 +121,8 @@ public class UserService {
             throw new IllegalArgumentException(("El número ya está registrado"));
         });
 
-
+        //Genera la contraseña aleatoria
+        String randomPassword = generatedRandomPassword();
 
         //Obtener el primer id de tbCompanies
         Long firstCompanyId = companyRepository.findFirstCompanyId().orElseThrow(() -> new IllegalArgumentException("La compañia no existe."));
@@ -73,6 +138,10 @@ public class UserService {
         } else {
             // Si ya hay usuarios, asigna el rol de Cliente
             userEntity.setRolId(UserRole.CLIENTE.getId());
+        }
+
+        if (!isValidDomain(dto.getEmail())){
+            throw new IllegalArgumentException("Dominio de correo no permistido");
         }
 
         //ASIGNACION DE PRIMER ID DE COMPANIA ENCONTRADA (DESDE companyRepository) A USUARIO
@@ -93,15 +162,27 @@ public class UserService {
         userEntity.setUsername(dto.getUsername());
         userEntity.setEmail(dto.getEmail());
         userEntity.setPhone(dto.getPhone());
-        String hashedPassword = argon2PasswordEncoder.encode(dto.getPassword()); //IMPORTANTE: REQUERIDO HASHEAR ANTES DE INSERTAR A LA DB
+        String hashedPassword = argon2PasswordEncoder.encode(randomPassword); //IMPORTANTE: REQUERIDO HASHEAR ANTES DE INSERTAR A LA DB
         userEntity.setPasswordHash(hashedPassword);
         userEntity.setIsActive(dto.getIsActive());
+
+        //Marca la contraseña como expirada para forzar el cambio en el primer inicio de sesion
+        userEntity.setPasswordExpired(true);
 
         //Guarda el usuario registrado en la DB
         UserEntity savedUser = userRepository.save(userEntity);
 
+        //Envia la contraseña temporal por correo electronico
+        String subject = "Credenciales de Acceso a Help Desk H2C";
+        String body = "Hola " + dto.getName() + " tu cuenta ha sido creada exitosamente. Tu nomre de usuario es: " + dto.getUsername() + " , tu contraseña temporal es: " + randomPassword + " Por favor no compartas con nadie esta información, Saludos del equipo de H2C";
+        emailService.sendEmail(dto.getEmail(), subject, body);
+
         return convertToUserDTO(savedUser);
 
+    }
+
+    private boolean isValidDomain(String email){
+        return email.endsWith("@gmail.com") || email.endsWith("@ricaldone.edu.sv");
     }
 
     //METODO DE ACTUALIZACION DE CATEGORIA DE USUARIO (TECNICOS)

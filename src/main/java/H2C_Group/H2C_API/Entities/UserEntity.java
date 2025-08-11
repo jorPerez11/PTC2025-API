@@ -44,6 +44,8 @@ public class UserEntity {
 //    private String tokenSesion;
     @Column(name="ISACTIVE")
     private Integer isActive;
+    @Column(name = "ISPASSWORDEXPIRED")
+    private boolean passwordExpired;
     @CreationTimestamp
     @Column(name="REGISTRATIONDATE")
     private LocalDateTime registrationDate;
