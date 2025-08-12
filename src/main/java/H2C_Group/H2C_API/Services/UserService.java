@@ -18,6 +18,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 
@@ -37,7 +38,7 @@ public class UserService implements UserDetailsService {
 
 
     @Autowired
-    private Argon2PasswordEncoder argon2PasswordEncoder;
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private EmailService emailService;
@@ -45,11 +46,15 @@ public class UserService implements UserDetailsService {
     @Autowired
     private EntityManager entityManager;
 
-    //Implementacion del metodo que requiere UserDetailsService si lo quito deja de funcionar :(
+    //Implementacion del metodo que requiere UserDetailsService si lo quito deja de funcionar :(. Spring Security lo usa para encontrar a un usuario por su nombre de usuario
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException{
         UserEntity userEntity = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario con el nombre: " + username + " no encontrado"));
+
+        // Aquí creamos un objeto User de Spring Security. Es crucial que la contraseña
+        // que devuelvas aquí sea la que tienes hasheada en la base de datos.
+        // Spring Security la usará para comparar con la contraseña que el usuario envió.
         return new User(
                 userEntity.getUsername(),
                 userEntity.getPasswordHash(),
@@ -76,12 +81,12 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
         //2.Verifica si la contraseña actual es correcta
-        if (!argon2PasswordEncoder.matches(currentPassword, userEntity.getPasswordHash())){
+        if (!passwordEncoder.matches(currentPassword, userEntity.getPasswordHash())){
             throw new IllegalArgumentException("La contraseña actual es incorrecta");
         }
 
         //3.Cifra la nueva contraseña
-        String newHashedPassword = argon2PasswordEncoder.encode(newPassword);
+        String newHashedPassword = passwordEncoder.encode(newPassword);
 
         //4.Actualiza la contraseña en la entidad del usuario
         userEntity.setPasswordHash(newHashedPassword);
@@ -162,7 +167,7 @@ public class UserService implements UserDetailsService {
         userEntity.setUsername(dto.getUsername());
         userEntity.setEmail(dto.getEmail());
         userEntity.setPhone(dto.getPhone());
-        String hashedPassword = argon2PasswordEncoder.encode(randomPassword); //IMPORTANTE: REQUERIDO HASHEAR ANTES DE INSERTAR A LA DB
+        String hashedPassword = passwordEncoder.encode(randomPassword); //IMPORTANTE: REQUERIDO HASHEAR ANTES DE INSERTAR A LA DB
         userEntity.setPasswordHash(hashedPassword);
         userEntity.setIsActive(dto.getIsActive());
 
@@ -235,7 +240,7 @@ public class UserService implements UserDetailsService {
             existingUser.setPhone(dto.getPhone());
         }
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) { // O dto.getPasswordHash()
-            String hashedPassword = argon2PasswordEncoder.encode(dto.getPassword());
+            String hashedPassword = passwordEncoder.encode(dto.getPassword());
             existingUser.setPasswordHash(hashedPassword); // O setPasswordHash()
         }
         //Actualizacion de rol [PARCIAL PARA PRUEBA] para usuarios (NIVEL DE ACCESO: 3 // CAMBIO DE ROL DE USUARIO [ADMIN] -> [TECNICO])
@@ -309,17 +314,13 @@ public class UserService implements UserDetailsService {
     }
 
     public boolean checkPassword(String rawPassword, String hashedPassword) {
-        return argon2PasswordEncoder.matches(rawPassword, hashedPassword);
+        return passwordEncoder.matches(rawPassword, hashedPassword);
     }
 
     //Encontrar usuario por su username. -- Su uso es importante para la actualizacion de datos de cada usuario, en configuracion
     public Long getUserIdByUsername(String username) {
         return userRepository.findByUsername(username).map(UserEntity::getUserId).orElseThrow(() -> new IllegalArgumentException("El usuario " + username + " no existe"));
     }
-
-
-
-
 
 }
 
