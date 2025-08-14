@@ -1,7 +1,9 @@
 package H2C_Group.H2C_API.Controllers;
 
+import H2C_Group.H2C_API.Entities.UserEntity;
 import H2C_Group.H2C_API.Models.DTO.ChangePasswordDTO;
 import H2C_Group.H2C_API.Models.DTO.UserDTO;
+import H2C_Group.H2C_API.Repositories.UserRepository;
 import H2C_Group.H2C_API.Services.UserService;
 import H2C_Group.H2C_API.Utils.JwUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +32,9 @@ public class authController {
     @Autowired
     private JwUtil jwtUtil;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody UserDTO userDTO){
         try {
@@ -48,8 +53,18 @@ public class authController {
         // 2. Si la autenticación fue exitosa, carga los detalles del usuario
         final UserDetails userDetails = userDetailsService.loadUserByUsername(authenticationRequest.getUsername());
 
-        // 3. Genera un token JWT usando la clase JwtUtil
-        final String jwt = jwtUtil.generateToken(userDetails);
+        String jwt;
+
+        //3 genera el token de larga o corta duracion
+        UserEntity userEntity = userRepository.findByUsername(authenticationRequest.getUsername())
+                .orElseThrow(() -> new Exception("Usuario no encontrado despuúes de la autenticación"));
+        //Si la contraseña no esta expirada genera el token de larga duracion
+        if (!userEntity.isPasswordExpired()){
+            jwt = jwtUtil.generateToken(userDetails, JwUtil.JWT_TOKEN_VALIDITY_LONG);
+        } else {
+            //Si la contraseña esta expirada genera el token de corta duracion
+            jwt = jwtUtil.generateToken(userDetails);
+        }
 
         // 4. Retorna el token en la respuesta
         return ResponseEntity.ok(new AuthenticationResponse(jwt));
