@@ -1,12 +1,14 @@
 package H2C_Group.H2C_API.Controllers;
 
-import H2C_Group.H2C_API.Exceptions.SurveyExceptions;
-import H2C_Group.H2C_API.Exceptions.TicketExceptions;
-import H2C_Group.H2C_API.Exceptions.UserExceptions;
+import H2C_Group.H2C_API.Exceptions.*;
 import H2C_Group.H2C_API.Models.DTO.SurveyDTO;
 import H2C_Group.H2C_API.Services.SurveyService;
+import jakarta.validation.Valid;
 import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,21 +25,24 @@ public class SurveyController {
 
 
     @GetMapping("/GetSurveys")
-    public ResponseEntity<List<SurveyDTO>> getSurvey(){
-        return new ResponseEntity<>(acceso.getAllSurveys(), HttpStatus.OK);
+    public ResponseEntity<Page<SurveyDTO>> getSurvey(
+            @PageableDefault(page = 0, size = 10)
+            Pageable pageable){
+        Page<SurveyDTO> survey =  acceso.getAllSurveys(pageable);
+        return new ResponseEntity<>(survey, HttpStatus.OK);
     }
 
     @PostMapping("/PostSurvey")
-    public ResponseEntity<?> postSurvey(@RequestBody SurveyDTO surveyDTO) {
+    public ResponseEntity<?> postSurvey(@Valid @RequestBody SurveyDTO surveyDTO) {
         try{
             SurveyDTO survey = acceso.createSurvey(surveyDTO);
             return new ResponseEntity<>(survey, HttpStatus.CREATED);
-        }catch (IllegalArgumentException e) {
+        }catch (ExceptionSurveyBadRequest e) {
             //Validación de argumentos invalidos
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST); // Código 400
-        }catch (UserExceptions.UserNotFoundException e) {
+        }catch (ExceptionSurveyNotFound e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND); // Código 404
@@ -49,42 +54,5 @@ public class SurveyController {
         }
     }
 
-    @PatchMapping("/UpdateSurvey/{id}")
-    public ResponseEntity<?> updateSurvey(@RequestBody SurveyDTO surveyDTO, @PathVariable Long id) {
-        try{
-            SurveyDTO survey = acceso.updateSurvey(id, surveyDTO);
-            return new ResponseEntity<>(survey, HttpStatus.OK);
-        }catch (IllegalArgumentException e) {
-            Map<String, String> errors = new HashMap<>();
-            errors.put("error", e.getMessage());
-            return new ResponseEntity<>(errors.toString(), HttpStatus.BAD_REQUEST);
-
-        } catch (Exception e) {
-            Map<String, String> errors = new HashMap<>();
-            e.printStackTrace();
-            errors.put("error", "Ocurrió un error interno del servidor al actualizar la encuesta.");
-            return new ResponseEntity<>(errors.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    @DeleteMapping("/DeleteSurvey/{id}")
-    public ResponseEntity<?> deleteSurvey(@PathVariable Long id) {
-        try{
-            acceso.deleteSurvey(id);
-            return new ResponseEntity<>(HttpStatus.OK);
-        }catch (IllegalArgumentException e) {
-            Map<String, String> errors = new HashMap<>();
-            errors.put("error", e.getMessage());
-            return new ResponseEntity<>(errors.toString(), HttpStatus.BAD_REQUEST);
-        }catch (SurveyExceptions.SurveyNotFoundException e){
-            Map<String, String> errors = new HashMap<>();
-            errors.put("error", e.getMessage());
-            return new ResponseEntity<>(errors.toString(), HttpStatus.NOT_FOUND);
-        }catch (Exception e) {
-            Map<String, String> errors = new HashMap<>();
-            errors.put("error", "Ocurrió un error interno del servidor al intentar eliminar la encuesta.");
-            return new ResponseEntity<>(errors.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
 
 }

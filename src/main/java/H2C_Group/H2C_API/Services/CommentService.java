@@ -3,12 +3,15 @@ package H2C_Group.H2C_API.Services;
 import H2C_Group.H2C_API.Entities.CommentEntity;
 import H2C_Group.H2C_API.Entities.TicketEntity;
 import H2C_Group.H2C_API.Entities.UserEntity;
-import H2C_Group.H2C_API.Exceptions.CommentExceptions;
+import H2C_Group.H2C_API.Exceptions.ExceptionCommentNotFound;
 import H2C_Group.H2C_API.Models.DTO.CommentDTO;
 import H2C_Group.H2C_API.Repositories.CommentRepository;
 import H2C_Group.H2C_API.Repositories.TicketRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -25,12 +28,12 @@ public class CommentService {
     @Autowired
     private UserRepository userRepository;
 
-    public List<CommentDTO> getAllComments() {
-        List<CommentEntity> comments = commentRepository.findAll();
-        return comments.stream().map(this::convertToCommentDTO).collect(Collectors.toList());
+    public Page<CommentDTO> getAllComments(Pageable pageable) {
+        Page<CommentEntity> comments = commentRepository.findAll(pageable);
+        return comments.map(this::convertToCommentDTO);
     }
 
-    public CommentDTO createComment(CommentDTO dto) {
+    public CommentDTO createComment(@Valid CommentDTO dto) {
         //Validaciones
         UserEntity existingUser = userRepository.findById(dto.getUserId()).orElseThrow(() -> new IllegalArgumentException("El usuario con id" + dto.getUserId() + " no existe"));
 
@@ -61,19 +64,14 @@ public class CommentService {
         }
 
         // 2. Buscar el comentario existente
-        CommentEntity existingComment = commentRepository.findById(id)
-                .orElseThrow(() -> new CommentExceptions.CommentNotFoundException("Comentario con ID " + id + " no encontrado para actualizar."));
+        CommentEntity existingComment = commentRepository.findById(id).orElseThrow(() -> new ExceptionCommentNotFound("Comentario con ID " + id + " no encontrado para actualizar."));
 
         // 3. Validar y actualizar userId si viene en el DTO
         // Solo actualizamos si el userId viene en el DTO y es diferente al actual
         if (dto.getUserId() != null && !dto.getUserId().equals(existingComment.getUser().getUserId())) {
-            UserEntity user = userRepository.findById(dto.getUserId())
-                    .orElseThrow(() -> new IllegalArgumentException("El usuario con ID " + dto.getUserId() + " no existe."));
+            UserEntity user = userRepository.findById(dto.getUserId()).orElseThrow(() -> new IllegalArgumentException("El usuario con ID " + dto.getUserId() + " no existe."));
             existingComment.setUser(user); // Asigna la entidad UserEntity
         } else if (dto.getUserId() == null) {
-            // Si el userId viene null, ¿qué debe pasar?
-            // Si es obligatorio, lanza excepción. Si no, no hacer nada o setear null si es permitido en DB.
-            // Dada tu Entity, User es NOT NULL, así que no puede ser null.
             throw new IllegalArgumentException("El ID del usuario no puede ser nulo al actualizar un comentario.");
         }
 
@@ -81,8 +79,7 @@ public class CommentService {
         // 4. Validar y actualizar ticketId si viene en el DTO
         // Similar al userId, solo actualizamos si el ticketId viene y es diferente
         if (dto.getTicketId() != null && !dto.getTicketId().equals(existingComment.getTicket().getTicketId())) {
-            TicketEntity ticket = ticketRepository.findById(dto.getTicketId())
-                    .orElseThrow(() -> new IllegalArgumentException("El ticket con ID " + dto.getTicketId() + " no existe."));
+            TicketEntity ticket = ticketRepository.findById(dto.getTicketId()).orElseThrow(() -> new IllegalArgumentException("El ticket con ID " + dto.getTicketId() + " no existe."));
             existingComment.setTicket(ticket); // Asigna la entidad TicketEntity
         } else if (dto.getTicketId() == null) {
             // Similar al userId, ticketId es NOT NULL en DB.
@@ -116,7 +113,7 @@ public class CommentService {
         boolean exists = commentRepository.existsById(id);
 
         if (!exists) {
-            throw new CommentExceptions.CommentNotFoundException("Comentario con ID " + id + " no encontrado.");
+            throw new ExceptionCommentNotFound("Comentario con ID " + id + " no encontrado.");
         }
 
         commentRepository.deleteById(id);

@@ -49,4 +49,6 @@ public class UserEntity {
     @CreationTimestamp
     @Column(name="REGISTRATIONDATE")
     private LocalDateTime registrationDate;
+    @Column(name="PROFILEPICTUREURL")
+    private String profilePictureUrl;
 }

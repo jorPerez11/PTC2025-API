@@ -4,14 +4,16 @@ package H2C_Group.H2C_API.Services;
 import H2C_Group.H2C_API.Entities.NotificationEntity;
 import H2C_Group.H2C_API.Entities.TicketEntity;
 import H2C_Group.H2C_API.Entities.UserEntity;
-import H2C_Group.H2C_API.Exceptions.NotificationExceptions;
-import H2C_Group.H2C_API.Exceptions.SolutionExceptions;
+import H2C_Group.H2C_API.Exceptions.ExceptionNotificationNotFound;
 import H2C_Group.H2C_API.Models.DTO.NotificationDTO;
 import H2C_Group.H2C_API.Repositories.NotificationRepository;
 import H2C_Group.H2C_API.Repositories.TicketRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
 import com.fasterxml.jackson.databind.annotation.JsonAppend;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -28,9 +30,9 @@ public class NotificationService {
     @Autowired
     private TicketRepository ticketRepository;
 
-    public List<NotificationDTO> findAll() {
-        List<NotificationEntity> notifications = notificationRepository.findAll();
-        return notifications.stream().map(this::convertToNotificationDTO).collect(Collectors.toList());
+    public Page<NotificationDTO> findAll(Pageable pageable) {
+        Page<NotificationEntity> notifications = notificationRepository.findAll(pageable);
+        return notifications.map(this::convertToNotificationDTO);
     }
 
     public NotificationDTO createNotification(NotificationDTO notificationDTO) {
@@ -54,30 +56,27 @@ public class NotificationService {
 
     }
 
-    public NotificationDTO updateNotification(Long id, NotificationDTO notificationDTO) {
+    public void markAllAsSeenForUser(Long userId) {
+
+    }
+
+
+    //Metodo de actualizacion del estado de notificacion (seen == 1)
+    public NotificationDTO updateNotificationState(Long id, NotificationDTO notificationDTO) {
         //Validaciones
         if (id == null || id <= 0) {
-            throw new IllegalArgumentException("El ID de la notificacion a actualizar no puede ser nulo o no válido.");
+            throw new IllegalArgumentException("El notification no puede ser nulo.");
         }
 
-        NotificationEntity existingNotification = notificationRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("El id de la notificacion no puede ser nulo."));
+        NotificationEntity existingNotification = notificationRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("El id de la notificacion " + id + " no existe."));
 
-        UserEntity existingUser = userRepository.findById(notificationDTO.getUserId()).orElseThrow(() -> new IllegalArgumentException("El usuario con id" + notificationDTO.getUserId() + " no existe"));
-        existingNotification.setUser(existingUser);
-
-        TicketEntity existingTicket = ticketRepository.findById(notificationDTO.getTicketId()).orElseThrow(() -> new IllegalArgumentException("La ticket con id" + notificationDTO.getTicketId() + " no existe"));
-        existingNotification.setTicket(existingTicket);
-
-        if (notificationDTO.getMessage() != null) {
-            existingNotification.setMessage(notificationDTO.getMessage());
+        if(existingNotification.getSeen() == 0) {
+            existingNotification.setSeen(1);
+            NotificationEntity updatedNotification = notificationRepository.save(existingNotification);
+            return convertToNotificationDTO(updatedNotification);
         }
 
-        if (notificationDTO.getSeen() != null) {
-            existingNotification.setSeen(notificationDTO.getSeen());
-        }
-
-        NotificationEntity savedNotification = notificationRepository.save(existingNotification);
-        return convertToNotificationDTO(savedNotification);
+        return convertToNotificationDTO(existingNotification);
 
     }
 
@@ -90,7 +89,7 @@ public class NotificationService {
         boolean exists = notificationRepository.existsById(id);
 
         if (!exists) {
-            throw new NotificationExceptions.NotificationNotFoundException("Notificacion con ID " + id + " no encontrado.");
+            throw new ExceptionNotificationNotFound("Notificacion con ID " + id + " no encontrado.");
         }
 
         notificationRepository.deleteById(id);
@@ -99,6 +98,8 @@ public class NotificationService {
 
     private NotificationDTO convertToNotificationDTO(NotificationEntity notificationEntity) {
         NotificationDTO dto = new NotificationDTO();
+
+        dto.setNotificationId(notificationEntity.getNotificationId());
 
         if (notificationEntity.getTicket() != null) {
             dto.setTicketId(notificationEntity.getTicket().getTicketId());
@@ -116,5 +117,6 @@ public class NotificationService {
         dto.setSeen(notificationEntity.getSeen());
         return dto;
     }
+
 
 }
