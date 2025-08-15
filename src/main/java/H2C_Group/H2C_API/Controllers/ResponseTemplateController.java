@@ -1,11 +1,15 @@
 package H2C_Group.H2C_API.Controllers;
 
-import H2C_Group.H2C_API.Exceptions.TicketExceptions;
-import H2C_Group.H2C_API.Exceptions.UserExceptions;
+import H2C_Group.H2C_API.Exceptions.ExceptionResponseTemplateBadRequest;
+import H2C_Group.H2C_API.Exceptions.ExceptionResponseTemplateNotFound;
 import H2C_Group.H2C_API.Models.DTO.ResponseTemplateDTO;
 import H2C_Group.H2C_API.Models.DTO.SolutionDTO;
 import H2C_Group.H2C_API.Services.ResponseTemplateService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,21 +25,23 @@ public class ResponseTemplateController {
     private ResponseTemplateService acceso;
 
     @GetMapping("/GetTemplates")
-    public ResponseEntity<List<ResponseTemplateDTO>> getAllResponseTemplates() {
-        return new ResponseEntity<>(acceso.findAllResponseTemplates(), HttpStatus.OK);
+    public ResponseEntity<Page<ResponseTemplateDTO>> getAllResponseTemplates(
+            @PageableDefault(page = 0, size = 10)
+            Pageable pageable) {
+        Page<ResponseTemplateDTO> templates = acceso.findAllResponseTemplates(pageable);
+        return new ResponseEntity<>(templates, HttpStatus.OK);
     }
 
     @PostMapping("/PostTemplate")
-    public ResponseEntity<?> createResponseTemplate(@RequestBody ResponseTemplateDTO responseTemplateDTO) {
+    public ResponseEntity<?> createResponseTemplate(@RequestBody @Valid ResponseTemplateDTO responseTemplateDTO) {
         try{
             ResponseTemplateDTO newTemplate = acceso.createResponseTemplate(responseTemplateDTO);
             return new ResponseEntity<>(newTemplate, HttpStatus.CREATED);
-        }catch (IllegalArgumentException e) {
-            //Validación de argumentos invalidos
+        }catch (ExceptionResponseTemplateBadRequest e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST); // Código 400
-        }catch (UserExceptions.UserNotFoundException e) {
+        }catch (ExceptionResponseTemplateNotFound e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND); // Código 404
@@ -49,15 +55,18 @@ public class ResponseTemplateController {
     }
 
     @PatchMapping("/UpdateTemplate/{id}")
-    public ResponseEntity<?> updateResponseTemplate(@PathVariable Long id, @RequestBody ResponseTemplateDTO responseTemplateDTO) {
+    public ResponseEntity<?> updateResponseTemplate(@PathVariable Long id, @Valid @RequestBody ResponseTemplateDTO responseTemplateDTO) {
         try{
             ResponseTemplateDTO newTemplate = acceso.updateResponseTemplate(id, responseTemplateDTO);
             return new ResponseEntity<>(newTemplate, HttpStatus.OK);
-        }catch (IllegalArgumentException e) {
+        }catch (ExceptionResponseTemplateBadRequest e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors.toString(), HttpStatus.BAD_REQUEST);
-
+        }catch (ExceptionResponseTemplateNotFound e){
+                Map<String, String> errors = new HashMap<>();
+                errors.put("error", e.getMessage());
+                return new ResponseEntity<>(errors.toString(), HttpStatus.NOT_FOUND);
         }catch (Exception e) {
             Map<String, String> errors = new HashMap<>();
             e.printStackTrace();
@@ -71,11 +80,11 @@ public class ResponseTemplateController {
         try{
             acceso.deleteResponseTemplate(id);
             return new ResponseEntity<>(HttpStatus.OK);
-        }catch (IllegalArgumentException e) {
+        }catch (ExceptionResponseTemplateBadRequest e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors.toString(), HttpStatus.BAD_REQUEST);
-        }catch (TicketExceptions.TicketNotFoundException e){
+        }catch (ExceptionResponseTemplateNotFound e){
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors.toString(), HttpStatus.NOT_FOUND);

@@ -9,6 +9,8 @@ import H2C_Group.H2C_API.Repositories.AuditTrailRepository;
 import H2C_Group.H2C_API.Repositories.TicketRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -26,16 +28,16 @@ public class AuditTrailService {
     private TicketRepository ticketRepository;
 
 
-    public List<AuditTrailDTO> getAllAuditTrails() {
-        List<AuditTrailEntity> auditTrail = auditTrailRepository.findAll();
-        return auditTrail.stream().map(this::convertToAuditTrailDTO).collect(Collectors.toList());
+    public Page<AuditTrailDTO> getAllAuditTrails(Pageable pageable) {
+        Page<AuditTrailEntity> auditTrail = auditTrailRepository.findAll(pageable);
+        return auditTrail.map(this::convertToAuditTrailDTO);
     }
 
     public AuditTrailDTO createAuditTrail(AuditTrailDTO dto) {
         //Validaciones
         UserEntity existingUser = userRepository.findById(dto.getUserId()).orElseThrow(() -> new IllegalArgumentException("El usuario con id" + dto.getUserId() + " no existe"));
 
-        TicketEntity existingTicket = ticketRepository.findById(dto.getTicketId()).orElseThrow(() -> new IllegalArgumentException("La ticket con id" + dto.getTicketId() + " no existe"));
+        TicketEntity existingTicket = ticketRepository.findById(dto.getTicketId()).orElseThrow(() -> new IllegalArgumentException("El ticket con id" + dto.getTicketId() + " no existe"));
 
         AuditTrailEntity auditTrailEntity = new AuditTrailEntity();
 
@@ -56,6 +58,8 @@ public class AuditTrailService {
 
     private AuditTrailDTO convertToAuditTrailDTO(AuditTrailEntity auditTrailEntity) {
         AuditTrailDTO auditTrailDTO = new AuditTrailDTO();
+
+        auditTrailDTO.setAuditTrailId(auditTrailEntity.getHistoryId());
 
         if  (auditTrailEntity.getUser() != null) {
             auditTrailDTO.setUserId(auditTrailEntity.getUser().getUserId());

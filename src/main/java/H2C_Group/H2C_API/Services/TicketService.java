@@ -4,8 +4,7 @@ package H2C_Group.H2C_API.Services;
 import H2C_Group.H2C_API.Entities.TicketEntity;
 import H2C_Group.H2C_API.Entities.UserEntity;
 import H2C_Group.H2C_API.Enums.*;
-import H2C_Group.H2C_API.Exceptions.TicketExceptions;
-import H2C_Group.H2C_API.Exceptions.UserExceptions;
+import H2C_Group.H2C_API.Exceptions.ExceptionTicketNotFound;
 import H2C_Group.H2C_API.Models.DTO.CategoryDTO;
 import H2C_Group.H2C_API.Models.DTO.TicketDTO;
 import H2C_Group.H2C_API.Models.DTO.TicketPriorityDTO;
@@ -13,6 +12,8 @@ import H2C_Group.H2C_API.Models.DTO.TicketStatusDTO;
 import H2C_Group.H2C_API.Repositories.TicketRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -29,9 +30,9 @@ public class TicketService {
     private TicketRepository ticketRepository;
 
 
-    public List<TicketDTO> getAllTickets() {
-        List<TicketEntity> tickets = ticketRepository.findAll();
-        return tickets.stream().map(this::convertToTicketDTO).collect(Collectors.toList());
+    public Page<TicketDTO> getAllTickets(Pageable pageable) {
+        Page<TicketEntity> tickets = ticketRepository.findAll(pageable);
+        return tickets.map(this::convertToTicketDTO);
     }
 
     public TicketDTO createTicket(TicketDTO ticketDTO) {
@@ -219,7 +220,7 @@ public class TicketService {
         boolean exists = ticketRepository.existsById(id);
 
         if (!exists) {
-            throw new TicketExceptions.TicketNotFoundException("Ticket con ID " + id + " no encontrado.");
+            throw new ExceptionTicketNotFound("Ticket con ID " + id + " no encontrado.");
         }
 
         ticketRepository.deleteById(id);
@@ -254,6 +255,8 @@ public class TicketService {
         } else {
             dto.setAssignedTech(null); // Establece el ID del técnico a null en el DTO si no hay técnico asignado
         }
+
+        dto.setCreationDate(ticket.getCreationDate());
 
         dto.setCloseDate(ticket.getCloseDate());
 

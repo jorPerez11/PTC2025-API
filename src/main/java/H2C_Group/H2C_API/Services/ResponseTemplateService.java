@@ -3,13 +3,14 @@ package H2C_Group.H2C_API.Services;
 
 import H2C_Group.H2C_API.Entities.ResponseTemplateEntity;
 import H2C_Group.H2C_API.Enums.Category;
-import H2C_Group.H2C_API.Exceptions.ResponseTemplateExceptions;
-import H2C_Group.H2C_API.Exceptions.SolutionExceptions;
+import H2C_Group.H2C_API.Exceptions.ExceptionResponseTemplateNotFound;
 import H2C_Group.H2C_API.Models.DTO.CategoryDTO;
 import H2C_Group.H2C_API.Models.DTO.ResponseTemplateDTO;
 import H2C_Group.H2C_API.Repositories.ResponseTemplateRepository;
 import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,9 +21,9 @@ public class ResponseTemplateService {
     @Autowired
     private ResponseTemplateRepository responseTemplateRepository;
 
-    public List<ResponseTemplateDTO> findAllResponseTemplates() {
-        List<ResponseTemplateEntity> responseTemplates = responseTemplateRepository.findAll();
-        return responseTemplates.stream().map(this::convertToResponseTemplateDTO).collect(Collectors.toList());
+    public Page<ResponseTemplateDTO> findAllResponseTemplates(Pageable pageable) {
+        Page<ResponseTemplateEntity> responseTemplates = responseTemplateRepository.findAll(pageable);
+        return responseTemplates.map(this::convertToResponseTemplateDTO);
     }
 
     public ResponseTemplateDTO createResponseTemplate(ResponseTemplateDTO responseTemplateDTO) {
@@ -99,7 +100,7 @@ public class ResponseTemplateService {
         boolean exists = responseTemplateRepository.existsById(id);
 
         if (!exists) {
-            throw new ResponseTemplateExceptions.ResponseTemplateNotFoundException("Solucion con ID " + id + " no encontrado.");
+            throw new ExceptionResponseTemplateNotFound("Solucion con ID " + id + " no encontrado.");
         }
 
         responseTemplateRepository.deleteById(id);
@@ -109,6 +110,8 @@ public class ResponseTemplateService {
     private ResponseTemplateDTO convertToResponseTemplateDTO(ResponseTemplateEntity responseTemplateEntity) {
         ResponseTemplateDTO responseTemplateDTO = new ResponseTemplateDTO();
 
+        responseTemplateDTO.setTemplateId(responseTemplateEntity.getTemplateId());
+
         Category categoryEnum = Category.fromIdOptional(responseTemplateEntity.getCategoryId()).orElseThrow(() -> new IllegalArgumentException("La categoria de id " + responseTemplateEntity.getCategoryId() + " no existe."));
         responseTemplateDTO.setCategory(new CategoryDTO(categoryEnum.getId(), categoryEnum.getDisplayName()));
 
@@ -116,7 +119,7 @@ public class ResponseTemplateService {
 
         responseTemplateDTO.setTemplateContent(responseTemplateEntity.getTemplateContent());
 
-        responseTemplateDTO.setKeyWords(responseTemplateDTO.getKeyWords());
+        responseTemplateDTO.setKeyWords(responseTemplateEntity.getKeywords());
 
         return responseTemplateDTO;
 
