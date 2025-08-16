@@ -1,5 +1,6 @@
 package H2C_Group.H2C_API.Utils;
 
+import H2C_Group.H2C_API.Entities.UserEntity;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -18,16 +19,18 @@ public class JwUtil {
     // Genera una clave secreta segura en tiempo de ejecución.
     private final SecretKey key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
     private static final long serialVersionUID = -2550185165626007488L;
-    public static final long JWT_TOKEN_VALIDITY_SHORT = 5 * 60 * 60 * 1000; // 5 horas
+    public static final long JWT_TOKEN_VALIDITY_SHORT = 5 * 60  * 1000; // 5 minutos
     public static final long JWT_TOKEN_VALIDITY_LONG = 7 * 24 * 60 * 60 * 1000; // 7 días
 
     // Obtener el nombre de usuario de un token
     public String getUsernameFromToken(String token) {
+
         return getClaimFromToken(token, Claims::getSubject);
     }
 
     // Obtener la fecha de expiración de un token
     public Date getExpirationDateFromToken(String token) {
+
         return getClaimFromToken(token, Claims::getExpiration);
     }
 
@@ -49,14 +52,15 @@ public class JwUtil {
 
 
     // Generar el token con un tiempo de validez por defecto (sesión corta)
-    public String generateToken(UserDetails userDetails) {
-        return generateToken(userDetails, JWT_TOKEN_VALIDITY_SHORT);
+    public String generateToken(UserEntity user) {
+        return generateToken(user, JWT_TOKEN_VALIDITY_SHORT);
     }
 
     // Nuevo metodo para generar el token con un tiempo de validez personalizado (sesión larga)
-    public String generateToken(UserDetails userDetails, long expirationTime) {
+    public String generateToken(UserEntity user, long expirationTime) {
         Map<String, Object> claims = new HashMap<>();
-        return doGenerateToken(claims, userDetails.getUsername(), expirationTime);
+        claims.put("rolId", user.getRolId());
+        return doGenerateToken(claims, user.getUsername(), expirationTime);
     }
 
     // Creación del token

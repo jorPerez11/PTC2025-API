@@ -65,7 +65,7 @@ public class UserService implements UserDetailsService {
 
     //Metodo para generar una contraseña segura y aleatoria
     private String generatedRandomPassword(){
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;':,./<>?";
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?";
         SecureRandom random = new SecureRandom();
         StringBuilder sb = new StringBuilder(12); //Longitud de 12 caracteres
 
@@ -179,7 +179,7 @@ public class UserService implements UserDetailsService {
 
         //Envia la contraseña temporal por correo electronico
         String subject = "Credenciales de Acceso a Help Desk H2C";
-        String body = "Hola " + dto.getName() + " tu cuenta ha sido creada exitosamente. Tu nomre de usuario es: " + dto.getUsername() + " , tu contraseña temporal es: " + randomPassword + " Por favor no compartas con nadie esta información, Saludos del equipo de H2C";
+        String body = "Hola " + dto.getName() + " tu cuenta ha sido creada exitosamente. Tu nombre de usuario es: " + dto.getUsername() + " , tu contraseña temporal es: " + randomPassword + " Por favor no compartas con nadie esta información, Saludos del equipo de H2C";
         emailService.sendEmail(dto.getEmail(), subject, body);
 
         return convertToUserDTO(savedUser);
