@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.jackson.Jacksonized;
+import org.hibernate.validator.constraints.URL;
 
 import java.time.LocalDateTime;
 
@@ -47,14 +48,15 @@ public class UserDTO {
 
         //Variable de tipo UserRole - Obtiene el numero (rolId) de Enum UserRole.
         //Se usa por seguridad (datos constantes), legibilidad (de codigo) y serializacion
-        @NotNull(message = "El rol del usuario es obligatorio.")
         private RolDTO rol;
 
-        @NotNull(message = "La compañia es obligatoria.")
         private Long companyId;
 
         //OPCIONAL: Categoria solo asignable a Roles Tecnico y Administrador
 
         private CategoryDTO category;
+
+        @URL
+        private String profilePictureUrl;
 
 }

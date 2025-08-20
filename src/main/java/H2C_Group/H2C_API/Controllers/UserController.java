@@ -1,10 +1,16 @@
 package H2C_Group.H2C_API.Controllers;
 
 
-import H2C_Group.H2C_API.Exceptions.UserExceptions;
+import H2C_Group.H2C_API.Exceptions.ExceptionUserBadRequest;
+import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
 import H2C_Group.H2C_API.Models.DTO.UserDTO;
 import H2C_Group.H2C_API.Services.UserService;
+import jakarta.validation.Valid;
+import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,22 +28,25 @@ public class UserController {
     private UserService acceso;
 
     @GetMapping("/GetUsers")
-    public List<UserDTO> GetUserData() {
-        return acceso.getAllUsers();
+    public ResponseEntity<Page<UserDTO>> getUsers(
+            @PageableDefault(page = 0, size = 10)
+            Pageable pageable) {
+        Page<UserDTO> users = acceso.findAll(pageable);
+        return new ResponseEntity<>(users, HttpStatus.OK);
     }
 
-        @PostMapping("/PostUser")
-    public ResponseEntity<?> createUser(@RequestBody UserDTO user) {
+    @PostMapping("/PostUser")
+    public ResponseEntity<?> createUser(@RequestBody @Valid UserDTO user) {
         System.out.println("DEBUG: Entrando al metodo createUser en el controlador.");
         try{
             UserDTO newUser = acceso.registerNewUser(user);
             return new ResponseEntity<>(newUser, HttpStatus.CREATED);
-        }catch (IllegalArgumentException e) {
+        }catch (ExceptionUserBadRequest e) {
             //Validación de argumentos invalidos
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST); // Código 400
-        }catch (UserExceptions.UserNotFoundException e) {
+        }catch (ExceptionUserNotFound e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND); // Código 404
@@ -50,16 +59,19 @@ public class UserController {
     }
 
     @PatchMapping("/UpdateUser/{id}")
-    public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody UserDTO dto) {
+    public ResponseEntity<?> updateUser(@PathVariable Long id, @Valid @RequestBody UserDTO dto) {
         try {
             UserDTO updatedUser = acceso.updateUser(id, dto);
             return new ResponseEntity<>(updatedUser, HttpStatus.OK);
 
-        } catch (IllegalArgumentException e) {
+        } catch (ExceptionUserBadRequest e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
-
+        }catch(ExceptionUserNotFound e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND);
         } catch (Exception e) {
             Map<String, String> errors = new HashMap<>();
             //e.printStackTrace();
@@ -73,11 +85,11 @@ public class UserController {
         try {
             acceso.deleteUser(id);
             return new ResponseEntity<>(HttpStatus.OK);
-        }catch(IllegalArgumentException e) {
+        }catch(ExceptionUserBadRequest e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
-        }catch(UserExceptions.UserNotFoundException e) {
+        }catch(ExceptionUserNotFound e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND);

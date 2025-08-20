@@ -1,12 +1,16 @@
 package H2C_Group.H2C_API.Controllers;
 
-import H2C_Group.H2C_API.Exceptions.TicketExceptions;
-import H2C_Group.H2C_API.Exceptions.UserExceptions;
+import H2C_Group.H2C_API.Exceptions.ExceptionSolutionBadRequest;
+import H2C_Group.H2C_API.Exceptions.ExceptionSolutionNotFound;
 import H2C_Group.H2C_API.Models.DTO.SolutionDTO;
 import H2C_Group.H2C_API.Models.DTO.TicketDTO;
 import H2C_Group.H2C_API.Repositories.SolutionRepository;
 import H2C_Group.H2C_API.Services.SolutionService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,22 +26,25 @@ public class SolutionController {
     SolutionService acceso;
 
     @GetMapping("/GetSolutions")
-    public ResponseEntity<List<SolutionDTO>> getAllSolutions() {
-        return new ResponseEntity<>(acceso.getAllSolutions(), HttpStatus.OK);
+    public ResponseEntity<Page<SolutionDTO>> getAllSolutions(
+            @PageableDefault(page = 0, size = 10)
+            Pageable pageable
+    ) {
+        Page<SolutionDTO> solutions = acceso.getAllSolutions(pageable);
+        return new ResponseEntity<>(solutions, HttpStatus.OK);
     }
 
 
     @PostMapping("/PostSolution")
-    public ResponseEntity<?> createSolution(@RequestBody SolutionDTO solutionDTO) {
+    public ResponseEntity<?> createSolution(@RequestBody @Valid SolutionDTO solutionDTO) {
         try {
             SolutionDTO newSolution = acceso.createSolution(solutionDTO);
             return new ResponseEntity<>(newSolution, HttpStatus.CREATED);
-        }catch (IllegalArgumentException e) {
-            //Validación de argumentos invalidos
+        }catch (ExceptionSolutionBadRequest e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST); // Código 400
-        }catch (UserExceptions.UserNotFoundException e) {
+        }catch (ExceptionSolutionNotFound e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND); // Código 404
@@ -51,18 +58,20 @@ public class SolutionController {
 
 
     @PatchMapping("/UpdateSolution/{id}")
-    public ResponseEntity<?> updateSolution(@PathVariable Long id, @RequestBody SolutionDTO solutionDTO) {
+    public ResponseEntity<?> updateSolution(@PathVariable Long id, @Valid @RequestBody SolutionDTO solutionDTO) {
         try{
             SolutionDTO newSolution = acceso.updateSolution(id, solutionDTO);
             return new ResponseEntity<>(newSolution, HttpStatus.OK);
-        } catch (IllegalArgumentException e) {
+        } catch (ExceptionSolutionBadRequest e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors.toString(), HttpStatus.BAD_REQUEST);
-
+        }catch (ExceptionSolutionNotFound e){
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors.toString(), HttpStatus.NOT_FOUND);
         } catch (Exception e) {
             Map<String, String> errors = new HashMap<>();
-            e.printStackTrace();
             errors.put("error", "Ocurrió un error interno del servidor al actualizar la solucion.");
             return new ResponseEntity<>(errors.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -75,11 +84,11 @@ public class SolutionController {
         try {
             acceso.deleteSolution(id);
             return new ResponseEntity<>(HttpStatus.OK);
-        }catch (IllegalArgumentException e) {
+        }catch (ExceptionSolutionBadRequest e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors.toString(), HttpStatus.BAD_REQUEST);
-        }catch (TicketExceptions.TicketNotFoundException e){
+        }catch (ExceptionSolutionNotFound e){
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors.toString(), HttpStatus.NOT_FOUND);
