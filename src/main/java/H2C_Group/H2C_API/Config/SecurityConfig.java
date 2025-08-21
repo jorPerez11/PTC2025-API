@@ -6,6 +6,7 @@ import H2C_Group.H2C_API.Utils.JwtRequestFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
@@ -37,23 +38,26 @@ public class SecurityConfig{
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                        // Permite acceso público a los endpoints de login y registro
+                        // 1. Permite las peticiones OPTIONS para pre-vuelo de CORS
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // 2. Permite el acceso a los endpoints de login y registro
                         .requestMatchers("/api/users/login", "/api/users/register").permitAll()
-                        //Permite el acceso a este endpoint solo si el usuario esta autenticado
+
+                        // 3. Permite el acceso a un endpoint autenticado
                         .requestMatchers("/api/users/change-password").authenticated()
-                        // Cualquier otra petición debe estar autenticada
+
+                        // 4. Cualquier otra petición debe estar autenticada
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-                http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
-
     @Bean
     public PasswordEncoder passwordEncoder(){
-
         return new BCryptPasswordEncoder();
     }
 
@@ -75,18 +79,26 @@ public class SecurityConfig{
         CorsConfiguration configuration = new CorsConfiguration();
         //Ip de origen que pueden ACCEDER A LA API AGREGAR TODAS LAS IP DEL EQUIPO (JORGE, DANIELA, FERNANDO, ASTRID, HERBERT)
         configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost",
                 "http://127.0.0.2:5501",
                 "http://IPJORGE:5501",
-                "http://IPASTRID:5501",
+                "http://192.168.1.42:5501",
                 "http://IPDANIELA:5501",
                 "http://IPHERBERT:5501"
         ));
+        // Define los métodos HTTP permitidos (GET, POST, etc.).
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+
+        // Define los encabezados permitidos. El * permite todos los encabezados.
         configuration.setAllowedHeaders(Arrays.asList("*"));
+
+        // Permite que las credenciales (como cookies o tokens) se incluyan en las peticiones.
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        // Aplica esta configuración a todas las rutas de tu API.
         source.registerCorsConfiguration("/**", configuration);
+
         return source;
     }
 

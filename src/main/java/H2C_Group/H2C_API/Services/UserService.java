@@ -18,7 +18,6 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -146,7 +145,7 @@ public class UserService implements UserDetailsService {
         }
 
         if (!isValidDomain(dto.getEmail())){
-            throw new IllegalArgumentException("Dominio de correo no permistido");
+            throw new IllegalArgumentException("Dominio de correo no permitido");
         }
 
         //ASIGNACION DE PRIMER ID DE COMPANIA ENCONTRADA (DESDE companyRepository) A USUARIO
