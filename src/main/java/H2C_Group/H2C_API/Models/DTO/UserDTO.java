@@ -59,4 +59,6 @@ public class UserDTO {
         @URL
         private String profilePictureUrl;
 
+        private String displayName;
+
 }
