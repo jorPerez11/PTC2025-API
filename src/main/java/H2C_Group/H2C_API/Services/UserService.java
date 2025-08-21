@@ -12,6 +12,7 @@ import H2C_Group.H2C_API.Models.DTO.RolDTO;
 import H2C_Group.H2C_API.Repositories.CompanyRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
 import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +21,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 
@@ -39,7 +41,7 @@ public class UserService implements UserDetailsService {
 
 
     @Autowired
-    private Argon2PasswordEncoder argon2PasswordEncoder;
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private EmailService emailService;
@@ -47,11 +49,15 @@ public class UserService implements UserDetailsService {
     @Autowired
     private EntityManager entityManager;
 
-    //Implementacion del metodo que requiere UserDetailsService si lo quito deja de funcionar :(
+    //Implementacion del metodo que requiere UserDetailsService si lo quito deja de funcionar :(. Spring Security lo usa para encontrar a un usuario por su nombre de usuario
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException{
         UserEntity userEntity = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario con el nombre: " + username + " no encontrado"));
+
+        // Aquí creamos un objeto User de Spring Security. Es crucial que la contraseña
+        // que devuelvas aquí sea la que tienes hasheada en la base de datos.
+        // Spring Security la usará para comparar con la contraseña que el usuario envió.
         return new User(
                 userEntity.getUsername(),
                 userEntity.getPasswordHash(),
@@ -62,7 +68,7 @@ public class UserService implements UserDetailsService {
 
     //Metodo para generar una contraseña segura y aleatoria
     private String generatedRandomPassword(){
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;':,./<>?";
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?";
         SecureRandom random = new SecureRandom();
         StringBuilder sb = new StringBuilder(12); //Longitud de 12 caracteres
 
@@ -72,26 +78,25 @@ public class UserService implements UserDetailsService {
         return sb.toString();
     }
 
+    @Transactional
     public UserDTO changePassword(String username, String currentPassword, String newPassword){
         //1.Encuentra el usuario por su nombre de usuario
         UserEntity userEntity = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
-        //2.Verifica si la contraseña actual es correcta
-        if (!argon2PasswordEncoder.matches(currentPassword, userEntity.getPasswordHash())){
-            throw new IllegalArgumentException("La contraseña actual es incorrecta");
+        //2.Verifica si la contraseña actual (si no es temporal)
+        if (!userEntity.isPasswordExpired()){
+            if (!passwordEncoder.matches(currentPassword, userEntity.getPasswordHash())){
+                throw new IllegalArgumentException("La contraseña actual es incorrecta");
+            }
         }
 
         //3.Cifra la nueva contraseña
-        String newHashedPassword = argon2PasswordEncoder.encode(newPassword);
+        String newHashedPassword = passwordEncoder.encode(newPassword);
 
         //4.Actualiza la contraseña en la entidad del usuario
         userEntity.setPasswordHash(newHashedPassword);
-
-        //5.Si la contraseña era temporal, marca la contraseña como no expirada (cambia de true a false)
-        if (userEntity.isPasswordExpired()){
-            userEntity.setPasswordExpired(false);
-        }
+        userEntity.setPasswordExpired(false);
 
         //6.Guarda los cambios en la base de datos
         userRepository.save(userEntity);
@@ -164,7 +169,7 @@ public class UserService implements UserDetailsService {
         userEntity.setUsername(dto.getUsername());
         userEntity.setEmail(dto.getEmail());
         userEntity.setPhone(dto.getPhone());
-        String hashedPassword = argon2PasswordEncoder.encode(randomPassword); //IMPORTANTE: REQUERIDO HASHEAR ANTES DE INSERTAR A LA DB
+        String hashedPassword = passwordEncoder.encode(randomPassword); //IMPORTANTE: REQUERIDO HASHEAR ANTES DE INSERTAR A LA DB
         userEntity.setPasswordHash(hashedPassword);
         userEntity.setIsActive(dto.getIsActive());
 
@@ -176,7 +181,7 @@ public class UserService implements UserDetailsService {
 
         //Envia la contraseña temporal por correo electronico
         String subject = "Credenciales de Acceso a Help Desk H2C";
-        String body = "Hola " + dto.getName() + " tu cuenta ha sido creada exitosamente. Tu nomre de usuario es: " + dto.getUsername() + " , tu contraseña temporal es: " + randomPassword + " Por favor no compartas con nadie esta información, Saludos del equipo de H2C";
+        String body = "Hola " + dto.getName() + " tu cuenta ha sido creada exitosamente. Tu nombre de usuario es: " + dto.getUsername() + " , tu contraseña temporal es: " + randomPassword + " Por favor no compartas con nadie esta información, Saludos del equipo de H2C";
         emailService.sendEmail(dto.getEmail(), subject, body);
 
         return convertToUserDTO(savedUser);
@@ -237,7 +242,7 @@ public class UserService implements UserDetailsService {
             existingUser.setPhone(dto.getPhone());
         }
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) { // O dto.getPasswordHash()
-            String hashedPassword = argon2PasswordEncoder.encode(dto.getPassword());
+            String hashedPassword = passwordEncoder.encode(dto.getPassword());
             existingUser.setPasswordHash(hashedPassword); // O setPasswordHash()
         }
         //Actualizacion de rol [PARCIAL PARA PRUEBA] para usuarios (NIVEL DE ACCESO: 3 // CAMBIO DE ROL DE USUARIO [ADMIN] -> [TECNICO])
@@ -307,17 +312,13 @@ public class UserService implements UserDetailsService {
     }
 
     public boolean checkPassword(String rawPassword, String hashedPassword) {
-        return argon2PasswordEncoder.matches(rawPassword, hashedPassword);
+        return passwordEncoder.matches(rawPassword, hashedPassword);
     }
 
     //Encontrar usuario por su username. -- Su uso es importante para la actualizacion de datos de cada usuario, en configuracion
     public Long getUserIdByUsername(String username) {
         return userRepository.findByUsername(username).map(UserEntity::getUserId).orElseThrow(() -> new IllegalArgumentException("El usuario " + username + " no existe"));
     }
-
-
-
-
 
 }
 
