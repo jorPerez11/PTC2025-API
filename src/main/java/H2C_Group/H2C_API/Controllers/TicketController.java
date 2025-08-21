@@ -1,10 +1,14 @@
 package H2C_Group.H2C_API.Controllers;
 
-import H2C_Group.H2C_API.Exceptions.TicketExceptions;
-import H2C_Group.H2C_API.Exceptions.UserExceptions;
+import H2C_Group.H2C_API.Exceptions.ExceptionTicketBadRequest;
+import H2C_Group.H2C_API.Exceptions.ExceptionTicketNotFound;
 import H2C_Group.H2C_API.Models.DTO.TicketDTO;
 import H2C_Group.H2C_API.Services.TicketService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,21 +25,29 @@ public class TicketController {
     private TicketService acceso;
 
     @GetMapping("/GetTickets")
-    public List<TicketDTO> getTickets() {
-        return acceso.getAllTickets();
+    public ResponseEntity<Page<TicketDTO>> getAllTickets(
+            @PageableDefault(page = 0, size = 10)
+            Pageable pageable) {
+        Page<TicketDTO> ticket =  acceso.getAllTickets(pageable);
+        return new ResponseEntity<>(ticket, HttpStatus.OK);
+    }
+
+    @GetMapping("/GetRecentTicketsByUser/{userId}")
+    public ResponseEntity<List<TicketDTO>> getTicketsByUserId(@PathVariable Long userId){
+        List<TicketDTO> tickets = acceso.geTicketByUserId(userId);
+        return new ResponseEntity<>(tickets, HttpStatus.OK);
     }
 
     @PostMapping("/PostTicket")
-    public ResponseEntity<?> postTicket(@RequestBody TicketDTO ticketDTO) {
+    public ResponseEntity<?> postTicket(@Valid @RequestBody TicketDTO ticketDTO) {
         try {
             TicketDTO newTicket = acceso.createTicket(ticketDTO);
             return new ResponseEntity<>(newTicket, HttpStatus.CREATED);
-        }catch (IllegalArgumentException e) {
-            //Validación de argumentos invalidos
+        }catch (ExceptionTicketBadRequest e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST); // Código 400
-        }catch (UserExceptions.UserNotFoundException e) {
+        }catch (ExceptionTicketNotFound e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND); // Código 404
@@ -49,16 +61,19 @@ public class TicketController {
 
 
     @PatchMapping("/UpdateTicket/{id}")
-    public ResponseEntity<String> updateTicket(@PathVariable Long id, @RequestBody TicketDTO ticketDTO) {
+    public ResponseEntity<String> updateTicket(@PathVariable Long id, @Valid @RequestBody TicketDTO ticketDTO) {
         try {
             TicketDTO updatedTicket = acceso.updateTicket(id, ticketDTO);
             return new ResponseEntity<>(updatedTicket.toString(), HttpStatus.OK);
 
-        } catch (IllegalArgumentException e) {
+        } catch (ExceptionTicketBadRequest e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors.toString(), HttpStatus.BAD_REQUEST);
-
+        }catch (ExceptionTicketNotFound e){
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors.toString(), HttpStatus.NOT_FOUND);
         } catch (Exception e) {
             Map<String, String> errors = new HashMap<>();
             e.printStackTrace();
@@ -73,11 +88,11 @@ public class TicketController {
         try {
             acceso.deleteTicket(id);
             return new ResponseEntity<>(HttpStatus.OK);
-        }catch (IllegalArgumentException e) {
+        }catch (ExceptionTicketBadRequest e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors.toString(), HttpStatus.BAD_REQUEST);
-        }catch (TicketExceptions.TicketNotFoundException e){
+        }catch (ExceptionTicketNotFound e){
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors.toString(), HttpStatus.NOT_FOUND);

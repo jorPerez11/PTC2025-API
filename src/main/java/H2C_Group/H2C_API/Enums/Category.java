@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import java.util.Arrays;
 import java.util.Optional;
 
-public enum Category {
+public enum     Category {
     SOPORTE_TECNICO(1L, "Soporte Técnico"),
     CONSULTAS(2L, "Consultas"),
     GESTION_DE_USUARIOS(3L, "Gestión de Usuarios"),

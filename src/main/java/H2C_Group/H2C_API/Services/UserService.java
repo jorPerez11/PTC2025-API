@@ -5,7 +5,7 @@ import H2C_Group.H2C_API.Entities.CompanyEntity;
 import H2C_Group.H2C_API.Entities.UserEntity;
 import H2C_Group.H2C_API.Enums.Category;
 import H2C_Group.H2C_API.Enums.UserRole;
-import H2C_Group.H2C_API.Exceptions.UserExceptions;
+import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
 import H2C_Group.H2C_API.Models.DTO.CategoryDTO;
 import H2C_Group.H2C_API.Models.DTO.UserDTO;
 import H2C_Group.H2C_API.Models.DTO.RolDTO;
@@ -14,6 +14,8 @@ import H2C_Group.H2C_API.Repositories.UserRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -101,9 +103,9 @@ public class UserService implements UserDetailsService {
     }
 
 
-    public List<UserDTO> findAll() {
-        List<UserEntity> usuarios = userRepository.findAll();
-        return usuarios.stream().map(this::convertToUserDTO).collect(Collectors.toList());
+    public Page<UserDTO> findAll(Pageable pageable) {
+        Page<UserEntity> usuarios = userRepository.findAll(pageable);
+        return usuarios.map(this::convertToUserDTO);
     }
 
 
@@ -275,7 +277,7 @@ public class UserService implements UserDetailsService {
         boolean exists = userRepository.existsById(id);
 
         if (!exists) {
-            throw new UserExceptions.UserNotFoundException("Usuario con ID " + id + " no encontrado.");
+            throw new ExceptionUserNotFound("Usuario con ID " + id + " no encontrado.");
         }
 
         userRepository.deleteById(id);
@@ -306,10 +308,6 @@ public class UserService implements UserDetailsService {
         dto.setPhone(usuario.getPhone());
         dto.setIsActive(usuario.getIsActive());
         return dto;
-    }
-
-    public List<UserDTO> getAllUsers() {
-        return findAll();
     }
 
     public boolean checkPassword(String rawPassword, String hashedPassword) {

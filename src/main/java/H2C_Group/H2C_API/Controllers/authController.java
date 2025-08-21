@@ -72,7 +72,7 @@ public class authController {
         }
 
         // 5.. Retorna el token en la respuesta
-        LoginResponse response = new LoginResponse(jwt, userEntity.getUsername(), userEntity.getRolId(), passwordExpired);
+        LoginResponse response = new LoginResponse(jwt, userEntity.getUsername(), userEntity.getRolId(), passwordExpired, userEntity.getUserId());
         return ResponseEntity.ok(response);
     }
 
@@ -82,12 +82,14 @@ public class authController {
         private String username;
         private Long rolId;
         private boolean passwordExpired;
+        private Long userId;
 
-        public LoginResponse(String token, String username, Long rolId, boolean passwordExpired){
+        public LoginResponse(String token, String username, Long rolId, boolean passwordExpired, Long userId){
             this.token = token;
             this.username = username;
             this.rolId = rolId;
             this.passwordExpired = passwordExpired;
+            this.userId = userId;
         }
         public String getToken(){return token;}
         public void setToken(String token){ this.token = token;}
@@ -97,6 +99,8 @@ public class authController {
         public void setRolId(Long rolId){ this.rolId = rolId;}
         public boolean isPasswordExpired(){return passwordExpired;}
         public void setPasswordExpired(boolean passwordExpired){ this.passwordExpired = passwordExpired;}
+        public Long getUserId(){return userId;}
+        public void setUserId(Long userId){this.userId = userId;}
     }
 
 

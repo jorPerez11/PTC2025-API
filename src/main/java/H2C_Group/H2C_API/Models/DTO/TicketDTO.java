@@ -30,6 +30,7 @@ public class TicketDTO {
     //Estado del ticket. Se asigna automaticamente (En espera, En progreso) a excepcion del estado "Completado"
     private TicketStatusDTO status;
 
+
     //CLIENTE
     @NotNull(message = "El id del usuario es obligatorio.")
     private Long userId;
@@ -43,7 +44,7 @@ public class TicketDTO {
     private String description;
 
     //TECNICO
-    private Long assignedTech;
+    private UserDTO assignedTech;
 
     private LocalDateTime creationDate;
 

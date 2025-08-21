@@ -5,14 +5,15 @@ import H2C_Group.H2C_API.Entities.SolutionEntity;
 import H2C_Group.H2C_API.Entities.TicketEntity;
 import H2C_Group.H2C_API.Entities.UserEntity;
 import H2C_Group.H2C_API.Enums.Category;
-import H2C_Group.H2C_API.Exceptions.SolutionExceptions;
-import H2C_Group.H2C_API.Exceptions.TicketExceptions;
+import H2C_Group.H2C_API.Exceptions.ExceptionSolutionNotFound;
 import H2C_Group.H2C_API.Models.DTO.CategoryDTO;
 import H2C_Group.H2C_API.Models.DTO.SolutionDTO;
 import H2C_Group.H2C_API.Models.DTO.TicketDTO;
 import H2C_Group.H2C_API.Repositories.SolutionRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -27,9 +28,9 @@ public class SolutionService {
     private SolutionRepository solutionRepository;
 
 
-    public List<SolutionDTO> getAllSolutions() {
-        List<SolutionEntity> tickets = solutionRepository.findAll();
-        return tickets.stream().map(this::convertToSolutionDTO).collect(Collectors.toList());
+    public Page<SolutionDTO> getAllSolutions(Pageable pageable) {
+        Page<SolutionEntity> solutions = solutionRepository.findAll(pageable);
+        return solutions.map(this::convertToSolutionDTO);
     }
 
     public SolutionDTO createSolution(SolutionDTO solutionDTO) {
@@ -112,7 +113,7 @@ public class SolutionService {
         boolean exists = solutionRepository.existsById(id);
 
         if (!exists) {
-            throw new SolutionExceptions.SolutionNotFoundException("Solucion con ID " + id + " no encontrado.");
+            throw new ExceptionSolutionNotFound("Solucion con ID " + id + " no encontrado.");
         }
 
         solutionRepository.deleteById(id);

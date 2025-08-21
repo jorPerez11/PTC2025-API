@@ -49,6 +49,7 @@ public class CompanyService {
     }
 
 
+
     //Conversion CompanyEntity a CompanyDTO
     private CompanyDTO convertToCompanyDTO(CompanyEntity company) {
         CompanyDTO dto = new CompanyDTO();
