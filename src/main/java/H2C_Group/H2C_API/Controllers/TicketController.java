@@ -32,6 +32,12 @@ public class TicketController {
         return new ResponseEntity<>(ticket, HttpStatus.OK);
     }
 
+    @GetMapping("/GetRecentTicketsByUser/{userId}")
+    public ResponseEntity<List<TicketDTO>> getTicketsByUserId(@PathVariable Long userId){
+        List<TicketDTO> tickets = acceso.geTicketByUserId(userId);
+        return new ResponseEntity<>(tickets, HttpStatus.OK);
+    }
+
     @PostMapping("/PostTicket")
     public ResponseEntity<?> postTicket(@Valid @RequestBody TicketDTO ticketDTO) {
         try {

@@ -8,12 +8,14 @@ public class JwtResponse implements Serializable {
     private final String username;
     private final String rolId;
     private final boolean passwordExpired;
+    private Long userId;
 
-    public JwtResponse(String token, String username, String rolId, boolean passwordExpired) {
+    public JwtResponse(String token, String username, String rolId, boolean passwordExpired, Long userId) {
         this.token = token;
         this.username = username;
         this.rolId = rolId;
         this.passwordExpired = passwordExpired;
+        this.userId = userId;
     }
 
     public boolean isPasswordExpired() {
@@ -30,5 +32,13 @@ public class JwtResponse implements Serializable {
 
     public String getToken() {
         return token;
+    }
+
+    public Long getUserId(){
+        return userId;
+    }
+
+    public void setUserId(){
+        this.userId = userId;
     }
 }
