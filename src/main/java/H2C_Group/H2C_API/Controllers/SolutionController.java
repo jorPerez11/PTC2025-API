@@ -98,4 +98,14 @@ public class SolutionController {
             return new ResponseEntity<>(errors.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    //Búsqueda
+    @GetMapping("/searchSolution")
+    public ResponseEntity<?> findSolutions(@RequestParam String title) {
+        List<SolutionDTO> results = acceso.findByTitle(title);
+        if (results.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Ninguna solución coincide con la búsqueda");
+        }
+        return ResponseEntity.ok(results);
+    }
 }

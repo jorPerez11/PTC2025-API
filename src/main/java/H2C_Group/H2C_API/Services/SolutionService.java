@@ -141,4 +141,10 @@ public class SolutionService {
 
     }
 
+    public List<SolutionDTO> findByTitle (String value) {
+        List<SolutionEntity> entities = solutionRepository.searchBySolutionTitleOrKeyWords(value);
+        return entities.stream()
+                .map(this::convertToSolutionDTO)
+                .collect(Collectors.toList());
+    }
 }
