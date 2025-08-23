@@ -12,6 +12,7 @@ import H2C_Group.H2C_API.Models.DTO.RolDTO;
 import H2C_Group.H2C_API.Repositories.CompanyRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
 import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -67,7 +68,7 @@ public class UserService implements UserDetailsService {
 
     //Metodo para generar una contraseña segura y aleatoria
     private String generatedRandomPassword(){
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;':,./<>?";
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?";
         SecureRandom random = new SecureRandom();
         StringBuilder sb = new StringBuilder(12); //Longitud de 12 caracteres
 
@@ -77,14 +78,17 @@ public class UserService implements UserDetailsService {
         return sb.toString();
     }
 
+    @Transactional
     public UserDTO changePassword(String username, String currentPassword, String newPassword){
         //1.Encuentra el usuario por su nombre de usuario
         UserEntity userEntity = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
-        //2.Verifica si la contraseña actual es correcta
-        if (!passwordEncoder.matches(currentPassword, userEntity.getPasswordHash())){
-            throw new IllegalArgumentException("La contraseña actual es incorrecta");
+        //2.Verifica si la contraseña actual (si no es temporal)
+        if (!userEntity.isPasswordExpired()){
+            if (!passwordEncoder.matches(currentPassword, userEntity.getPasswordHash())){
+                throw new IllegalArgumentException("La contraseña actual es incorrecta");
+            }
         }
 
         //3.Cifra la nueva contraseña
@@ -92,11 +96,7 @@ public class UserService implements UserDetailsService {
 
         //4.Actualiza la contraseña en la entidad del usuario
         userEntity.setPasswordHash(newHashedPassword);
-
-        //5.Si la contraseña era temporal, marca la contraseña como no expirada (cambia de true a false)
-        if (userEntity.isPasswordExpired()){
-            userEntity.setPasswordExpired(false);
-        }
+        userEntity.setPasswordExpired(false);
 
         //6.Guarda los cambios en la base de datos
         userRepository.save(userEntity);
@@ -181,7 +181,7 @@ public class UserService implements UserDetailsService {
 
         //Envia la contraseña temporal por correo electronico
         String subject = "Credenciales de Acceso a Help Desk H2C";
-        String body = "Hola " + dto.getName() + " tu cuenta ha sido creada exitosamente. Tu nomre de usuario es: " + dto.getUsername() + " , tu contraseña temporal es: " + randomPassword + " Por favor no compartas con nadie esta información, Saludos del equipo de H2C";
+        String body = "Hola " + dto.getName() + " tu cuenta ha sido creada exitosamente. Tu nombre de usuario es: " + dto.getUsername() + " , tu contraseña temporal es: " + randomPassword + " Por favor no compartas con nadie esta información, Saludos del equipo de H2C";
         emailService.sendEmail(dto.getEmail(), subject, body);
 
         return convertToUserDTO(savedUser);

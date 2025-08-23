@@ -15,6 +15,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.Serializable;
+
 @RestController
 @CrossOrigin(origins = "*")
 @RequestMapping("/api/users")
@@ -51,34 +53,54 @@ public class authController {
         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authenticationRequest.getUsername(), authenticationRequest.getPassword()));
 
         // 2. Si la autenticación fue exitosa, carga los detalles del usuario
-        final UserDetails userDetails = userDetailsService.loadUserByUsername(authenticationRequest.getUsername());
+        UserEntity userEntity = userRepository.findByUsername(authenticationRequest.getUsername())
+                .orElseThrow(() -> new Exception ("Usuario no encontrado después de la autenticación"));
 
+        // 3. Obtenemos el estado de la contraseña expirada del usuario
+        boolean passwordExpired = userEntity.isPasswordExpired();
+
+        //4. genera el token de larga o corta duracion
         String jwt;
 
-        //3 genera el token de larga o corta duracion
-        UserEntity userEntity = userRepository.findByUsername(authenticationRequest.getUsername())
-                .orElseThrow(() -> new Exception("Usuario no encontrado despuúes de la autenticación"));
         //Si la contraseña no esta expirada genera el token de larga duracion
-        if (!userEntity.isPasswordExpired()){
-            jwt = jwtUtil.generateToken(userDetails, JwUtil.JWT_TOKEN_VALIDITY_LONG);
+        if (passwordExpired){
+            //Si la contraseña es de corta duracion genera un token de corta duracion
+            jwt = jwtUtil.generateToken(userEntity, JwUtil.JWT_TOKEN_VALIDITY_SHORT);
         } else {
-            //Si la contraseña esta expirada genera el token de corta duracion
-            jwt = jwtUtil.generateToken(userDetails);
+            //Si la contraseña es de larga duracion genera un token de larga duracion
+            jwt = jwtUtil.generateToken(userEntity, JwUtil.JWT_TOKEN_VALIDITY_LONG);
         }
 
-        // 4. Retorna el token en la respuesta
-        return ResponseEntity.ok(new AuthenticationResponse(jwt));
+        // 5.. Retorna el token en la respuesta
+        LoginResponse response = new LoginResponse(jwt, userEntity.getUsername(), userEntity.getRolId(), passwordExpired, userEntity.getUserId());
+        return ResponseEntity.ok(response);
     }
 
     // DTO para la respuesta del login
-    static class AuthenticationResponse {
-        private final String token;
-        public AuthenticationResponse(String token) {
+    static class LoginResponse implements Serializable {
+        private String token;
+        private String username;
+        private Long rolId;
+        private boolean passwordExpired;
+        private Long userId;
+
+        public LoginResponse(String token, String username, Long rolId, boolean passwordExpired, Long userId){
             this.token = token;
+            this.username = username;
+            this.rolId = rolId;
+            this.passwordExpired = passwordExpired;
+            this.userId = userId;
         }
-        public String getToken() {
-            return token;
-        }
+        public String getToken(){return token;}
+        public void setToken(String token){ this.token = token;}
+        public String getUsername(){return username;}
+        public void setUsername(String username){ this.username = username;}
+        public Long getRolId(){return rolId;}
+        public void setRolId(Long rolId){ this.rolId = rolId;}
+        public boolean isPasswordExpired(){return passwordExpired;}
+        public void setPasswordExpired(boolean passwordExpired){ this.passwordExpired = passwordExpired;}
+        public Long getUserId(){return userId;}
+        public void setUserId(Long userId){this.userId = userId;}
     }
 
 

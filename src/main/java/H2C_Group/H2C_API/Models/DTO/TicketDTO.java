@@ -44,7 +44,7 @@ public class TicketDTO {
     private String description;
 
     //TECNICO
-    private Long assignedTech;
+    private UserDTO assignedTech;
 
     private LocalDateTime creationDate;
 
