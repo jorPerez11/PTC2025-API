@@ -19,13 +19,13 @@ public class ResponseTemplateEntity {
     @SequenceGenerator(name = "solution_seq_generator", sequenceName = "SEQ_RESPONSETEMPLATESID", allocationSize = 1)
     @Column(name="TEMPLATEID")
     private Long templateId;
-    @Column(name="CATEGORYID")
-    private Long categoryId;
     @Column(name="TITLE")
     private String title;
     @Column(name="TEMPLATECONTENT")
     private String templateContent;
     @Column(name="KEYWORDS")
     private String keywords;
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "CATEGORYID")
+    private CategoryEntity category;
 }

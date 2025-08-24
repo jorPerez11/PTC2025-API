@@ -1,14 +1,18 @@
 package H2C_Group.H2C_API.Services;
 
 
+import H2C_Group.H2C_API.Entities.CategoryEntity;
 import H2C_Group.H2C_API.Entities.CompanyEntity;
 import H2C_Group.H2C_API.Entities.UserEntity;
 import H2C_Group.H2C_API.Enums.Category;
 import H2C_Group.H2C_API.Enums.UserRole;
+import H2C_Group.H2C_API.Exceptions.ExceptionCategoryBadRequest;
+import H2C_Group.H2C_API.Exceptions.ExceptionCategoryNotFound;
 import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
 import H2C_Group.H2C_API.Models.DTO.CategoryDTO;
 import H2C_Group.H2C_API.Models.DTO.UserDTO;
 import H2C_Group.H2C_API.Models.DTO.RolDTO;
+import H2C_Group.H2C_API.Repositories.CategoryRepository;
 import H2C_Group.H2C_API.Repositories.CompanyRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -38,9 +42,11 @@ public class UserService implements UserDetailsService {
     @Autowired
     private CompanyRepository companyRepository;
 
-
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private CategoryRepository categoryRepository;
 
     @Autowired
     private EmailService emailService;
@@ -135,15 +141,20 @@ public class UserService implements UserDetailsService {
 
         UserEntity userEntity = new UserEntity();
 
-        //Asignacion de rol a usuario. Por defecto, al crearlo sera "Cliente" (Se debera actualizar si el usuario es un tecnico)
-        long userCount = userRepository.count();
-
-        if (userCount == 0) {
-            // Si no hay usuarios, este es el primer registro, asigna el rol de Administrador
-            userEntity.setRolId(UserRole.ADMINISTRADOR.getId());
+        // Usar el rol del DTO si está presente
+        if (dto.getRol() != null && dto.getRol().getId() != null) {
+            // Verificar que el rol sea válido
+            UserRole role = UserRole.fromId(dto.getRol().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Rol con ID " + dto.getRol().getId() + " no válido"));
+            userEntity.setRolId(role.getId());
         } else {
-            // Si ya hay usuarios, asigna el rol de Cliente
-            userEntity.setRolId(UserRole.CLIENTE.getId());
+            // Lógica original para asignar rol por defecto
+            long userCount = userRepository.count();
+            if (userCount == 0) {
+                userEntity.setRolId(UserRole.ADMINISTRADOR.getId());
+            } else {
+                userEntity.setRolId(UserRole.CLIENTE.getId());
+            }
         }
 
         if (!isValidDomain(dto.getEmail())){
@@ -157,11 +168,12 @@ public class UserService implements UserDetailsService {
 
         userEntity.setCompany(companyToAssign);
 
-
         if (dto.getCategory() != null) {
-            userEntity.setCategoryId(dto.getCategory().getId());
+            CategoryEntity categoryEntity = categoryRepository.findById(dto.getCategory().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("La categoria de id " + dto.getCategory().getId() + " no existe."));
+            userEntity.setCategory(categoryEntity);
         } else {
-            userEntity.setCategoryId(null); // Establece explicitamente a null si no se proporciona
+            userEntity.setCategory(null);
         }
 
         userEntity.setFullName(dto.getName());
@@ -201,8 +213,7 @@ public class UserService implements UserDetailsService {
 
         UserEntity existingUser = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("El usuario con id" + id + " no existe"));
 
-        //Primera operacion: Actualizar categoria (NIVEL DE ACCESO: 3 // [ADMIN] -> [TECNICO] )
-        if (dto.getCategory() != null) { //Verifica si existe un valor (id) del atributo "category" enviado por el usuario (ADMIN)
+        if (dto.getCategory() != null) {
             if (dto.getCategory().getId() == null) {//Verifica si el valor (id) enviado por el usuario (ADMIN) existe en el registro de CategoryDTO
                 throw new IllegalArgumentException("Para actualizar la categoría, debe proporcionar un 'id' dentro de la enumeracion en 'Category'");
             }
@@ -212,19 +223,18 @@ public class UserService implements UserDetailsService {
 
             //Verifica si el usuario es un Tecnico
             if (existingUser.getRolId().equals(UserRole.TECNICO.getId())) {
-                existingUser.setCategoryId(category.getId());
-                Optional<Category> optionalCategory = Category.fromId(dto.getCategory().getId()); //Se asignara la categoria segun el id proporcionado por el usuario (ADMIN)
-                if (optionalCategory.isEmpty()) { //Si no existe (el registro en la lista esta vacio), se avisara que esa categoria asociada con su id no existe
+                CategoryEntity categoryEntity = categoryRepository.findById(dto.getCategory().getId())
+                        .orElseThrow(() -> new IllegalArgumentException("La categoria de id " + dto.getCategory().getId() + "  no existe."));
+                existingUser.setCategory(categoryEntity);
+                Optional<Category> optionalCategory = Category.fromId(dto.getCategory().getId());
+                if (optionalCategory.isEmpty()) {
                     throw new IllegalArgumentException("La categoría con ID " + dto.getCategory().getId() + " no existe.");
                 }
-                category = optionalCategory.get();
             }else{
                 throw new IllegalArgumentException("Solo los técnicos pueden tener una categoría asignada. El usuario " + existingUser.getFullName() + " no es técnico.");
             }
-
-        }else {
-            existingUser.setCategoryId(null);
-
+        } else {
+            existingUser.setCategory(null);
         }
 
 
@@ -291,9 +301,9 @@ public class UserService implements UserDetailsService {
         UserRole userRoleEnum = UserRole.fromId(usuario.getRolId()).orElseThrow(() -> new IllegalArgumentException("ID de Rol de usuario inválido en la entidad: " + usuario.getRolId()));
         dto.setRol(new RolDTO(userRoleEnum));
 
-        if (usuario.getCategoryId() != null) {
-            Category categoryEnum = Category.fromId(usuario.getCategoryId()).orElseThrow(() -> new IllegalArgumentException("ID de Categoría inválido en la entidad para el usuario: " + usuario.getUserId() + " con categoryId: " + usuario.getCategoryId()));
-            // Creacion de CategoryDTO para la respuesta, incluyendo ambos id y displayName
+        // Solución para el metodo convertToUserDTO
+        if (usuario.getCategory() != null) {
+            Category categoryEnum = Category.fromId(usuario.getCategory().getCategoryId()).orElseThrow(() -> new IllegalArgumentException("ID de Categoría inválido en la entidad para el usuario: " + usuario.getUserId() + " con categoryId: " + usuario.getCategory().getCategoryId()));
             dto.setCategory(new CategoryDTO(categoryEnum.getId(), categoryEnum.getDisplayName()));
         } else {
             dto.setCategory(null);
@@ -319,5 +329,24 @@ public class UserService implements UserDetailsService {
         return userRepository.findByUsername(username).map(UserEntity::getUserId).orElseThrow(() -> new IllegalArgumentException("El usuario " + username + " no existe"));
     }
 
+    // Encontrar usuario por su rol
+    public List<UserDTO> findByRole(Long roleId) {
+        List<UserEntity> users = userRepository.findByRolId(roleId);
+
+        return users.stream().map(user -> {
+            UserDTO dto = new UserDTO();
+            dto.setId(user.getUserId());
+            dto.setName(user.getFullName());
+            dto.setEmail(user.getEmail());
+            dto.setPhone(user.getPhone());
+            dto.setProfilePictureUrl(user.getProfilePictureUrl());
+
+            UserRole role = UserRole.fromId(user.getRolId())
+                    .orElseThrow(() -> new IllegalArgumentException("Rol inválido"));
+            dto.setRol(new RolDTO(role));
+
+            return dto;
+        }).collect(Collectors.toList());
+    }
 }
 

@@ -23,8 +23,6 @@ public class SolutionEntity {
     @SequenceGenerator(name = "solution_seq_generator", sequenceName = "SEQ_SOLUTIONID", allocationSize = 1)
     @Column(name="SOLUTIONID")
     private Long solutionId;
-    @Column(name="CATEGORYID")
-    private Long categoryId;
     @Column(name="SOLUTIONTITLE")
     private String solutionTitle;
     @Column(name="DESCRIPTIONS")
@@ -39,6 +37,7 @@ public class SolutionEntity {
     @CreationTimestamp
     @Column(name="UPDATEDATE")
     private LocalDateTime updateDate;
-
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "CATEGORYID")
+    private CategoryEntity category;
 }

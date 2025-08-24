@@ -1,11 +1,13 @@
 package H2C_Group.H2C_API.Services;
 
 
+import H2C_Group.H2C_API.Entities.CategoryEntity;
 import H2C_Group.H2C_API.Entities.ResponseTemplateEntity;
 import H2C_Group.H2C_API.Enums.Category;
 import H2C_Group.H2C_API.Exceptions.ExceptionResponseTemplateNotFound;
 import H2C_Group.H2C_API.Models.DTO.CategoryDTO;
 import H2C_Group.H2C_API.Models.DTO.ResponseTemplateDTO;
+import H2C_Group.H2C_API.Repositories.CategoryRepository;
 import H2C_Group.H2C_API.Repositories.ResponseTemplateRepository;
 import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +22,9 @@ import java.util.stream.Collectors;
 public class ResponseTemplateService {
     @Autowired
     private ResponseTemplateRepository responseTemplateRepository;
+
+    @Autowired
+    private CategoryRepository categoryRepository;
 
     public Page<ResponseTemplateDTO> findAllResponseTemplates(Pageable pageable) {
         Page<ResponseTemplateEntity> responseTemplates = responseTemplateRepository.findAll(pageable);
@@ -47,8 +52,11 @@ public class ResponseTemplateService {
         responseTemplateEntity.setTemplateContent(responseTemplateDTO.getTemplateContent());
         responseTemplateEntity.setTemplateId(responseTemplateDTO.getTemplateId());
 
-        Category category = Category.fromId(responseTemplateDTO.getCategory().getId()).orElseThrow(() -> new IllegalArgumentException("La categoria de id " + responseTemplateDTO.getCategory().getId() + "  no existe."));
-        responseTemplateEntity.setCategoryId(responseTemplateDTO.getCategory().getId());
+        CategoryEntity categoryEntity = categoryRepository.findById(responseTemplateDTO.getCategory().getId())
+                .orElseThrow(() -> new IllegalArgumentException("La categoria de id " + responseTemplateDTO.getCategory().getId() + " no existe."));
+
+        // Ahora usa el metodo setCategory para pasar el objeto
+        responseTemplateEntity.setCategory(categoryEntity);
 
         responseTemplateRepository.save(responseTemplateEntity);
         return convertToResponseTemplateDTO(responseTemplateEntity);
@@ -58,8 +66,6 @@ public class ResponseTemplateService {
     public ResponseTemplateDTO updateResponseTemplate(Long id, ResponseTemplateDTO responseTemplateDTO) {
 
         ResponseTemplateEntity existingTemplate = responseTemplateRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("El id de plantilla " + id + " no existe."));
-
-
 
         if (responseTemplateDTO.getCategory() != null) {
             CategoryDTO categoryFromDTO = responseTemplateDTO.getCategory();
@@ -72,8 +78,10 @@ public class ResponseTemplateService {
             if (!categoryEnum.getDisplayName().equalsIgnoreCase(categoryFromDTO.getDisplayName())) {
                 throw new IllegalArgumentException("El 'displayName' de la categoría ('" + categoryFromDTO.getDisplayName() + "') no coincide con el 'id' proporcionado (" + categoryFromDTO.getId() + "). Se esperaba: '" + categoryEnum.getDisplayName() + "'");
             }
+            CategoryEntity categoryEntity = categoryRepository.findById(categoryFromDTO.getId())
+                    .orElseThrow(() -> new IllegalArgumentException("El ID de categoría proporcionado no existe en la BD: " + categoryFromDTO.getId()));
 
-            existingTemplate.setCategoryId(categoryEnum.getId());
+            existingTemplate.setCategory(categoryEntity);
         }
 
         if (responseTemplateDTO.getTitle() == null || responseTemplateDTO.getTitle().trim().isBlank()) {
@@ -112,7 +120,7 @@ public class ResponseTemplateService {
 
         responseTemplateDTO.setTemplateId(responseTemplateEntity.getTemplateId());
 
-        Category categoryEnum = Category.fromIdOptional(responseTemplateEntity.getCategoryId()).orElseThrow(() -> new IllegalArgumentException("La categoria de id " + responseTemplateEntity.getCategoryId() + " no existe."));
+        Category categoryEnum = Category.fromIdOptional(responseTemplateEntity.getCategory().getCategoryId()).orElseThrow(() -> new IllegalArgumentException("La categoria de id " + responseTemplateEntity.getCategory().getCategoryId() + " no existe."));
         responseTemplateDTO.setCategory(new CategoryDTO(categoryEnum.getId(), categoryEnum.getDisplayName()));
 
         responseTemplateDTO.setTitle(responseTemplateEntity.getTitle());
@@ -124,5 +132,4 @@ public class ResponseTemplateService {
         return responseTemplateDTO;
 
     }
-
 }

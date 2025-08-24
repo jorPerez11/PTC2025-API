@@ -1,6 +1,7 @@
 package H2C_Group.H2C_API.Services;
 
 
+import H2C_Group.H2C_API.Entities.CategoryEntity;
 import H2C_Group.H2C_API.Entities.SolutionEntity;
 import H2C_Group.H2C_API.Entities.TicketEntity;
 import H2C_Group.H2C_API.Entities.UserEntity;
@@ -9,6 +10,7 @@ import H2C_Group.H2C_API.Exceptions.ExceptionSolutionNotFound;
 import H2C_Group.H2C_API.Models.DTO.CategoryDTO;
 import H2C_Group.H2C_API.Models.DTO.SolutionDTO;
 import H2C_Group.H2C_API.Models.DTO.TicketDTO;
+import H2C_Group.H2C_API.Repositories.CategoryRepository;
 import H2C_Group.H2C_API.Repositories.SolutionRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +29,9 @@ public class SolutionService {
     @Autowired
     private SolutionRepository solutionRepository;
 
+    @Autowired
+    private CategoryRepository categoryRepository;
+
 
     public Page<SolutionDTO> getAllSolutions(Pageable pageable) {
         Page<SolutionEntity> solutions = solutionRepository.findAll(pageable);
@@ -42,8 +47,12 @@ public class SolutionService {
 
         solutionEntity.setUser(existingUser);
 
-        Category.fromIdOptional(solutionDTO.getCategory().getId()).orElseThrow(() -> new IllegalArgumentException("ID de categoría inválido: " + solutionDTO.getCategory().getId()));
-        solutionEntity.setCategoryId(solutionDTO.getCategory().getId());
+        // Obtiene la entidad de categoría completa del repositorio
+        CategoryEntity categoryEntity = categoryRepository.findById(solutionDTO.getCategory().getId())
+                .orElseThrow(() -> new IllegalArgumentException("La categoria con id " + solutionDTO.getCategory().getId() + " no existe."));
+
+// Asigna el objeto de categoría completo a la entidad de solución
+        solutionEntity.setCategory(categoryEntity);
 
         solutionEntity.setSolutionId(solutionDTO.getSolutionId());
         solutionEntity.setSolutionTitle(solutionDTO.getSolutionTitle());
@@ -80,7 +89,12 @@ public class SolutionService {
                 throw new IllegalArgumentException("El 'displayName' de la categoría ('" + categoryFromDTO.getDisplayName() + "') no coincide con el 'id' proporcionado (" + categoryFromDTO.getId() + "). Se esperaba: '" + categoryEnum.getDisplayName() + "'");
             }
 
-            existingSolution.setCategoryId(categoryEnum.getId());
+            // Obtiene el objeto CategoryEntity desde el repositorio.
+            CategoryEntity categoryEntity = categoryRepository.findById(categoryFromDTO.getId())
+                    .orElseThrow(() -> new IllegalArgumentException("El ID de categoría proporcionado no existe en la BD: " + categoryFromDTO.getId()));
+
+            // Asigna el objeto de categoría a la entidad de solución.
+            existingSolution.setCategory(categoryEntity);
         }
 
         if (solutionDTO.getSolutionTitle() != null) {
@@ -129,8 +143,8 @@ public class SolutionService {
             solutionDTO.setUserId(solutionEntity.getUser().getUserId());
         }
 
-        Category categoryEnum = Category.fromIdOptional(solutionEntity.getCategoryId()).orElseThrow(() -> new IllegalArgumentException("La categoria de id " + solutionEntity.getCategoryId() + " no existe."));
-        solutionDTO.setCategory(new CategoryDTO(categoryEnum.getId(), categoryEnum.getDisplayName()));
+        // Accede al objeto category y luego a su ID.
+        Category categoryEnum = Category.fromIdOptional(solutionEntity.getCategory().getCategoryId()).orElseThrow(() -> new IllegalArgumentException("La categoria de id " + solutionEntity.getCategory().getCategoryId() + " no existe."));
 
         solutionDTO.setSolutionId(solutionEntity.getSolutionId());
         solutionDTO.setSolutionTitle(solutionEntity.getSolutionTitle());

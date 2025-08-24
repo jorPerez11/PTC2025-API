@@ -31,8 +31,8 @@ public class UserDTO {
         @Email(message = "Debe ser un correo válido.")
         private String email;
 
-        @Size(max = 9, message = "El número de teléfono no puede exceder los 9 caracteres.")
-        @Pattern(regexp = "^[0-9]{9}$", message = "El número de teléfono debe contener exactamente 9 dígitos.")
+        @Size(max = 20, message = "El número de teléfono no puede exceder los 20 caracteres.")
+        @Pattern(regexp = "^\\+?[0-9\\s\\-\\(\\)]{8,20}$", message = "El número de teléfono debe ser válido.")
         private String phone;
 
 
