@@ -35,6 +35,15 @@ public class UserController {
         return new ResponseEntity<>(users, HttpStatus.OK);
     }
 
+    @GetMapping("/GetTech")
+    public ResponseEntity<List<UserDTO>> getTechs(){
+        List<UserDTO> tecnicos = acceso.getTech();
+        if (tecnicos.isEmpty()){
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(tecnicos);
+    }
+
     @PostMapping("/PostUser")
     public ResponseEntity<?> createUser(@RequestBody @Valid UserDTO user) {
         System.out.println("DEBUG: Entrando al metodo createUser en el controlador.");

@@ -86,6 +86,9 @@ public class TicketService {
         //Asignacion del procentaje
         ticketEntity.setPercentage(ticketDTO.getPercentage());
 
+        //Asignacion de url de imagen del ticket
+        ticketEntity.setImageUrl(ticketDTO.getImageUrl());
+
         //Almacenamiento de ticket creado en la DB
         TicketEntity savedTicket = ticketRepository.save(ticketEntity);
 
@@ -210,6 +213,10 @@ public class TicketService {
             existingTicket.setPercentage(ticketDTO.getPercentage());
         }
 
+        if(ticketDTO.getImageUrl() !=null){
+            existingTicket.setImageUrl(ticketDTO.getImageUrl());
+        }
+
         TicketEntity savedTicket = ticketRepository.save(existingTicket);
         return convertToTicketDTO(savedTicket);
 
@@ -256,6 +263,7 @@ public class TicketService {
         dto.setTitle(ticket.getTitle());
         dto.setDescription(ticket.getDescription());
 
+
         if (ticket.getAssignedTechUser() != null) {
             UserDTO techDTO = new UserDTO();
             techDTO.setId(ticket.getAssignedTechUser().getUserId());
@@ -270,6 +278,9 @@ public class TicketService {
         dto.setCloseDate(ticket.getCloseDate());
 
         dto.setPercentage(ticket.getPercentage());
+
+        dto.setImageUrl(ticket.getImageUrl());
+
         return dto;
 
     }
