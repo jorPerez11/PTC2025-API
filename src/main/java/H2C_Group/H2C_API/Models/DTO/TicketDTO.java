@@ -14,6 +14,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
 @ToString @EqualsAndHashCode
@@ -46,7 +47,7 @@ public class TicketDTO {
     //TECNICO
     private UserDTO assignedTech;
 
-    private LocalDateTime creationDate;
+    private Timestamp creationDate;
 
     //CAMPO closeDate
     private LocalDateTime closeDate;
@@ -54,4 +55,5 @@ public class TicketDTO {
     @Max(value = 100, message = "El valor del porcentaje no puede ser mayor a 100")
     private Integer percentage;
 
+    private String imageUrl;
 }

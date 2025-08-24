@@ -8,6 +8,7 @@ import lombok.Setter;
 import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
 @Entity
@@ -40,10 +41,12 @@ public class TicketEntity {
     @JoinColumn(name = "ASSIGNEDTECH", nullable = true) // El tecnico asignado es nulo al crear el ticket.
     private UserEntity assignedTechUser;
     @CreationTimestamp
-    @Column(name="CREATIONDATE")
-    private LocalDateTime creationDate;
+    @Column(name="CREATIONDATE" , nullable = false, updatable = false)
+    private Timestamp creationDate;
     @Column(name="CLOSEDATE")
     private LocalDateTime closeDate;
     @Column(name="PERCENTAGE")
     private Integer percentage;
+    @Column(name = "IMAGE_URL")
+    private String imageUrl;
 }

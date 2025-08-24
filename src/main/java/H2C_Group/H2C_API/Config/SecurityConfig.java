@@ -75,6 +75,7 @@ public class SecurityConfig{
         CorsConfiguration configuration = new CorsConfiguration();
         //Ip de origen que pueden ACCEDER A LA API AGREGAR TODAS LAS IP DEL EQUIPO (JORGE, DANIELA, FERNANDO, ASTRID, HERBERT)
         configuration.setAllowedOrigins(Arrays.asList(
+                "http://127.0.0.1:5501",
                 "http://127.0.0.2:5501",
                 "http://IPJORGE:5501",
                 "http://IPASTRID:5501",
