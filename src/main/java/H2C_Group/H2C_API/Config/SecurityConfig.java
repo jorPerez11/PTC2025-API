@@ -52,16 +52,22 @@ public class SecurityConfig{
                         .requestMatchers("/api/users/change-password").authenticated()
 
                         // 4. REGLA DE CAPTURA GENERAL (Debe ser la última)
+                        // Permite acceso público a los endpoints de login y registro
+                        .requestMatchers("/api/users/login", "/api/users/register", "api/users/registerTech").permitAll()
+                        //Permite el acceso a este endpoint solo si el usuario esta autenticado
+                        .requestMatchers("/api/users/change-password").authenticated()
+                        // Cualquier otra petición debe estar autenticada
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-
-        http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+                http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
+
     @Bean
     public PasswordEncoder passwordEncoder(){
+
         return new BCryptPasswordEncoder();
     }
 
@@ -85,28 +91,26 @@ public class SecurityConfig{
         // AQUÍ ES DONDE SE APLICA TU VERDADERA SEGURIDAD DE ORIGEN
         // Esta lista es la única fuente de verdad para saber qué clientes (IPs/dominios) pueden hablar con tu API.
         configuration.setAllowedOrigins(Arrays.asList(
-                "http://127.0.0.1:5501",
-                "http://localhost",
+                "http://127.0.0.1:5501", //
+                "http://localhost:5501", //
+                "http://127.0.0.1",     //
+                "http://localhost",     //
                 "http://127.0.0.2:5501",
                 "http://IPJORGE:5501",
                 "http://IPASTRID:5501",
+                "http://179.5.94.204:5501",
+                "http://192.168.1.42:5501",
                 "http://IPDANIELA:5501",
                 "http://127.0.0.7:5501"
 
         ));
-        // Define los métodos HTTP permitidos (GET, POST, etc.).
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-
-        // Define los encabezados permitidos. El * permite todos los encabezados.
         configuration.setAllowedHeaders(Arrays.asList("*"));
-
-        // Permite que las credenciales (como cookies o tokens) se incluyan en las peticiones.
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        // Aplica esta configuración a todas las rutas de tu API.
         source.registerCorsConfiguration("/**", configuration);
-
         return source;
     }
+
 }
