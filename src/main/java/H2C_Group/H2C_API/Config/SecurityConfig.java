@@ -62,6 +62,7 @@ public class SecurityConfig{
 
                         // Permite el acceso a la Base de Conocimiento solo a usuarios con roles específicos
                         .requestMatchers("/api/GetSolutions").hasAnyAuthority("ROLE_ADMINISTRADOR", "ROLE_TECNICO", "ROLE_CLIENTE")
+                        .requestMatchers(HttpMethod.PATCH, "/api/UpdateSolution/**").hasAnyAuthority("ROLE_ADMINISTRADOR", "ROLE_TECNICO")
 
 
                         // 3. REGLAS DE AUTENTICACIÓN (authenticated)
