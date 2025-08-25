@@ -36,42 +36,22 @@ public class SecurityConfig{
                 .cors(Customizer.withDefaults()) // Le dice a Spring que use el Bean 'corsConfigurationSource' de abajo
                 .authorizeHttpRequests(auth -> auth
                         // 1. REGLAS ESPECÍFICAS DE PERMISOS (permitAll)
-
-                        // Permite las peticiones OPTIONS (para pre-vuelo de CORS)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                        // Permite el acceso al endpoint de login y registro
                         .requestMatchers("/api/users/login", "/api/users/register").permitAll()
-
-                        // Permite las reglas de "primer uso"
                         .requestMatchers("/api/firstuse/**").permitAll()
-
-                        // Permite explícitamente el acceso a la gestión inicial de compañía
-                        // Nota: '/api/companies' se deja abierto para POST/PATCH para que el administrador inicial pueda crearla.
                         .requestMatchers(HttpMethod.POST, "/api/PostCompany", "/api/companies").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/companies/**").permitAll()
-
-                        // NOTA: '/api/users/**' con PATCH es demasiado amplio. Si es solo para el cambio
-                        // de contraseña, usa la regla más específica abajo. Si es para el CRUD de usuarios,
-                        // podría dejarse así, pero recomiendo un rol específico (ej. hasAuthority("ROLE_ADMINISTRADOR")).
-                        // De momento, dejo esta abierta como estaba en tu código:
                         .requestMatchers(HttpMethod.PATCH, "/api/users/**").permitAll()
-
+                        .requestMatchers(HttpMethod.DELETE, "/api/companies/**", "/api/users/**").permitAll()
 
                         // 2. REGLAS DE AUTORIDAD ESPECÍFICAS (hasAnyAuthority)
-
-                        // Permite el acceso a la Base de Conocimiento solo a usuarios con roles específicos
                         .requestMatchers("/api/GetSolutions").hasAnyAuthority("ROLE_ADMINISTRADOR", "ROLE_TECNICO", "ROLE_CLIENTE")
                         .requestMatchers(HttpMethod.PATCH, "/api/UpdateSolution/**").hasAnyAuthority("ROLE_ADMINISTRADOR", "ROLE_TECNICO")
 
-
                         // 3. REGLAS DE AUTENTICACIÓN (authenticated)
-
-                        // Permite que cualquier usuario autenticado cambie su contraseña
                         .requestMatchers("/api/users/change-password").authenticated()
 
                         // 4. REGLA DE CAPTURA GENERAL (Debe ser la última)
-                        // Todos los demás endpoints requieren al menos estar autenticado
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

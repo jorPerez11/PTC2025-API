@@ -88,28 +88,26 @@ public class UserController {
 
     @PostMapping("/PostUser")
     public ResponseEntity<?> createUser(@RequestBody @Valid UserDTO user) {
-        System.out.println("DEBUG: Entrando al metodo createUser en el controlador.");
-        try{
+        try {
             UserDTO newUser = acceso.registerNewUser(user);
+            // Devuelve el objeto de usuario creado
             return new ResponseEntity<>(newUser, HttpStatus.CREATED);
-        }catch (ExceptionUserBadRequest e) {
-            //Validación de argumentos invalidos
+        } catch (ExceptionUserBadRequest e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
-            return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST); // Código 400
-        }catch (ExceptionUserNotFound e) {
+            return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+        } catch (ExceptionUserNotFound e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
-            return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND); // Código 404
-        }catch (Exception e) {
+            return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
             Map<String, String> errors = new HashMap<>();
-            e.printStackTrace();
             errors.put("error", "Ocurrió un error interno del servidor al crear el usuario.");
-            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR); // Código 500
+            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    @DeleteMapping("/DeleteUser/{id}")
+    @DeleteMapping("/users/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         try {
             acceso.deleteUser(id);
