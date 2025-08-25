@@ -22,6 +22,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
     Optional<UserEntity> findByPhone(String phone);
 
     List<UserEntity> findByRolId(Long rolId);
+
     /**
      * Verifica si existe al menos un usuario asociado a un ID de categoría específico.
      * @param categoryId El ID de la categoría a verificar.
@@ -34,8 +35,6 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
     Page<UserEntity> findAll(Pageable pageable);
 
     Page<UserEntity> findByRolId(Long rolId, Pageable pageable);
-
-
 
     @Query("SELECT u FROM UserEntity u " +
             // 🔑 CLAVE: Usar LEFT JOIN FETCH para cargar la categoría junto con el usuario.
@@ -57,3 +56,4 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
     );
 
 }
+

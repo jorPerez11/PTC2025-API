@@ -10,14 +10,11 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -36,22 +33,25 @@ public class SecurityConfig{
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtRequestFilter jwtRequestFilter) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(Customizer.withDefaults())
+                .cors(Customizer.withDefaults()) // Le dice a Spring que use el Bean 'corsConfigurationSource' de abajo
                 .authorizeHttpRequests(auth -> auth
-                        // Permite explícitamente el acceso a la creación de la compañía.
-                        // Permite explícitamente el acceso a la creación de la compañía.
-                        .requestMatchers(HttpMethod.POST, "/api/PostCompany/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/PostCompany").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/companies").permitAll()
+                        // 1. REGLAS ESPECÍFICAS DE PERMISOS (permitAll)
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/api/users/login", "/api/users/register").permitAll()
+                        .requestMatchers("/api/firstuse/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/PostCompany", "/api/companies").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/companies/**").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/users/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/companies/**", "/api/users/**").permitAll()
 
-                        // Permite el acceso a todos los endpoints del "primer uso"
-                        .requestMatchers("/api/firstuse/**").permitAll()
+                        // 2. REGLAS DE AUTORIDAD ESPECÍFICAS (hasAnyAuthority)
+                        .requestMatchers("/api/GetSolutions").hasAnyAuthority("ROLE_ADMINISTRADOR", "ROLE_TECNICO", "ROLE_CLIENTE")
+                        .requestMatchers(HttpMethod.PATCH, "/api/UpdateSolution/**").hasAnyAuthority("ROLE_ADMINISTRADOR", "ROLE_TECNICO")
 
-                        // Permite las peticiones OPTIONS (para pre-vuelo de CORS)
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // 3. REGLAS DE AUTENTICACIÓN (authenticated)
+                        .requestMatchers("/api/users/change-password").authenticated()
 
+                        // 4. REGLA DE CAPTURA GENERAL (Debe ser la última)
                         // Permite acceso público a los endpoints de login y registro
                         .requestMatchers("/api/users/login", "/api/users/register", "api/users/registerTech").permitAll()
                         //Permite el acceso a este endpoint solo si el usuario esta autenticado
@@ -87,17 +87,22 @@ public class SecurityConfig{
     @Bean
     public CorsConfigurationSource corsConfigurationSource(){
         CorsConfiguration configuration = new CorsConfiguration();
-        //Ip de origen que pueden ACCEDER A LA API AGREGAR TODAS LAS IP DEL EQUIPO (JORGE, DANIELA, FERNANDO, ASTRID, HERBERT)
+
+        // AQUÍ ES DONDE SE APLICA TU VERDADERA SEGURIDAD DE ORIGEN
+        // Esta lista es la única fuente de verdad para saber qué clientes (IPs/dominios) pueden hablar con tu API.
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://127.0.0.1:5501", //
                 "http://localhost:5501", //
                 "http://127.0.0.1",     //
                 "http://localhost",     //
                 "http://127.0.0.2:5501",
+                "http://IPJORGE:5501",
+                "http://IPASTRID:5501",
                 "http://179.5.94.204:5501",
                 "http://192.168.1.42:5501",
                 "http://IPDANIELA:5501",
-                "http://IPHERBERT:5501"
+                "http://127.0.0.7:5501"
+
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
@@ -109,4 +114,3 @@ public class SecurityConfig{
     }
 
 }
-

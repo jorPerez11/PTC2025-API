@@ -40,6 +40,16 @@ public class TicketController {
         return ResponseEntity.ok(tickets);
     }
 
+    @GetMapping("/GetTicketById/{id}")
+    public ResponseEntity<TicketDTO> getTicketById(@PathVariable Long id){
+        try {
+            TicketDTO ticket = acceso.getTicketById(id);
+            return new ResponseEntity<>(ticket, HttpStatus.OK);
+        } catch (ExceptionTicketNotFound e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
     @GetMapping("/GetRecentTicketsByUser/{userId}")
     public ResponseEntity<List<TicketDTO>> getTicketsByUserId(@PathVariable Long userId) {
         List<TicketDTO> tickets = acceso.geTicketByUserId(userId);
