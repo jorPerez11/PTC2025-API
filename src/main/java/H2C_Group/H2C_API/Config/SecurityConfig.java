@@ -80,7 +80,7 @@ public class SecurityConfig{
                 "http://IPJORGE:5501",
                 "http://IPASTRID:5501",
                 "http://IPDANIELA:5501",
-                "http://IPHERBERT:5501"
+                "http://127.0.0.7:5501"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
