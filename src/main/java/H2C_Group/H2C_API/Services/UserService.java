@@ -133,11 +133,15 @@ public class UserService implements UserDetailsService {
 
 
     public UserDTO registerNewUser(UserDTO dto) {
-        //Limpiar el cache antes de las validaciones esto es para que tenga que consultar la base y no guarde informacion innecesaria
+        //Limpiar el caché antes de las validaciones esto es para que tenga que consultar la base y no guarde informacion innecesaria
         entityManager.clear();
+        // Asegúrate de que el correo electrónico no sea nulo antes de guardar
+        if (dto.getEmail() == null || dto.getEmail().isEmpty()) {
+            throw new IllegalArgumentException("El correo electrónico no puede ser nulo.");
+        }
 
         //Validaciones de entrada
-        //Busca en el userRepository si existe algun registro en la DB que repita el email / usuario / telefono a registrar
+        //Busca en el userRepository si existe algún registro en la DB que repita el email / usuario / telefono a registrar
         userRepository.findByEmailIgnoreCase(dto.getEmail()).ifPresent(user -> {
             throw new IllegalArgumentException("El correo electrónico ya está registrado.");
         });
@@ -228,29 +232,31 @@ public class UserService implements UserDetailsService {
 
         // 2. Iterar sobre el Map de actualizaciones y aplicar los cambios
         updates.forEach((key, value) -> {
-            switch (key) {
-                case "Nombre": // Ahora coincide con el key "Nombre" del frontend
-                    user.setFullName(value);
-                    break;
-                case "username":
-                    user.setUsername(value);
-                    break;
-                case "Correo Electrónico": // Coincide con el key del frontend
-                    user.setEmail(value);
-                    break;
-                case "Número de tel.": // Coincide con el key del frontend
-                    user.setPhone(value);
-                    break;
-                case "password":
-                    // 1. Hash de la nueva contraseña recibida
-                    String hashedPassword = passwordEncoder.encode(value);
-                    // 2. Usar el metodo correcto para la entidad: setPasswordHash
-                    user.setPasswordHash(hashedPassword);
-                    break;
-                case "Foto": // Coincide con el key del frontend
-                    user.setProfilePictureUrl(value);
-                    break;
-                // Agrega más casos para otros campos si es necesario
+            // Asegúrate de que el valor no sea null o vacío antes de actualizar
+            if (value != null && !value.trim().isEmpty()) {
+                switch (key) {
+                    case "fullName":
+                        user.setFullName(value);
+                        break;
+                    case "username":
+                        user.setUsername(value);
+                        break;
+                    case "email":
+                        user.setEmail(value);
+                        break;
+                    case "phone":
+                        user.setPhone(value);
+                        break;
+                    case "password":
+                        // Hash de la nueva contraseña recibida
+                        String hashedPassword = passwordEncoder.encode(value);
+                        user.setPasswordHash(hashedPassword);
+                        break;
+                    case "profilePictureUrl":
+                        user.setProfilePictureUrl(value);
+                        break;
+                    // Agrega más casos para otros campos si es necesario
+                }
             }
         });
 
