@@ -8,6 +8,10 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.time.LocalDateTime;
+import java.util.Date;
 
 @ToString
 @EqualsAndHashCode
@@ -37,4 +41,5 @@ public class SolutionDTO {
     @Size(max = 50, message = "La clave no puede exceder los 50 caracteres")
     private String keyWords;
 
+    private String updateDate;
 }
