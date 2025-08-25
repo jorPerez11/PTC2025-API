@@ -4,8 +4,11 @@ import H2C_Group.H2C_API.Exceptions.ExceptionTicketNotFound;
 import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
 import H2C_Group.H2C_API.Models.DTO.TicketDTO;
 import H2C_Group.H2C_API.Services.TicketService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -37,8 +40,15 @@ public class TicketController {
         return ResponseEntity.ok(tickets);
     }
 
+    @GetMapping("/GetRecentTicketsByUser/{userId}")
+    public ResponseEntity<List<TicketDTO>> getTicketsByUserId(@PathVariable Long userId) {
+        List<TicketDTO> tickets = acceso.geTicketByUserId(userId);
+        return new ResponseEntity<>(tickets, HttpStatus.OK);
+    }
+
+
     @PostMapping("/PostTicket")
-    public ResponseEntity<?> postTicket(@RequestBody TicketDTO ticketDTO) {
+    public ResponseEntity<?> postTicket(@Valid @RequestBody TicketDTO ticketDTO) {
         try {
             TicketDTO newTicket = acceso.createTicket(ticketDTO);
             return new ResponseEntity<>(newTicket, HttpStatus.CREATED);
@@ -61,42 +71,43 @@ public class TicketController {
 
 
     @PatchMapping("/UpdateTicket/{ticketId}")
-    public ResponseEntity<String> updateTicket(@PathVariable Long ticketId, @RequestBody TicketDTO payload) {
+    public ResponseEntity<?> updateTicket(@PathVariable Long ticketId, @Valid @RequestBody TicketDTO payload) {
         try {
             TicketDTO updatedTicket = acceso.updateTicket(ticketId, payload);
             return ResponseEntity.noContent().build();
-
         } catch (IllegalArgumentException e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
-            return new ResponseEntity<>(errors.toString(), HttpStatus.BAD_REQUEST);
-
+            return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+        } catch (ExceptionTicketNotFound e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND);
         } catch (Exception e) {
             Map<String, String> errors = new HashMap<>();
-            e.printStackTrace();
             errors.put("error", "Ocurrió un error interno del servidor al actualizar el ticket.");
-            return new ResponseEntity<>(errors.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
 
     @DeleteMapping("/DeleteTicket/{id}")
-    public ResponseEntity<String> deleteTicket(@PathVariable Long id) {
+    public ResponseEntity<?> deleteTicket(@PathVariable Long id) {
         try {
             acceso.deleteTicket(id);
             return new ResponseEntity<>(HttpStatus.OK);
-        }catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
-            return new ResponseEntity<>(errors.toString(), HttpStatus.BAD_REQUEST);
-        }catch (ExceptionTicketNotFound e){
+            return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+        } catch (ExceptionTicketNotFound e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
-            return new ResponseEntity<>(errors.toString(), HttpStatus.NOT_FOUND);
-        }catch (Exception e) {
+            return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", "Ocurrió un error interno del servidor al intentar eliminar el ticket.");
-            return new ResponseEntity<>(errors.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

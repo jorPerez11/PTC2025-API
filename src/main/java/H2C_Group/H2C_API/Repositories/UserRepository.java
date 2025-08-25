@@ -2,6 +2,8 @@ package H2C_Group.H2C_API.Repositories;
 
 
 import H2C_Group.H2C_API.Entities.UserEntity;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,13 +21,21 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
     Optional<UserEntity> findByEmailIgnoreCase(String email);
     Optional<UserEntity> findByPhone(String phone);
 
+    List<UserEntity> findByRolId(Long rolId);
+    /**
+     * Verifica si existe al menos un usuario asociado a un ID de categoría específico.
+     * @param categoryId El ID de la categoría a verificar.
+     * @return true si existe al menos un usuario, false en caso contrario.
+     */
+    boolean existsByCategory_CategoryId(Long categoryId);
+
     Optional<UserEntity> findByUsername(String username);
 
     Page<UserEntity> findAll(Pageable pageable);
 
     Page<UserEntity> findByRolId(Long rolId, Pageable pageable);
 
-    List<UserEntity> findByRolId(Long rolId);
+
 
     @Query("SELECT u FROM UserEntity u " +
             // 🔑 CLAVE: Usar LEFT JOIN FETCH para cargar la categoría junto con el usuario.
@@ -46,5 +56,4 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
             String period
     );
 
-    boolean existsByCategory_CategoryId(Long id);
 }

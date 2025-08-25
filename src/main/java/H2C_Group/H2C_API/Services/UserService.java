@@ -8,6 +8,7 @@ import H2C_Group.H2C_API.Enums.Category;
 import H2C_Group.H2C_API.Enums.UserRole;
 import H2C_Group.H2C_API.Exceptions.ExceptionCategoryNotFound;
 import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
+import H2C_Group.H2C_API.Exceptions.ExceptionCategoryBadRequest;
 import H2C_Group.H2C_API.Models.DTO.CategoryDTO;
 import H2C_Group.H2C_API.Models.DTO.UserDTO;
 import H2C_Group.H2C_API.Models.DTO.RolDTO;
@@ -30,6 +31,8 @@ import org.springframework.stereotype.Service;
 
 
 import java.security.SecureRandom;
+import java.time.Instant;
+import java.util.*;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -45,10 +48,10 @@ public class UserService implements UserDetailsService {
     private CompanyRepository companyRepository;
 
     @Autowired
-    private CategoryRepository categoryRepository;
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private PasswordEncoder passwordEncoder;
+    private CategoryRepository categoryRepository;
 
     @Autowired
     private EmailService emailService;
@@ -71,6 +74,13 @@ public class UserService implements UserDetailsService {
                 Collections.emptyList()
 
         );
+    }
+
+    public List<UserDTO> getTech(){
+        List<UserEntity> tech = userRepository.findByRolId(2L);
+        return tech.stream()
+                .map(this::convertToUserDTO)
+                .collect(Collectors.toList());
     }
 
     //Metodo para generar una contraseña segura y aleatoria
@@ -145,16 +155,23 @@ public class UserService implements UserDetailsService {
 
         UserEntity userEntity = new UserEntity();
 
-        //Asignacion de rol a usuario. Por defecto, al crearlo sera "Cliente" (Se debera actualizar si el usuario es un tecnico)
-        long userCount = userRepository.count();
-
-        if (userCount == 0) {
-            // Si no hay usuarios, este es el primer registro, asigna el rol de Administrador
-            userEntity.setRolId(UserRole.ADMINISTRADOR.getId());
-        } else {
+        // Usar el rol del DTO si está presente
+        if (dto.getRol() != null && dto.getRol().getId() != null) {
+            // Verificar que el rol sea válido
+            UserRole role = UserRole.fromId(dto.getRol().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Rol con ID " + dto.getRol().getId() + " no válido"));
+            userEntity.setRolId(role.getId());
+        }else{
+            long userCount = userRepository.count();
+            if (userCount == 0) {
+                userEntity.setRolId(UserRole.ADMINISTRADOR.getId());
+            } else {
+                userEntity.setRolId(UserRole.CLIENTE.getId());
+            }
             // Si ya hay usuarios, asigna el rol de Cliente
             userEntity.setRolId(UserRole.CLIENTE.getId());
         }
+
 
         if (!isValidDomain(dto.getEmail())){
             throw new IllegalArgumentException("Dominio de correo no permistido");
@@ -207,6 +224,7 @@ public class UserService implements UserDetailsService {
         return convertToUserDTO(savedUser);
 
     }
+
 
 
     //METODO PARA REGISTRAR TECNICOS
@@ -296,13 +314,10 @@ public class UserService implements UserDetailsService {
 
     }
 
-
-
-
-
     private boolean isValidDomain(String email){
         return email.endsWith("@gmail.com") || email.endsWith("@ricaldone.edu.sv");
     }
+
 
     //METODO DE ACTUALIZACION DE CATEGORIA DE USUARIO (TECNICOS)
     public UserDTO updateUser(Long id, UserDTO dto) {

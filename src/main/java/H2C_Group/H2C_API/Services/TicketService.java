@@ -5,6 +5,7 @@ import H2C_Group.H2C_API.Entities.TicketEntity;
 import H2C_Group.H2C_API.Entities.UserEntity;
 import H2C_Group.H2C_API.Enums.*;
 import H2C_Group.H2C_API.Exceptions.ExceptionTicketNotFound;
+import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
 import H2C_Group.H2C_API.Models.DTO.*;
 import H2C_Group.H2C_API.Repositories.TicketRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
@@ -34,6 +35,14 @@ public class TicketService {
         return tickets.map(this::convertToTicketDTO);
     }
 
+    public List<TicketDTO> geTicketByUserId(Long userId){
+        userRepository.findById(userId).orElseThrow(() -> new ExceptionUserNotFound("El id del usuario " + " no existe" ));
+        List<TicketEntity> tickets = ticketRepository.findByUserCreator_UserIdOrderByCreationDate(userId);
+        return tickets.stream()
+                .map(this::convertToTicketDTO)
+                .collect(Collectors.toList());
+    }
+
     public TicketDTO createTicket(TicketDTO ticketDTO) {
 
         //Validaciones
@@ -49,6 +58,12 @@ public class TicketService {
 
         //Conversion DTO -> Entity
         TicketEntity ticketEntity = new TicketEntity();
+
+        //Asignacion del procentaje
+        ticketEntity.setPercentage(ticketDTO.getPercentage());
+
+        //Asignacion de url de imagen del ticket
+        ticketEntity.setImageUrl(ticketDTO.getImageUrl());
 
         ticketEntity.setTicketId(ticketDTO.getTicketId());
         //Asignacion de categoria
@@ -201,6 +216,10 @@ public class TicketService {
             existingTicket.setPercentage(ticketDTO.getPercentage());
         }
 
+        if(ticketDTO.getImageUrl() !=null){
+            existingTicket.setImageUrl(ticketDTO.getImageUrl());
+        }
+
         TicketEntity savedTicket = ticketRepository.save(existingTicket);
         return convertToTicketDTO(savedTicket);
 
@@ -262,10 +281,13 @@ public class TicketService {
         } else {
             dto.setAssignedTech(null); // Establece el ID del técnico a null en el DTO si no hay técnico asignado
         }
+        dto.setCreationDate(ticket.getCreationDate());
 
         dto.setCloseDate(ticket.getCloseDate());
 
         dto.setPercentage(ticket.getPercentage());
+
+        dto.setImageUrl(ticket.getImageUrl());
         return dto;
 
     }
