@@ -10,14 +10,11 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -38,17 +35,7 @@ public class SecurityConfig{
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults()) // Le dice a Spring que use el Bean 'corsConfigurationSource' de abajo
                 .authorizeHttpRequests(auth -> auth
-<<<<<<< Updated upstream
-                        // Permite explícitamente el acceso a la creación de la compañía.
-                        // Permite explícitamente el acceso a la creación de la compañía.
-                        .requestMatchers(HttpMethod.POST, "/api/PostCompany/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/PostCompany").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/companies").permitAll()
-                        .requestMatchers(HttpMethod.PATCH, "/api/companies/**").permitAll()
-                        .requestMatchers(HttpMethod.PATCH, "/api/users/**").permitAll()
-
-                        // Permite el acceso a todos los endpoints del "primer uso"
-                        .requestMatchers("/api/firstuse/**").permitAll()
+                        // 1. REGLAS ESPECÍFICAS DE PERMISOS (permitAll)
 
                         // Permite las peticiones OPTIONS (para pre-vuelo de CORS)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -56,23 +43,35 @@ public class SecurityConfig{
                         // Permite el acceso al endpoint de login y registro
                         .requestMatchers("/api/users/login", "/api/users/register").permitAll()
 
-                        // Los demás endpoints requieren autenticación
-                        .anyRequest().authenticated()
-=======
-                        // 1. Permite la pre-solicitud (OPTIONS), login y registro
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/users/login", "/api/users/register").permitAll()
+                        // Permite las reglas de "primer uso"
+                        .requestMatchers("/api/firstuse/**").permitAll()
 
-                        // 2. REGLA ESPECÍFICA PARA LA BASE DE CONOCIMIENTO
-                        // Asume que todos los roles (ADMINISTRADOR, TECNICO, CLIENTE) deben ver las soluciones.
+                        // Permite explícitamente el acceso a la gestión inicial de compañía
+                        // Nota: '/api/companies' se deja abierto para POST/PATCH para que el administrador inicial pueda crearla.
+                        .requestMatchers(HttpMethod.POST, "/api/PostCompany", "/api/companies").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/companies/**").permitAll()
+
+                        // NOTA: '/api/users/**' con PATCH es demasiado amplio. Si es solo para el cambio
+                        // de contraseña, usa la regla más específica abajo. Si es para el CRUD de usuarios,
+                        // podría dejarse así, pero recomiendo un rol específico (ej. hasAuthority("ROLE_ADMINISTRADOR")).
+                        // De momento, dejo esta abierta como estaba en tu código:
+                        .requestMatchers(HttpMethod.PATCH, "/api/users/**").permitAll()
+
+
+                        // 2. REGLAS DE AUTORIDAD ESPECÍFICAS (hasAnyAuthority)
+
+                        // Permite el acceso a la Base de Conocimiento solo a usuarios con roles específicos
                         .requestMatchers("/api/GetSolutions").hasAnyAuthority("ROLE_ADMINISTRADOR", "ROLE_TECNICO", "ROLE_CLIENTE")
 
-                        // 3. Permite que cualquier usuario autenticado cambie su contraseña
+
+                        // 3. REGLAS DE AUTENTICACIÓN (authenticated)
+
+                        // Permite que cualquier usuario autenticado cambie su contraseña
                         .requestMatchers("/api/users/change-password").authenticated()
 
-                        // 4. Todas las demás peticiones (CRUD, etc.) requieren al menos estar autenticado (o usa una lista de roles)
-                        .anyRequest().authenticated() // Mantenemos esta para el resto de endpoints no listados explícitamente
->>>>>>> Stashed changes
+                        // 4. REGLA DE CAPTURA GENERAL (Debe ser la última)
+                        // Todos los demás endpoints requieren al menos estar autenticado
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
@@ -105,22 +104,11 @@ public class SecurityConfig{
         // AQUÍ ES DONDE SE APLICA TU VERDADERA SEGURIDAD DE ORIGEN
         // Esta lista es la única fuente de verdad para saber qué clientes (IPs/dominios) pueden hablar con tu API.
         configuration.setAllowedOrigins(Arrays.asList(
-<<<<<<< Updated upstream
                 "http://127.0.0.1:5501",
                 "http://localhost",
                 "http://127.0.0.2:5501",
                 "http://IPJORGE:5501",
-                "http://192.168.1.42:5501",
-                "http://IPDANIELA:5501",
-=======
-                "http://localhost",
-                "http://127.0.0.1:5501",// Para tu entorno de desarrollo con XAMPP
-                "http://127.0.0.2:5501",
-                "http://IPJORGE:5501",   // IPs del equipo
-                "http://IPASTRID:5501",
-                "http://179.5.65.91:5501",
->>>>>>> Stashed changes
-                "http://IPHERBERT:5501"
+                "http://192.168.1.42:5501"
         ));
         // Define los métodos HTTP permitidos (GET, POST, etc.).
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
@@ -138,4 +126,3 @@ public class SecurityConfig{
         return source;
     }
 }
-
