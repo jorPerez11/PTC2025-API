@@ -35,6 +35,7 @@ public class UserController {
         return new ResponseEntity<>(users, HttpStatus.OK);
     }
 
+<<<<<<< Updated upstream
     @GetMapping("/GetTech")
     public ResponseEntity<List<UserDTO>> getTechs(){
         List<UserDTO> tecnicos = acceso.getTech();
@@ -53,6 +54,23 @@ public class UserController {
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+=======
+    //Obtener un usuario por su ID
+    @GetMapping("/GetUser/{id}")
+    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+        try {
+            UserDTO user = acceso.findUserById(id); // Llamaremos a un nuevo método en el servicio
+            return new ResponseEntity<>(user, HttpStatus.OK);
+        } catch (ExceptionUserNotFound e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND); // Código 404
+        } catch (Exception e) {
+            Map<String, String> errors = new HashMap<>();
+            e.printStackTrace();
+            errors.put("error", "Ocurrió un error interno del servidor al buscar el usuario.");
+            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR); // Código 500
+>>>>>>> Stashed changes
         }
     }
 

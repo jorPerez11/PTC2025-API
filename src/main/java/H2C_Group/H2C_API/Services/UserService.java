@@ -20,6 +20,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -59,14 +60,24 @@ public class UserService implements UserDetailsService {
         UserEntity userEntity = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario con el nombre: " + username + " no encontrado"));
 
-        // Aquí creamos un objeto User de Spring Security. Es crucial que la contraseña
-        // que devuelvas aquí sea la que tienes hasheada en la base de datos.
-        // Spring Security la usará para comparar con la contraseña que el usuario envió.
+        // 1. Obtener el UserRole Enum usando el ID
+        UserRole userRoleEnum = UserRole.fromId(userEntity.getRolId())
+                .orElseThrow(() -> new IllegalStateException("ID de rol desconocido: " + userEntity.getRolId()));
+
+        // 2. Construir la autoridad de Spring Security
+        // El formato debe ser "ROLE_<NOMBRE_DEL_ROL>" (ej: ROLE_TECNICO, ROLE_CLIENTE, ROLE_ADMINISTRADOR)
+        String roleName = "ROLE_" + userRoleEnum.name();
+
+        // 3. Crear la lista de autoridades
+        List<SimpleGrantedAuthority> authorities = Collections.singletonList(
+                new SimpleGrantedAuthority(roleName)
+        );
+
+        // 4. Devolver el objeto UserDetails con las autoridades
         return new User(
                 userEntity.getUsername(),
                 userEntity.getPasswordHash(),
-                Collections.emptyList()
-
+                authorities
         );
     }
 
@@ -491,6 +502,7 @@ public class UserService implements UserDetailsService {
         return userRepository.findByUsername(username).map(UserEntity::getUserId).orElseThrow(() -> new IllegalArgumentException("El usuario " + username + " no existe"));
     }
 
+<<<<<<< Updated upstream
     // Encontrar usuario por su rol
     public List<UserDTO> findByRole(Long roleId) {
         List<UserEntity> users = userRepository.findByRolId(roleId);
@@ -571,6 +583,24 @@ public class UserService implements UserDetailsService {
         String firstName = parts[0].toLowerCase();
         String lastName = parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
         return firstName + "." + lastName;
+=======
+    public UserDTO findUserById(Long id) {
+        // Busca la entidad en la base de datos. orElseThrow lanza la excepción si no lo encuentra.
+        UserEntity userEntity = userRepository.findById(id)
+                .orElseThrow(() -> new ExceptionUserNotFound("Usuario con ID " + id + " no encontrado."));
+
+        // Convierte la entidad a DTO para enviarla al frontend.
+        // (Asumo que ya tienes una lógica para esto, si no, aquí la implementarías)
+        UserDTO userDTO = new UserDTO();
+        userDTO.setId(userEntity.getUserId());
+        userDTO.setName(userEntity.getFullName());
+        userDTO.setUsername(userEntity.getUsername());
+        userDTO.setEmail(userEntity.getEmail());
+        userDTO.setPhone(userEntity.getPhone());
+        // ... setear los demás campos necesarios
+
+        return userDTO;
+>>>>>>> Stashed changes
     }
 }
 
