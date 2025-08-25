@@ -28,8 +28,6 @@ public class UserEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "COMPANYID", nullable = false)
     private CompanyEntity company;
-    @Column(name="CATEGORYID")
-    private Long categoryId;
     @Column(name="FULLNAME")
     private String fullName;
     @Column(name="USERNAME")
@@ -51,4 +49,7 @@ public class UserEntity {
     private LocalDateTime registrationDate;
     @Column(name="PROFILEPICTUREURL")
     private String profilePictureUrl;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "CATEGORYID")
+    private CategoryEntity category;
 }

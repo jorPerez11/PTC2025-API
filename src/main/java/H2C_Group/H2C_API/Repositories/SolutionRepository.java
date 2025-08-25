@@ -14,4 +14,5 @@ public interface SolutionRepository extends JpaRepository<SolutionEntity,Long> {
             "WHERE LOWER(s.solutionTitle) LIKE LOWER(CONCAT('%', :value, '%')) " +
             "   OR LOWER(s.keyWords) LIKE LOWER(CONCAT('%', :value, '%'))")
     List<SolutionEntity> searchBySolutionTitleOrKeyWords(@Param("value") String value);
+    boolean existsByCategory_CategoryId(Long categoryId);
 }
