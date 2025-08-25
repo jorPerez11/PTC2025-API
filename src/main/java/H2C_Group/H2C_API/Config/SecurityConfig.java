@@ -89,7 +89,10 @@ public class SecurityConfig{
                 "http://localhost",
                 "http://127.0.0.2:5501",
                 "http://IPJORGE:5501",
-                "http://192.168.1.42:5501"
+                "http://IPASTRID:5501",
+                "http://IPDANIELA:5501",
+                "http://127.0.0.7:5501"
+
         ));
         // Define los métodos HTTP permitidos (GET, POST, etc.).
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
