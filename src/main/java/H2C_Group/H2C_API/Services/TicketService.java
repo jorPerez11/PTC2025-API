@@ -11,6 +11,7 @@ import H2C_Group.H2C_API.Repositories.TicketRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +29,8 @@ public class TicketService {
     private TicketRepository ticketRepository;
 
 
-    public Page<TicketDTO> getAllTickets(Pageable pageable) {
+    public Page<TicketDTO> getAllTickets(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
         Page<TicketEntity> tickets = ticketRepository.findAll(pageable);
         return tickets.map(this::convertToTicketDTO);
     }
@@ -63,6 +65,12 @@ public class TicketService {
         //Conversion DTO -> Entity
         TicketEntity ticketEntity = new TicketEntity();
 
+        //Asignacion del procentaje
+        ticketEntity.setPercentage(ticketDTO.getPercentage());
+
+        //Asignacion de url de imagen del ticket
+        ticketEntity.setImageUrl(ticketDTO.getImageUrl());
+
         ticketEntity.setTicketId(ticketDTO.getTicketId());
         //Asignacion de categoria
         Category category = Category.fromId(ticketDTO.getCategory().getId()).orElseThrow(() -> new IllegalArgumentException("La categoria de id " + ticketDTO.getCategory().getId() + "  no existe."));
@@ -91,9 +99,6 @@ public class TicketService {
 
         //Asignacion del procentaje
         ticketEntity.setPercentage(ticketDTO.getPercentage());
-
-        //Asignacion de url de imagen del ticket
-        ticketEntity.setImageUrl(ticketDTO.getImageUrl());
 
         //Almacenamiento de ticket creado en la DB
         TicketEntity savedTicket = ticketRepository.save(ticketEntity);
@@ -137,8 +142,6 @@ public class TicketService {
             } else {
                 throw new IllegalArgumentException("El usuario con ID " + userTech.getUserId() + " no tiene un rol válido para ser asignado como técnico (debe ser Administrador o Técnico).");
             }
-        } else {
-            throw new IllegalArgumentException("El tecnico proporcionado no existe.");
         }
 
 
@@ -262,14 +265,20 @@ public class TicketService {
         dto.setStatus(new TicketStatusDTO(statusEnum.getId(), statusEnum.getDisplayName()));
 
         if (ticket.getUserCreator() != null) {
-            dto.setUserId(ticket.getUserCreator().getUserId());
+
+            Long userCreatorId = ticket.getUserCreator().getUserId(); //Declaracion de variable para almacenamiento del id de tipo Long
+
+            dto.setUserId(userCreatorId); //Asignacion de ID del usuario creador del ticket
+
+
+            userRepository.findById(userCreatorId).ifPresent(user -> {dto.setUserName(user.getFullName());}); //Asignacion de nombre completo para campo userName en TicketDTO
         } else {
             throw new IllegalArgumentException("El ID del usuario no puede ser nulo.");
         }
 
+
         dto.setTitle(ticket.getTitle());
         dto.setDescription(ticket.getDescription());
-
 
         if (ticket.getAssignedTechUser() != null) {
             UserDTO techDTO = new UserDTO();
@@ -279,7 +288,6 @@ public class TicketService {
         } else {
             dto.setAssignedTech(null); // Establece el ID del técnico a null en el DTO si no hay técnico asignado
         }
-
         dto.setCreationDate(ticket.getCreationDate());
 
         dto.setCloseDate(ticket.getCloseDate());
@@ -287,7 +295,6 @@ public class TicketService {
         dto.setPercentage(ticket.getPercentage());
 
         dto.setImageUrl(ticket.getImageUrl());
-
         return dto;
 
     }

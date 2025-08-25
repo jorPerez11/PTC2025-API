@@ -28,6 +28,11 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
 
+        if (request.getMethod().equalsIgnoreCase("OPTIONS")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         final String requestUri = request.getRequestURI();
 
         // Paso 1: Ignorar rutas públicas. Si la URI de la petición es para login o register, el filtro se salta la validación del token y deja pasar la petición al siguiente filtro en la cadena. Esto es crucial porque estas rutas  no tienen un token JWT
