@@ -44,6 +44,11 @@ public class CompanyController {
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+        } catch (DataIntegrityViolationException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Ya existe una compañía con este correo electrónico o nombre de usuario.");
+            e.printStackTrace();
+            return new ResponseEntity<>(error, HttpStatus.CONFLICT); // Código 409
         }
     }
 
@@ -59,7 +64,7 @@ public class CompanyController {
             e.printStackTrace(); // Para ver el error completo en el log del servidor
             return new ResponseEntity<>(error, HttpStatus.CONFLICT); // Código 409
         } catch (ExceptionCompanyBadRequest e) {
-            // Si hay otros errores de validación
+            // Sí hay otros errores de validación
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             e.printStackTrace();
