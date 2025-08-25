@@ -44,30 +44,8 @@ public class UserController {
         return ResponseEntity.ok(tecnicos);
     }
 
-    @PostMapping("/PostUser")
-    public ResponseEntity<?> createUser(@RequestBody @Valid UserDTO user) {
-        System.out.println("DEBUG: Entrando al metodo createUser en el controlador.");
-        try{
-            UserDTO newUser = acceso.registerNewUser(user);
-            return new ResponseEntity<>(newUser, HttpStatus.CREATED);
-        }catch (ExceptionUserBadRequest e) {
-            //Validación de argumentos invalidos
-            Map<String, String> errors = new HashMap<>();
-            errors.put("error", e.getMessage());
-            return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST); // Código 400
-        }catch (ExceptionUserNotFound e) {
-            Map<String, String> errors = new HashMap<>();
-            errors.put("error", e.getMessage());
-            return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND); // Código 404
-        }catch (Exception e) {
-            Map<String, String> errors = new HashMap<>();
-            e.printStackTrace();
-            errors.put("error", "Ocurrió un error interno del servidor al crear el usuario.");
-            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR); // Código 500
-        }
-    }
-
-    @PatchMapping("/UpdateUser/{id}")
+    // Método de actualización único y correcto, usa UserDTO y valida con @Valid.
+    @PatchMapping("/users/{id}")
     public ResponseEntity<?> updateUser(@PathVariable Long id, @Valid @RequestBody UserDTO dto) {
         try {
             UserDTO updatedUser = acceso.updateUser(id, dto);
@@ -89,7 +67,47 @@ public class UserController {
         }
     }
 
-    @DeleteMapping("/DeleteUser/{id}")
+    //Obtener un usuario por su ID
+    @GetMapping("/GetUser/{id}")
+    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+        try {
+            UserDTO user = acceso.findUserById(id); // Llamaremos a un nuevo método en el servicio
+            return new ResponseEntity<>(user, HttpStatus.OK);
+        } catch (ExceptionUserNotFound e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND); // Código 404
+        } catch (Exception e) {
+            Map<String, String> errors = new HashMap<>();
+            e.printStackTrace();
+            errors.put("error", "Ocurrió un error interno del servidor al buscar el usuario.");
+            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR); // Código 500
+
+        }
+    }
+
+    @PostMapping("/PostUser")
+    public ResponseEntity<?> createUser(@RequestBody @Valid UserDTO user) {
+        try {
+            UserDTO newUser = acceso.registerNewUser(user);
+            // Devuelve el objeto de usuario creado
+            return new ResponseEntity<>(newUser, HttpStatus.CREATED);
+        } catch (ExceptionUserBadRequest e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+        } catch (ExceptionUserNotFound e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", "Ocurrió un error interno del servidor al crear el usuario.");
+            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @DeleteMapping("/users/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         try {
             acceso.deleteUser(id);

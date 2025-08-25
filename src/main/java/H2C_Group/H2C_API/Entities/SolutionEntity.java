@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -23,8 +24,6 @@ public class SolutionEntity {
     @SequenceGenerator(name = "solution_seq_generator", sequenceName = "SEQ_SOLUTIONID", allocationSize = 1)
     @Column(name="SOLUTIONID")
     private Long solutionId;
-    @Column(name="CATEGORYID")
-    private Long categoryId;
     @Column(name="SOLUTIONTITLE")
     private String solutionTitle;
     @Column(name="DESCRIPTIONS")
@@ -36,9 +35,10 @@ public class SolutionEntity {
     private String solutionSteps;
     @Column(name="KEYWORDS")
     private String keyWords;
-    @CreationTimestamp
+    @UpdateTimestamp
     @Column(name="UPDATEDATE")
     private LocalDateTime updateDate;
-
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "CATEGORYID")
+    private CategoryEntity category;
 }
