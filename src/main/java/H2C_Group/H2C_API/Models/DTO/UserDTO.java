@@ -61,4 +61,8 @@ public class UserDTO {
 
         private String displayName;
 
+
+        private LocalDateTime registrationDate;
+
+
 }
