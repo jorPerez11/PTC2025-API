@@ -41,6 +41,12 @@ public class TicketService {
                 .collect(Collectors.toList());
     }
 
+    public TicketDTO getTicketById(Long id) {
+        TicketEntity ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new ExceptionTicketNotFound("Ticket con ID " + id + " no encontrado."));
+        return convertToTicketDTO(ticket);
+    }
+
     public TicketDTO createTicket(TicketDTO ticketDTO) {
 
         //Validaciones
@@ -95,6 +101,7 @@ public class TicketService {
         //Conversion del ticket almacenado de vuelta a DTO para la respuesta del Frontend
         return  convertToTicketDTO(savedTicket);
     }
+
 
 
     public TicketDTO updateTicket(Long id, TicketDTO ticketDTO) {
