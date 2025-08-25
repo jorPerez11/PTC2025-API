@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -34,7 +35,7 @@ public class SolutionEntity {
     private String solutionSteps;
     @Column(name="KEYWORDS")
     private String keyWords;
-    @CreationTimestamp
+    @UpdateTimestamp
     @Column(name="UPDATEDATE")
     private LocalDateTime updateDate;
     @ManyToOne(fetch = FetchType.LAZY)

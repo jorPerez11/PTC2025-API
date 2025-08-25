@@ -20,6 +20,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -59,14 +60,24 @@ public class UserService implements UserDetailsService {
         UserEntity userEntity = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario con el nombre: " + username + " no encontrado"));
 
-        // Aquí creamos un objeto User de Spring Security. Es crucial que la contraseña
-        // que devuelvas aquí sea la que tienes hasheada en la base de datos.
-        // Spring Security la usará para comparar con la contraseña que el usuario envió.
+        // 1. Obtener el UserRole Enum usando el ID
+        UserRole userRoleEnum = UserRole.fromId(userEntity.getRolId())
+                .orElseThrow(() -> new IllegalStateException("ID de rol desconocido: " + userEntity.getRolId()));
+
+        // 2. Construir la autoridad de Spring Security
+        // El formato debe ser "ROLE_<NOMBRE_DEL_ROL>" (ej: ROLE_TECNICO, ROLE_CLIENTE, ROLE_ADMINISTRADOR)
+        String roleName = "ROLE_" + userRoleEnum.name();
+
+        // 3. Crear la lista de autoridades
+        List<SimpleGrantedAuthority> authorities = Collections.singletonList(
+                new SimpleGrantedAuthority(roleName)
+        );
+
+        // 4. Devolver el objeto UserDetails con las autoridades
         return new User(
                 userEntity.getUsername(),
                 userEntity.getPasswordHash(),
-                Collections.emptyList()
-
+                authorities
         );
     }
 
@@ -247,7 +258,7 @@ public class UserService implements UserDetailsService {
         UserEntity updatedUser = userRepository.save(user);
 
         // 4. Convertir la entidad a DTO y devolverla
-        return convertToDTO(updatedUser);
+        return convertToUserDTO(updatedUser);
     }
 
     /**
@@ -271,7 +282,7 @@ public class UserService implements UserDetailsService {
         // Guardar la contraseña hasheada y marcarla como expirada
         // para forzar el cambio en el primer inicio de sesión
         admin.setPasswordHash(hashedPassword);
-        admin.setIsActive(1); // O el valor que uses para indicar que está activo
+        admin.setIsActive(1); // O el valor que usas para indicar que está activo
         admin.setPasswordExpired(true);
 
         // Guardar los cambios en la base de datos
@@ -283,19 +294,6 @@ public class UserService implements UserDetailsService {
         emailService.sendEmail(admin.getEmail(), subject, body);
 
         return convertToUserDTO(savedAdmin);
-    }
-
-    // Asegúrate de tener un metodo convertToDTO que mapee la entidad a un DTO
-    private UserDTO convertToDTO(UserEntity user) {
-        UserDTO dto = new UserDTO();
-        dto.setId(user.getUserId());
-        dto.setName(user.getFullName());
-        dto.setUsername(user.getUsername());
-        dto.setEmail(user.getEmail());
-        dto.setPhone(user.getPhone());
-        dto.setProfilePictureUrl(user.getProfilePictureUrl());
-        // Aquí puedes mapear otros campos como el rol y la categoría
-        return dto;
     }
 
     //METODO DE ACTUALIZACION DE CATEGORIA DE USUARIO (TECNICOS)
@@ -314,12 +312,12 @@ public class UserService implements UserDetailsService {
             }
 
             //Verifica si existe un id con la categoria indicada
-            Category category = Category.fromId(dto.getCategory().getId()).orElseThrow(() -> new IllegalArgumentException("La categoria de id " + dto.getCategory().getId() + "  no existe."));
+            Category category = Category.fromId(dto.getCategory().getId()).orElseThrow(() -> new IllegalArgumentException("La categoria de id " + dto.getCategory().getId() + " no existe."));
 
             //Verifica si el usuario es un Tecnico
             if (existingUser.getRolId().equals(UserRole.TECNICO.getId())) {
                 CategoryEntity categoryEntity = categoryRepository.findById(dto.getCategory().getId())
-                        .orElseThrow(() -> new IllegalArgumentException("La categoria de id " + dto.getCategory().getId() + "  no existe."));
+                        .orElseThrow(() -> new IllegalArgumentException("La categoria de id " + dto.getCategory().getId() + " no existe."));
                 existingUser.setCategory(categoryEntity);
                 Optional<Category> optionalCategory = Category.fromId(dto.getCategory().getId());
                 if (optionalCategory.isEmpty()) {
@@ -457,28 +455,28 @@ public class UserService implements UserDetailsService {
     }
 
     //Manda datos del usuario. Convierte de UserEntity a DTOUser
-    private UserDTO convertToUserDTO(UserEntity usuario) {
+    private UserDTO convertToUserDTO(UserEntity user) {
         UserDTO dto = new UserDTO();
-        dto.setId(usuario.getUserId());
-        UserRole userRoleEnum = UserRole.fromId(usuario.getRolId()).orElseThrow(() -> new IllegalArgumentException("ID de Rol de usuario inválido en la entidad: " + usuario.getRolId()));
+        dto.setId(user.getUserId());
+        UserRole userRoleEnum = UserRole.fromId(user.getRolId()).orElseThrow(() -> new IllegalArgumentException("ID de Rol de usuario inválido en la entidad: " + user.getRolId()));
         dto.setRol(new RolDTO(userRoleEnum));
 
         // Solución para el metodo convertToUserDTO
-        if (usuario.getCategory() != null) {
-            Category categoryEnum = Category.fromId(usuario.getCategory().getCategoryId()).orElseThrow(() -> new IllegalArgumentException("ID de Categoría inválido en la entidad para el usuario: " + usuario.getUserId() + " con categoryId: " + usuario.getCategory().getCategoryId()));
+        if (user.getCategory() != null) {
+            Category categoryEnum = Category.fromId(user.getCategory().getCategoryId()).orElseThrow(() -> new IllegalArgumentException("ID de Categoría inválido en la entidad para el usuario: " + user.getUserId() + " con categoryId: " + user.getCategory().getCategoryId()));
             dto.setCategory(new CategoryDTO(categoryEnum.getId(), categoryEnum.getDisplayName()));
         } else {
             dto.setCategory(null);
         }
 
-        if (usuario.getCompany() != null) { // userEntity.getCompany() devuelve un CompanyEntity
-            dto.setCompanyId(usuario.getCompany().getCompanyId()); // userEntity.getCompany().getCompanyId() devuelve el Long ID
+        if (user.getCompany() != null) { // userEntity.getCompany() devuelve un CompanyEntity
+            dto.setCompanyId(user.getCompany().getCompanyId()); // userEntity.getCompany().getCompanyId() devuelve el Long ID
         }
-        dto.setName(usuario.getFullName());
-        dto.setUsername(usuario.getUsername());
-        dto.setEmail(usuario.getEmail());
-        dto.setPhone(usuario.getPhone());
-        dto.setIsActive(usuario.getIsActive());
+        dto.setName(user.getFullName());
+        dto.setUsername(user.getUsername());
+        dto.setEmail(user.getEmail());
+        dto.setPhone(user.getPhone());
+        dto.setIsActive(user.getIsActive());
         return dto;
     }
 
@@ -572,5 +570,13 @@ public class UserService implements UserDetailsService {
         String lastName = parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
         return firstName + "." + lastName;
     }
-}
 
+    public UserDTO findUserById(Long id) {
+        // Busca la entidad en la base de datos. orElseThrow lanza la excepción si no lo encuentra.
+        UserEntity userEntity = userRepository.findById(id)
+                .orElseThrow(() -> new ExceptionUserNotFound("Usuario con ID " + id + " no encontrado."));
+
+        // Convierte la entidad a DTO para enviarla al frontend.
+        return convertToUserDTO(userEntity);
+    }
+}
