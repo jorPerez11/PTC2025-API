@@ -239,51 +239,6 @@ public class UserService implements UserDetailsService {
         return convertToUserDTO(savedUser);
 
     }
-
-
-
-    @Transactional
-    public UserDTO UpdateUser(Long id, Map<String, String> updates) throws ExceptionUserNotFound {
-        // 1. Encontrar el usuario por su ID
-        UserEntity user = userRepository.findById(id)
-                .orElseThrow(() -> new ExceptionUserNotFound("Usuario no encontrado con ID: " + id));
-
-        // 2. Iterar sobre el Map de actualizaciones y aplicar los cambios
-        updates.forEach((key, value) -> {
-            // Asegúrate de que el valor no sea null o vacío antes de actualizar
-            if (value != null && !value.trim().isEmpty()) {
-                switch (key) {
-                    case "fullName":
-                        user.setFullName(value);
-                        break;
-                    case "username":
-                        user.setUsername(value);
-                        break;
-                    case "email":
-                        user.setEmail(value);
-                        break;
-                    case "phone":
-                        user.setPhone(value);
-                        break;
-                    case "password":
-                        // Hash de la nueva contraseña recibida
-                        String hashedPassword = passwordEncoder.encode(value);
-                        user.setPasswordHash(hashedPassword);
-                        break;
-                    case "profilePictureUrl":
-                        user.setProfilePictureUrl(value);
-                        break;
-                    // Agrega más casos para otros campos si es necesario
-                }
-            }
-        });
-
-        // 3. Guardar el usuario actualizado en la base de datos
-        UserEntity updatedUser = userRepository.save(user);
-
-        // 4. Convertir la entidad a DTO y devolverla
-        return convertToUserDTO(updatedUser);
-    }
   
     //METODO PARA REGISTRAR TECNICOS
  public UserDTO registerNewUserTech(UserDTO dto) {
