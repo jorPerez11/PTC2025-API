@@ -36,8 +36,9 @@ public class SecurityConfig{
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtRequestFilter jwtRequestFilter) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(Customizer.withDefaults())
+                .cors(Customizer.withDefaults()) // Le dice a Spring que use el Bean 'corsConfigurationSource' de abajo
                 .authorizeHttpRequests(auth -> auth
+<<<<<<< Updated upstream
                         // Permite explícitamente el acceso a la creación de la compañía.
                         // Permite explícitamente el acceso a la creación de la compañía.
                         .requestMatchers(HttpMethod.POST, "/api/PostCompany/**").permitAll()
@@ -57,6 +58,21 @@ public class SecurityConfig{
 
                         // Los demás endpoints requieren autenticación
                         .anyRequest().authenticated()
+=======
+                        // 1. Permite la pre-solicitud (OPTIONS), login y registro
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/api/users/login", "/api/users/register").permitAll()
+
+                        // 2. REGLA ESPECÍFICA PARA LA BASE DE CONOCIMIENTO
+                        // Asume que todos los roles (ADMINISTRADOR, TECNICO, CLIENTE) deben ver las soluciones.
+                        .requestMatchers("/api/GetSolutions").hasAnyAuthority("ROLE_ADMINISTRADOR", "ROLE_TECNICO", "ROLE_CLIENTE")
+
+                        // 3. Permite que cualquier usuario autenticado cambie su contraseña
+                        .requestMatchers("/api/users/change-password").authenticated()
+
+                        // 4. Todas las demás peticiones (CRUD, etc.) requieren al menos estar autenticado (o usa una lista de roles)
+                        .anyRequest().authenticated() // Mantenemos esta para el resto de endpoints no listados explícitamente
+>>>>>>> Stashed changes
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
@@ -85,14 +101,25 @@ public class SecurityConfig{
     @Bean
     public CorsConfigurationSource corsConfigurationSource(){
         CorsConfiguration configuration = new CorsConfiguration();
-        //Ip de origen que pueden ACCEDER A LA API AGREGAR TODAS LAS IP DEL EQUIPO (JORGE, DANIELA, FERNANDO, ASTRID, HERBERT)
+
+        // AQUÍ ES DONDE SE APLICA TU VERDADERA SEGURIDAD DE ORIGEN
+        // Esta lista es la única fuente de verdad para saber qué clientes (IPs/dominios) pueden hablar con tu API.
         configuration.setAllowedOrigins(Arrays.asList(
+<<<<<<< Updated upstream
                 "http://127.0.0.1:5501",
                 "http://localhost",
                 "http://127.0.0.2:5501",
                 "http://IPJORGE:5501",
                 "http://192.168.1.42:5501",
                 "http://IPDANIELA:5501",
+=======
+                "http://localhost",
+                "http://127.0.0.1:5501",// Para tu entorno de desarrollo con XAMPP
+                "http://127.0.0.2:5501",
+                "http://IPJORGE:5501",   // IPs del equipo
+                "http://IPASTRID:5501",
+                "http://179.5.65.91:5501",
+>>>>>>> Stashed changes
                 "http://IPHERBERT:5501"
         ));
         // Define los métodos HTTP permitidos (GET, POST, etc.).
