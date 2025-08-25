@@ -6,6 +6,7 @@ import H2C_Group.H2C_API.Entities.SolutionEntity;
 import H2C_Group.H2C_API.Entities.TicketEntity;
 import H2C_Group.H2C_API.Entities.UserEntity;
 import H2C_Group.H2C_API.Enums.Category;
+import H2C_Group.H2C_API.Exceptions.ExceptionSolutionBadRequest;
 import H2C_Group.H2C_API.Exceptions.ExceptionSolutionNotFound;
 import H2C_Group.H2C_API.Models.DTO.CategoryDTO;
 import H2C_Group.H2C_API.Models.DTO.SolutionDTO;
@@ -83,19 +84,15 @@ public class SolutionService {
 
         if (solutionDTO.getCategory() != null) {
             CategoryDTO categoryFromDTO = solutionDTO.getCategory();
-            if (categoryFromDTO.getId() == null) { // Validación de ID obligatoria
-                throw new IllegalArgumentException("El ID de categoría es obligatorio.");
-            }
-            Category categoryEnum = Category.fromIdOptional(categoryFromDTO.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("El ID de categoría proporcionado no existe en la enumeración de Categoría: " + categoryFromDTO.getId()));
 
-            if (!categoryEnum.getDisplayName().equalsIgnoreCase(categoryFromDTO.getDisplayName())) {
-                throw new IllegalArgumentException("El 'displayName' de la categoría ('" + categoryFromDTO.getDisplayName() + "') no coincide con el 'id' proporcionado (" + categoryFromDTO.getId() + "). Se esperaba: '" + categoryEnum.getDisplayName() + "'");
+            if (categoryFromDTO.getId() == null) {
+                // Lanza tu excepción controlada:
+                throw new ExceptionSolutionBadRequest("El ID de categoría es obligatorio.");
             }
 
-            // Obtiene el objeto CategoryEntity desde el repositorio.
+            // Solo necesitamos el ID para encontrar la entidad de Categoría
             CategoryEntity categoryEntity = categoryRepository.findById(categoryFromDTO.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("El ID de categoría proporcionado no existe en la BD: " + categoryFromDTO.getId()));
+                    .orElseThrow(() -> new ExceptionSolutionNotFound("El ID de categoría " + categoryFromDTO.getId() + " no existe."));
 
             // Asigna el objeto de categoría a la entidad de solución.
             existingSolution.setCategory(categoryEntity);
