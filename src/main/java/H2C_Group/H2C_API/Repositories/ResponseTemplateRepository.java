@@ -7,5 +7,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ResponseTemplateRepository extends JpaRepository<ResponseTemplateEntity,Long> {
-
+    boolean existsByCategory_CategoryId(Long categoryId);
 }

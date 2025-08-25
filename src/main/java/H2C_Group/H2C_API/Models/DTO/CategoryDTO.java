@@ -21,5 +21,4 @@ public class CategoryDTO {
         this.id = id;
         this.displayName = displayName;
     }
-
 }

@@ -19,7 +19,7 @@ public class JwUtil {
     // Genera una clave secreta segura en tiempo de ejecución.
     private final SecretKey key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
     private static final long serialVersionUID = -2550185165626007488L;
-    public static final long JWT_TOKEN_VALIDITY_SHORT = 5 * 60  * 1000; // 5 minutos
+    public static final long JWT_TOKEN_VALIDITY_SHORT = 7 * 24  * 60 * 1000; // 5 minutos
     public static final long JWT_TOKEN_VALIDITY_LONG = 7 * 24 * 60 * 60 * 1000; // 7 días
 
     // Obtener el nombre de usuario de un token

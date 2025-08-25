@@ -34,7 +34,7 @@ public class CloudinaryController {
         }
     }
 
-    @PostMapping("upload-to-folder")
+    @PostMapping("/upload-to-folder")
     public ResponseEntity<?> uploadImageToFolder(
             @RequestParam("image") MultipartFile file,
             @RequestParam String folder

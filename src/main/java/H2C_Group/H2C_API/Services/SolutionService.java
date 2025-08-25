@@ -1,6 +1,7 @@
 package H2C_Group.H2C_API.Services;
 
 
+import H2C_Group.H2C_API.Entities.CategoryEntity;
 import H2C_Group.H2C_API.Entities.SolutionEntity;
 import H2C_Group.H2C_API.Entities.TicketEntity;
 import H2C_Group.H2C_API.Entities.UserEntity;
@@ -9,6 +10,7 @@ import H2C_Group.H2C_API.Exceptions.ExceptionSolutionNotFound;
 import H2C_Group.H2C_API.Models.DTO.CategoryDTO;
 import H2C_Group.H2C_API.Models.DTO.SolutionDTO;
 import H2C_Group.H2C_API.Models.DTO.TicketDTO;
+import H2C_Group.H2C_API.Repositories.CategoryRepository;
 import H2C_Group.H2C_API.Repositories.SolutionRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,8 +29,13 @@ public class SolutionService {
     @Autowired
     private SolutionRepository solutionRepository;
 
+    @Autowired
+    private CategoryRepository categoryRepository;
+
 
     public Page<SolutionDTO> getAllSolutions(Pageable pageable) {
+        // NOTA: Para evitar la LazyInitializationException (LIE) del UserEntity,
+        // Tu SolutionRepository debe usar @Query con JOIN FETCH en su findAll.
         Page<SolutionEntity> solutions = solutionRepository.findAll(pageable);
         return solutions.map(this::convertToSolutionDTO);
     }
@@ -42,10 +49,16 @@ public class SolutionService {
 
         solutionEntity.setUser(existingUser);
 
-        Category.fromIdOptional(solutionDTO.getCategory().getId()).orElseThrow(() -> new IllegalArgumentException("ID de categoría inválido: " + solutionDTO.getCategory().getId()));
-        solutionEntity.setCategoryId(solutionDTO.getCategory().getId());
+        // Obtiene la entidad de categoría completa del repositorio
+        CategoryEntity categoryEntity = categoryRepository.findById(solutionDTO.getCategory().getId())
+                .orElseThrow(() -> new IllegalArgumentException("La categoria con id " + solutionDTO.getCategory().getId() + " no existe."));
 
-        solutionEntity.setSolutionId(solutionDTO.getSolutionId());
+// Asigna el objeto de categoría completo a la entidad de solución
+        solutionEntity.setCategory(categoryEntity);
+
+        // CORRECCIÓN CRÍTICA: Se elimina esta línea. El ID se autogenera.
+        // solutionEntity.setSolutionId(solutionDTO.getSolutionId());
+
         solutionEntity.setSolutionTitle(solutionDTO.getSolutionTitle());
         solutionEntity.setDescriptionS(solutionDTO.getDescriptionS());
         solutionEntity.setSolutionSteps(solutionDTO.getSolutionSteps());
@@ -66,7 +79,7 @@ public class SolutionService {
         SolutionEntity existingSolution = solutionRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("La solución con ID " + id + " no existe."));
 
         UserEntity existingUser = userRepository.findById(solutionDTO.getUserId()).orElseThrow(() -> new IllegalArgumentException("El usuario con id" + solutionDTO.getUserId() + " no existe"));
-        existingUser.setUserId(existingUser.getUserId());
+        existingSolution.setUser(existingUser); // Asignar el usuario al que se le hace el update.
 
         if (solutionDTO.getCategory() != null) {
             CategoryDTO categoryFromDTO = solutionDTO.getCategory();
@@ -80,7 +93,12 @@ public class SolutionService {
                 throw new IllegalArgumentException("El 'displayName' de la categoría ('" + categoryFromDTO.getDisplayName() + "') no coincide con el 'id' proporcionado (" + categoryFromDTO.getId() + "). Se esperaba: '" + categoryEnum.getDisplayName() + "'");
             }
 
-            existingSolution.setCategoryId(categoryEnum.getId());
+            // Obtiene el objeto CategoryEntity desde el repositorio.
+            CategoryEntity categoryEntity = categoryRepository.findById(categoryFromDTO.getId())
+                    .orElseThrow(() -> new IllegalArgumentException("El ID de categoría proporcionado no existe en la BD: " + categoryFromDTO.getId()));
+
+            // Asigna el objeto de categoría a la entidad de solución.
+            existingSolution.setCategory(categoryEntity);
         }
 
         if (solutionDTO.getSolutionTitle() != null) {
@@ -129,7 +147,10 @@ public class SolutionService {
             solutionDTO.setUserId(solutionEntity.getUser().getUserId());
         }
 
-        Category categoryEnum = Category.fromIdOptional(solutionEntity.getCategoryId()).orElseThrow(() -> new IllegalArgumentException("La categoria de id " + solutionEntity.getCategoryId() + " no existe."));
+        // Accede al objeto category y luego a su ID.
+        Category categoryEnum = Category.fromIdOptional(solutionEntity.getCategory().getCategoryId()).orElseThrow(() -> new IllegalArgumentException("La categoria de id " + solutionEntity.getCategory().getCategoryId() + " no existe."));
+
+        // Mapeo del objeto CategoryDTO
         solutionDTO.setCategory(new CategoryDTO(categoryEnum.getId(), categoryEnum.getDisplayName()));
 
         solutionDTO.setSolutionId(solutionEntity.getSolutionId());
@@ -137,6 +158,10 @@ public class SolutionService {
         solutionDTO.setDescriptionS(solutionEntity.getDescriptionS());
         solutionDTO.setSolutionSteps(solutionEntity.getSolutionSteps());
         solutionDTO.setKeyWords(solutionEntity.getKeyWords());
+
+        // CORRECCIÓN CRÍTICA: Mapear la fecha de actualización
+        solutionDTO.setUpdateDate(solutionEntity.getUpdateDate());
+
         return solutionDTO;
 
     }
