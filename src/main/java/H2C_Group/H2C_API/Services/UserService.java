@@ -1,14 +1,18 @@
 package H2C_Group.H2C_API.Services;
 
 
+import H2C_Group.H2C_API.Entities.CategoryEntity;
 import H2C_Group.H2C_API.Entities.CompanyEntity;
 import H2C_Group.H2C_API.Entities.UserEntity;
 import H2C_Group.H2C_API.Enums.Category;
 import H2C_Group.H2C_API.Enums.UserRole;
+import H2C_Group.H2C_API.Exceptions.ExceptionCategoryBadRequest;
+import H2C_Group.H2C_API.Exceptions.ExceptionCategoryNotFound;
 import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
 import H2C_Group.H2C_API.Models.DTO.CategoryDTO;
 import H2C_Group.H2C_API.Models.DTO.UserDTO;
 import H2C_Group.H2C_API.Models.DTO.RolDTO;
+import H2C_Group.H2C_API.Repositories.CategoryRepository;
 import H2C_Group.H2C_API.Repositories.CompanyRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -20,15 +24,13 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 
 import java.security.SecureRandom;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.time.Instant;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,9 +41,11 @@ public class UserService implements UserDetailsService {
     @Autowired
     private CompanyRepository companyRepository;
 
-
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private CategoryRepository categoryRepository;
 
     @Autowired
     private EmailService emailService;
@@ -143,19 +147,24 @@ public class UserService implements UserDetailsService {
 
         UserEntity userEntity = new UserEntity();
 
-        //Asignacion de rol a usuario. Por defecto, al crearlo sera "Cliente" (Se debera actualizar si el usuario es un tecnico)
-        long userCount = userRepository.count();
-
-        if (userCount == 0) {
-            // Si no hay usuarios, este es el primer registro, asigna el rol de Administrador
-            userEntity.setRolId(UserRole.ADMINISTRADOR.getId());
+        // Usar el rol del DTO si está presente
+        if (dto.getRol() != null && dto.getRol().getId() != null) {
+            // Verificar que el rol sea válido
+            UserRole role = UserRole.fromId(dto.getRol().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Rol con ID " + dto.getRol().getId() + " no válido"));
+            userEntity.setRolId(role.getId());
         } else {
-            // Si ya hay usuarios, asigna el rol de Cliente
-            userEntity.setRolId(UserRole.CLIENTE.getId());
+            // Lógica original para asignar rol por defecto
+            long userCount = userRepository.count();
+            if (userCount == 0) {
+                userEntity.setRolId(UserRole.ADMINISTRADOR.getId());
+            } else {
+                userEntity.setRolId(UserRole.CLIENTE.getId());
+            }
         }
 
         if (!isValidDomain(dto.getEmail())){
-            throw new IllegalArgumentException("Dominio de correo no permistido");
+            throw new IllegalArgumentException("Dominio de correo no permitido");
         }
 
         //ASIGNACION DE PRIMER ID DE COMPANIA ENCONTRADA (DESDE companyRepository) A USUARIO
@@ -165,11 +174,12 @@ public class UserService implements UserDetailsService {
 
         userEntity.setCompany(companyToAssign);
 
-
         if (dto.getCategory() != null) {
-            userEntity.setCategoryId(dto.getCategory().getId());
+            CategoryEntity categoryEntity = categoryRepository.findById(dto.getCategory().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("La categoria de id " + dto.getCategory().getId() + " no existe."));
+            userEntity.setCategory(categoryEntity);
         } else {
-            userEntity.setCategoryId(null); // Establece explicitamente a null si no se proporciona
+            userEntity.setCategory(null);
         }
 
         userEntity.setFullName(dto.getName());
@@ -199,6 +209,95 @@ public class UserService implements UserDetailsService {
         return email.endsWith("@gmail.com") || email.endsWith("@ricaldone.edu.sv");
     }
 
+    @Transactional
+    public UserDTO UpdateUser(Long id, Map<String, String> updates) throws ExceptionUserNotFound {
+        // 1. Encontrar el usuario por su ID
+        UserEntity user = userRepository.findById(id)
+                .orElseThrow(() -> new ExceptionUserNotFound("Usuario no encontrado con ID: " + id));
+
+        // 2. Iterar sobre el Map de actualizaciones y aplicar los cambios
+        updates.forEach((key, value) -> {
+            switch (key) {
+                case "Nombre": // Ahora coincide con el key "Nombre" del frontend
+                    user.setFullName(value);
+                    break;
+                case "username":
+                    user.setUsername(value);
+                    break;
+                case "Correo Electrónico": // Coincide con el key del frontend
+                    user.setEmail(value);
+                    break;
+                case "Número de tel.": // Coincide con el key del frontend
+                    user.setPhone(value);
+                    break;
+                case "password":
+                    // 1. Hash de la nueva contraseña recibida
+                    String hashedPassword = passwordEncoder.encode(value);
+                    // 2. Usar el metodo correcto para la entidad: setPasswordHash
+                    user.setPasswordHash(hashedPassword);
+                    break;
+                case "Foto": // Coincide con el key del frontend
+                    user.setProfilePictureUrl(value);
+                    break;
+                // Agrega más casos para otros campos si es necesario
+            }
+        });
+
+        // 3. Guardar el usuario actualizado en la base de datos
+        UserEntity updatedUser = userRepository.save(user);
+
+        // 4. Convertir la entidad a DTO y devolverla
+        return convertToDTO(updatedUser);
+    }
+
+    /**
+     * Genera la contraseña, la hashea, la guarda y envía el correo electrónico
+     * al usuario administrador una vez finalizado el proceso de primer uso.
+     * @param userId El ID del usuario administrador a activar.
+     * @return El DTO del usuario actualizado.
+     * @throws ExceptionUserNotFound Si el usuario no es encontrado.
+     */
+    @Transactional
+    public UserDTO finalizeAdminSetup(Long userId) throws ExceptionUserNotFound {
+        UserEntity admin = userRepository.findById(userId)
+                .orElseThrow(() -> new ExceptionUserNotFound("Usuario administrador no encontrado con ID: " + userId));
+
+        // Generar la contraseña segura y aleatoria
+        String randomPassword = generatedRandomPassword();
+
+        // Hashear la contraseña antes de guardarla
+        String hashedPassword = passwordEncoder.encode(randomPassword);
+
+        // Guardar la contraseña hasheada y marcarla como expirada
+        // para forzar el cambio en el primer inicio de sesión
+        admin.setPasswordHash(hashedPassword);
+        admin.setIsActive(1); // O el valor que uses para indicar que está activo
+        admin.setPasswordExpired(true);
+
+        // Guardar los cambios en la base de datos
+        UserEntity savedAdmin = userRepository.save(admin);
+
+        // Enviar las credenciales temporales por correo electrónico
+        String subject = "Credenciales de Acceso a Help Desk H2C";
+        String body = "Hola " + admin.getFullName() + " tu cuenta ha sido creada exitosamente. Tu nombre de usuario es: " + admin.getUsername() + " , tu contraseña temporal es: " + randomPassword + " Por favor no compartas con nadie esta información, Saludos del equipo de H2C";
+        emailService.sendEmail(admin.getEmail(), subject, body);
+
+        return convertToUserDTO(savedAdmin);
+    }
+
+    // Asegúrate de tener un metodo convertToDTO que mapee la entidad a un DTO
+    private UserDTO convertToDTO(UserEntity user) {
+        UserDTO dto = new UserDTO();
+        dto.setId(user.getUserId());
+        dto.setName(user.getFullName());
+        dto.setUsername(user.getUsername());
+        dto.setEmail(user.getEmail());
+        dto.setPhone(user.getPhone());
+        dto.setProfilePictureUrl(user.getProfilePictureUrl());
+        // Aquí puedes mapear otros campos como el rol y la categoría
+        return dto;
+    }
+
     //METODO DE ACTUALIZACION DE CATEGORIA DE USUARIO (TECNICOS)
     public UserDTO updateUser(Long id, UserDTO dto) {
 
@@ -209,8 +308,7 @@ public class UserService implements UserDetailsService {
 
         UserEntity existingUser = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("El usuario con id" + id + " no existe"));
 
-        //Primera operacion: Actualizar categoria (NIVEL DE ACCESO: 3 // [ADMIN] -> [TECNICO] )
-        if (dto.getCategory() != null) { //Verifica si existe un valor (id) del atributo "category" enviado por el usuario (ADMIN)
+        if (dto.getCategory() != null) {
             if (dto.getCategory().getId() == null) {//Verifica si el valor (id) enviado por el usuario (ADMIN) existe en el registro de CategoryDTO
                 throw new IllegalArgumentException("Para actualizar la categoría, debe proporcionar un 'id' dentro de la enumeracion en 'Category'");
             }
@@ -220,19 +318,18 @@ public class UserService implements UserDetailsService {
 
             //Verifica si el usuario es un Tecnico
             if (existingUser.getRolId().equals(UserRole.TECNICO.getId())) {
-                existingUser.setCategoryId(category.getId());
-                Optional<Category> optionalCategory = Category.fromId(dto.getCategory().getId()); //Se asignara la categoria segun el id proporcionado por el usuario (ADMIN)
-                if (optionalCategory.isEmpty()) { //Si no existe (el registro en la lista esta vacio), se avisara que esa categoria asociada con su id no existe
+                CategoryEntity categoryEntity = categoryRepository.findById(dto.getCategory().getId())
+                        .orElseThrow(() -> new IllegalArgumentException("La categoria de id " + dto.getCategory().getId() + "  no existe."));
+                existingUser.setCategory(categoryEntity);
+                Optional<Category> optionalCategory = Category.fromId(dto.getCategory().getId());
+                if (optionalCategory.isEmpty()) {
                     throw new IllegalArgumentException("La categoría con ID " + dto.getCategory().getId() + " no existe.");
                 }
-                category = optionalCategory.get();
             }else{
                 throw new IllegalArgumentException("Solo los técnicos pueden tener una categoría asignada. El usuario " + existingUser.getFullName() + " no es técnico.");
             }
-
-        }else {
-            existingUser.setCategoryId(null);
-
+        } else {
+            existingUser.setCategory(null);
         }
 
 
@@ -275,6 +372,43 @@ public class UserService implements UserDetailsService {
         return convertToUserDTO(savedUser);
     }
 
+    //Este metodo se encargará de asignar la categoría a un técnico pendiente, generar las credenciales, guardarlas en la base de datos y enviar el correo.
+    @Transactional
+    public UserDTO assignCategoryAndActivateTechnician(Long userId, Long categoryId) {
+        UserEntity userEntity = userRepository.findById(userId)
+                .orElseThrow(() -> new ExceptionUserNotFound("El usuario con ID " + userId + " no existe."));
+
+        // 1. Validar que el usuario sea un técnico y que no tenga una categoría asignada
+        if (!userEntity.getRolId().equals(UserRole.TECNICO.getId())) {
+            throw new IllegalArgumentException("Solo se pueden asignar categorías a usuarios con rol de TÉCNICO.");
+        }
+
+        if (userEntity.getCategory() != null) {
+            throw new IllegalArgumentException("El técnico con ID " + userId + " ya tiene una categoría asignada.");
+        }
+
+        // 2. Verificar que la categoría exista
+        CategoryEntity categoryEntity = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ExceptionCategoryNotFound("La categoría con ID " + categoryId + " no existe."));
+
+        // 3. Asignar la categoría y activar al técnico
+        userEntity.setCategory(categoryEntity);
+
+        // 4. Generar y guardar la contraseña
+        String randomPassword = generatedRandomPassword();
+        String hashedPassword = passwordEncoder.encode(randomPassword);
+        userEntity.setPasswordHash(hashedPassword);
+        userEntity.setPasswordExpired(false); // La contraseña temporal ya es la inicial
+
+        UserEntity updatedUser = userRepository.save(userEntity);
+
+        // 5. Enviar correo electrónico
+        String subject = "Credenciales de Acceso a Help Desk H2C";
+        String body = "Hola " + updatedUser.getFullName() + " tu cuenta de técnico ha sido activada. Tu nombre de usuario es: " + updatedUser.getUsername() + " , tu contraseña temporal es: " + randomPassword + " Por favor no compartas con nadie esta información, Saludos del equipo de H2C";
+        emailService.sendEmail(updatedUser.getEmail(), subject, body);
+
+        return convertToUserDTO(updatedUser);
+    }
 
     public void deleteUser(Long id) {
 
@@ -291,6 +425,36 @@ public class UserService implements UserDetailsService {
         userRepository.deleteById(id);
     }
 
+    @Transactional
+    public UserDTO registerTechnicianPending(UserDTO userDTO, Long companyId) {
+        // 1. Validar que la compañía exista
+        CompanyEntity companyToAssign = companyRepository.findById(companyId)
+                .orElseThrow(() -> new IllegalArgumentException("Compañía no encontrada. No se puede asignar el técnico."));
+
+        // 2. Crear y configurar la entidad de usuario
+        UserEntity userEntity = new UserEntity();
+        userEntity.setFullName(userDTO.getName());
+        userEntity.setEmail(userDTO.getEmail());
+        userEntity.setPhone(userDTO.getPhone());
+        userEntity.setProfilePictureUrl(userDTO.getProfilePictureUrl());
+        userEntity.setUsername(userDTO.getUsername());
+
+        // Asignar los valores por defecto para un técnico pendiente
+        userEntity.setIsActive(0); // 0 para pendiente, 1 para activo
+        userEntity.setPasswordExpired(true); // La contraseña está expirada por defecto
+
+        // Asignar el ID del rol directamente
+        userEntity.setRolId(2L); // 2 es el ID del rol 'Técnico'
+
+        // 3. Asignar la compañía
+        userEntity.setCompany(companyToAssign);
+
+        // Guardar la entidad en la base de datos
+        // Hibernate automáticamente establecerá la fecha de registro gracias a @CreationTimestamp
+        UserEntity savedUser = userRepository.save(userEntity);
+
+        return convertToUserDTO(savedUser);
+    }
 
     //Manda datos del usuario. Convierte de UserEntity a DTOUser
     private UserDTO convertToUserDTO(UserEntity usuario) {
@@ -299,9 +463,9 @@ public class UserService implements UserDetailsService {
         UserRole userRoleEnum = UserRole.fromId(usuario.getRolId()).orElseThrow(() -> new IllegalArgumentException("ID de Rol de usuario inválido en la entidad: " + usuario.getRolId()));
         dto.setRol(new RolDTO(userRoleEnum));
 
-        if (usuario.getCategoryId() != null) {
-            Category categoryEnum = Category.fromId(usuario.getCategoryId()).orElseThrow(() -> new IllegalArgumentException("ID de Categoría inválido en la entidad para el usuario: " + usuario.getUserId() + " con categoryId: " + usuario.getCategoryId()));
-            // Creacion de CategoryDTO para la respuesta, incluyendo ambos id y displayName
+        // Solución para el metodo convertToUserDTO
+        if (usuario.getCategory() != null) {
+            Category categoryEnum = Category.fromId(usuario.getCategory().getCategoryId()).orElseThrow(() -> new IllegalArgumentException("ID de Categoría inválido en la entidad para el usuario: " + usuario.getUserId() + " con categoryId: " + usuario.getCategory().getCategoryId()));
             dto.setCategory(new CategoryDTO(categoryEnum.getId(), categoryEnum.getDisplayName()));
         } else {
             dto.setCategory(null);
@@ -327,5 +491,86 @@ public class UserService implements UserDetailsService {
         return userRepository.findByUsername(username).map(UserEntity::getUserId).orElseThrow(() -> new IllegalArgumentException("El usuario " + username + " no existe"));
     }
 
+    // Encontrar usuario por su rol
+    public List<UserDTO> findByRole(Long roleId) {
+        List<UserEntity> users = userRepository.findByRolId(roleId);
+
+        return users.stream().map(user -> {
+            UserDTO dto = new UserDTO();
+            dto.setId(user.getUserId());
+            dto.setName(user.getFullName());
+            dto.setEmail(user.getEmail());
+            dto.setPhone(user.getPhone());
+            dto.setProfilePictureUrl(user.getProfilePictureUrl());
+
+            UserRole role = UserRole.fromId(user.getRolId())
+                    .orElseThrow(() -> new IllegalArgumentException("Rol inválido"));
+            dto.setRol(new RolDTO(role));
+
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public UserDTO registerInitialAdmin(UserDTO dto) {
+        // 1. Limpiar el caché para evitar problemas
+        entityManager.clear();
+
+        // 2. Validaciones: asegúrate de que el email, username, y teléfono no existan
+        userRepository.findByEmailIgnoreCase(dto.getEmail()).ifPresent(user -> {
+            throw new IllegalArgumentException("El correo electrónico ya está registrado.");
+        });
+        // Opcional: Genera el username si no está en el DTO para el caso de admin
+        if (dto.getUsername() == null || dto.getUsername().isBlank()) {
+            String generatedUsername = generateUsername(dto.getName());
+            dto.setUsername(generatedUsername);
+        }
+
+        userRepository.findByUsername(dto.getUsername()).ifPresent(user -> {
+            throw new IllegalArgumentException(("El usuario '" + dto.getUsername() + "' ya esta registrado."));
+        });
+
+        userRepository.findByPhone(dto.getPhone()).ifPresent(user -> {
+            throw new IllegalArgumentException(("El número ya está registrado."));
+        });
+
+        // 3. Generar la contraseña aleatoria y hashearla
+        String randomPassword = generatedRandomPassword();
+        String hashedPassword = passwordEncoder.encode(randomPassword);
+
+        // 4. Crear la entidad de usuario
+        UserEntity userEntity = new UserEntity();
+        userEntity.setFullName(dto.getName());
+        userEntity.setUsername(dto.getUsername());
+        userEntity.setEmail(dto.getEmail());
+        userEntity.setPhone(dto.getPhone());
+        userEntity.setPasswordHash(hashedPassword);
+
+        // 5. Asignar el rol de ADMINISTRADOR, isActive y PasswordExpired
+        userEntity.setRolId(UserRole.ADMINISTRADOR.getId()); // Asigna el rol de administrador
+        userEntity.setIsActive(0); // 0 para indicar que está pendiente de activación
+        userEntity.setPasswordExpired(true); // Requiere cambio de contraseña en el primer login
+
+        // 6. Asignar la primera compañía encontrada
+        Long foundCompanyId = companyRepository.findFirstCompanyId()
+                .orElseThrow(() -> new IllegalStateException("No se puede registrar el usuario: No hay compañías registradas."));
+        CompanyEntity companyToAssign = companyRepository.findById(foundCompanyId)
+                .orElseThrow(() -> new IllegalStateException("La primera compañía (ID: " + foundCompanyId + ") no fue encontrada."));
+        userEntity.setCompany(companyToAssign);
+
+        // 7. Guardar el usuario en la base de datos
+        UserEntity savedUser = userRepository.save(userEntity);
+
+        // 8. No enviar correo aquí. La lógica de envío está en finalizeAdminSetup
+        return convertToUserDTO(savedUser);
+    }
+
+    // Generar username automáticamente
+    private String generateUsername(String fullName) {
+        String[] parts = fullName.split(" ");
+        String firstName = parts[0].toLowerCase();
+        String lastName = parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
+        return firstName + "." + lastName;
+    }
 }
 

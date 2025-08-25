@@ -43,6 +43,18 @@ public class UserController {
         }
         return ResponseEntity.ok(tecnicos);
     }
+  
+  @PatchMapping("/users/{id}")
+    public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody Map<String, String> updates) {
+        try {
+            UserDTO updatedUser = acceso.UpdateUser(id, updates);
+            return new ResponseEntity<>(updatedUser, HttpStatus.OK);
+        } catch (ExceptionUserNotFound e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+        }
+    }
 
     @PostMapping("/PostUser")
     public ResponseEntity<?> createUser(@RequestBody @Valid UserDTO user) {
