@@ -35,7 +35,16 @@ public class UserController {
         return new ResponseEntity<>(users, HttpStatus.OK);
     }
 
-    @PatchMapping("/users/{id}")
+    @GetMapping("/GetTech")
+    public ResponseEntity<List<UserDTO>> getTechs(){
+        List<UserDTO> tecnicos = acceso.getTech();
+        if (tecnicos.isEmpty()){
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(tecnicos);
+    }
+  
+  @PatchMapping("/users/{id}")
     public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody Map<String, String> updates) {
         try {
             UserDTO updatedUser = acceso.UpdateUser(id, updates);

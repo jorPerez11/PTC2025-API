@@ -70,6 +70,13 @@ public class UserService implements UserDetailsService {
         );
     }
 
+    public List<UserDTO> getTech(){
+        List<UserEntity> tech = userRepository.findByRolId(2L);
+        return tech.stream()
+                .map(this::convertToUserDTO)
+                .collect(Collectors.toList());
+    }
+
     //Metodo para generar una contraseña segura y aleatoria
     private String generatedRandomPassword(){
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?";

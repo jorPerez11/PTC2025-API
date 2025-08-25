@@ -23,4 +23,5 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
      */
     boolean existsByCategory_CategoryId(Long categoryId);
     Optional<UserEntity> findByUsername(String username);
+    List<UserEntity> findByRolId(Long rolId);
 }
