@@ -67,6 +67,28 @@ public class UserController {
         }
     }
 
+    @PatchMapping("/UpdateUser/{id}")
+    public ResponseEntity<?> UpdateUser(@PathVariable Long id, @Valid @RequestBody UserDTO dto) {
+        try {
+            UserDTO updatedUser = acceso.updateUser(id, dto);
+            return new ResponseEntity<>(updatedUser, HttpStatus.OK);
+
+        } catch (ExceptionUserBadRequest e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+        }catch(ExceptionUserNotFound e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            Map<String, String> errors = new HashMap<>();
+            //e.printStackTrace();
+            errors.put("error", "Ocurrió un error interno del servidor al actualizar el usuario.");
+            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     //Obtener un usuario por su ID
     @GetMapping("/GetUser/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Long id) {
