@@ -16,10 +16,11 @@ import java.util.stream.Collectors;
 
 @Service
 public class CategoryService {
-    public List<CategoryDTO> getAllCategories(){
+    public List<CategoryDTO> getAllCategories() {
         return Arrays.stream(Category.values())
                 .map(category -> new CategoryDTO(category.getId(), category.getDisplayName()))
                 .collect(Collectors.toList());
+    }
     @Autowired
     private CategoryRepository categoryRepository;
 

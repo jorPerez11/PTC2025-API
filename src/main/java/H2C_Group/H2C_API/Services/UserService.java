@@ -258,7 +258,7 @@ public class UserService implements UserDetailsService {
         UserEntity updatedUser = userRepository.save(user);
 
         // 4. Convertir la entidad a DTO y devolverla
-        return convertToDTO(updatedUser);
+        return convertToUserDTO(updatedUser);
     }
 
     /**
@@ -282,7 +282,7 @@ public class UserService implements UserDetailsService {
         // Guardar la contraseña hasheada y marcarla como expirada
         // para forzar el cambio en el primer inicio de sesión
         admin.setPasswordHash(hashedPassword);
-        admin.setIsActive(1); // O el valor que uses para indicar que está activo
+        admin.setIsActive(1); // O el valor que usas para indicar que está activo
         admin.setPasswordExpired(true);
 
         // Guardar los cambios en la base de datos
@@ -294,19 +294,6 @@ public class UserService implements UserDetailsService {
         emailService.sendEmail(admin.getEmail(), subject, body);
 
         return convertToUserDTO(savedAdmin);
-    }
-
-    // Asegúrate de tener un metodo convertToDTO que mapee la entidad a un DTO
-    private UserDTO convertToDTO(UserEntity user) {
-        UserDTO dto = new UserDTO();
-        dto.setId(user.getUserId());
-        dto.setName(user.getFullName());
-        dto.setUsername(user.getUsername());
-        dto.setEmail(user.getEmail());
-        dto.setPhone(user.getPhone());
-        dto.setProfilePictureUrl(user.getProfilePictureUrl());
-        // Aquí puedes mapear otros campos como el rol y la categoría
-        return dto;
     }
 
     //METODO DE ACTUALIZACION DE CATEGORIA DE USUARIO (TECNICOS)
@@ -325,12 +312,12 @@ public class UserService implements UserDetailsService {
             }
 
             //Verifica si existe un id con la categoria indicada
-            Category category = Category.fromId(dto.getCategory().getId()).orElseThrow(() -> new IllegalArgumentException("La categoria de id " + dto.getCategory().getId() + "  no existe."));
+            Category category = Category.fromId(dto.getCategory().getId()).orElseThrow(() -> new IllegalArgumentException("La categoria de id " + dto.getCategory().getId() + " no existe."));
 
             //Verifica si el usuario es un Tecnico
             if (existingUser.getRolId().equals(UserRole.TECNICO.getId())) {
                 CategoryEntity categoryEntity = categoryRepository.findById(dto.getCategory().getId())
-                        .orElseThrow(() -> new IllegalArgumentException("La categoria de id " + dto.getCategory().getId() + "  no existe."));
+                        .orElseThrow(() -> new IllegalArgumentException("La categoria de id " + dto.getCategory().getId() + " no existe."));
                 existingUser.setCategory(categoryEntity);
                 Optional<Category> optionalCategory = Category.fromId(dto.getCategory().getId());
                 if (optionalCategory.isEmpty()) {
@@ -468,28 +455,28 @@ public class UserService implements UserDetailsService {
     }
 
     //Manda datos del usuario. Convierte de UserEntity a DTOUser
-    private UserDTO convertToUserDTO(UserEntity usuario) {
+    private UserDTO convertToUserDTO(UserEntity user) {
         UserDTO dto = new UserDTO();
-        dto.setId(usuario.getUserId());
-        UserRole userRoleEnum = UserRole.fromId(usuario.getRolId()).orElseThrow(() -> new IllegalArgumentException("ID de Rol de usuario inválido en la entidad: " + usuario.getRolId()));
+        dto.setId(user.getUserId());
+        UserRole userRoleEnum = UserRole.fromId(user.getRolId()).orElseThrow(() -> new IllegalArgumentException("ID de Rol de usuario inválido en la entidad: " + user.getRolId()));
         dto.setRol(new RolDTO(userRoleEnum));
 
         // Solución para el metodo convertToUserDTO
-        if (usuario.getCategory() != null) {
-            Category categoryEnum = Category.fromId(usuario.getCategory().getCategoryId()).orElseThrow(() -> new IllegalArgumentException("ID de Categoría inválido en la entidad para el usuario: " + usuario.getUserId() + " con categoryId: " + usuario.getCategory().getCategoryId()));
+        if (user.getCategory() != null) {
+            Category categoryEnum = Category.fromId(user.getCategory().getCategoryId()).orElseThrow(() -> new IllegalArgumentException("ID de Categoría inválido en la entidad para el usuario: " + user.getUserId() + " con categoryId: " + user.getCategory().getCategoryId()));
             dto.setCategory(new CategoryDTO(categoryEnum.getId(), categoryEnum.getDisplayName()));
         } else {
             dto.setCategory(null);
         }
 
-        if (usuario.getCompany() != null) { // userEntity.getCompany() devuelve un CompanyEntity
-            dto.setCompanyId(usuario.getCompany().getCompanyId()); // userEntity.getCompany().getCompanyId() devuelve el Long ID
+        if (user.getCompany() != null) { // userEntity.getCompany() devuelve un CompanyEntity
+            dto.setCompanyId(user.getCompany().getCompanyId()); // userEntity.getCompany().getCompanyId() devuelve el Long ID
         }
-        dto.setName(usuario.getFullName());
-        dto.setUsername(usuario.getUsername());
-        dto.setEmail(usuario.getEmail());
-        dto.setPhone(usuario.getPhone());
-        dto.setIsActive(usuario.getIsActive());
+        dto.setName(user.getFullName());
+        dto.setUsername(user.getUsername());
+        dto.setEmail(user.getEmail());
+        dto.setPhone(user.getPhone());
+        dto.setIsActive(user.getIsActive());
         return dto;
     }
 
@@ -502,7 +489,6 @@ public class UserService implements UserDetailsService {
         return userRepository.findByUsername(username).map(UserEntity::getUserId).orElseThrow(() -> new IllegalArgumentException("El usuario " + username + " no existe"));
     }
 
-<<<<<<< Updated upstream
     // Encontrar usuario por su rol
     public List<UserDTO> findByRole(Long roleId) {
         List<UserEntity> users = userRepository.findByRolId(roleId);
@@ -583,24 +569,14 @@ public class UserService implements UserDetailsService {
         String firstName = parts[0].toLowerCase();
         String lastName = parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
         return firstName + "." + lastName;
-=======
+    }
+
     public UserDTO findUserById(Long id) {
         // Busca la entidad en la base de datos. orElseThrow lanza la excepción si no lo encuentra.
         UserEntity userEntity = userRepository.findById(id)
                 .orElseThrow(() -> new ExceptionUserNotFound("Usuario con ID " + id + " no encontrado."));
 
         // Convierte la entidad a DTO para enviarla al frontend.
-        // (Asumo que ya tienes una lógica para esto, si no, aquí la implementarías)
-        UserDTO userDTO = new UserDTO();
-        userDTO.setId(userEntity.getUserId());
-        userDTO.setName(userEntity.getFullName());
-        userDTO.setUsername(userEntity.getUsername());
-        userDTO.setEmail(userEntity.getEmail());
-        userDTO.setPhone(userEntity.getPhone());
-        // ... setear los demás campos necesarios
-
-        return userDTO;
->>>>>>> Stashed changes
+        return convertToUserDTO(userEntity);
     }
 }
-

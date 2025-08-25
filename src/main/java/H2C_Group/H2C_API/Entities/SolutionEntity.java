@@ -38,10 +38,7 @@ public class SolutionEntity {
     @UpdateTimestamp
     @Column(name="UPDATEDATE")
     private LocalDateTime updateDate;
-<<<<<<< Updated upstream
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "CATEGORYID")
     private CategoryEntity category;
-=======
->>>>>>> Stashed changes
 }

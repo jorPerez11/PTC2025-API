@@ -34,6 +34,8 @@ public class SolutionService {
 
 
     public Page<SolutionDTO> getAllSolutions(Pageable pageable) {
+        // NOTA: Para evitar la LazyInitializationException (LIE) del UserEntity,
+        // Tu SolutionRepository debe usar @Query con JOIN FETCH en su findAll.
         Page<SolutionEntity> solutions = solutionRepository.findAll(pageable);
         return solutions.map(this::convertToSolutionDTO);
     }
@@ -54,7 +56,9 @@ public class SolutionService {
 // Asigna el objeto de categoría completo a la entidad de solución
         solutionEntity.setCategory(categoryEntity);
 
-        solutionEntity.setSolutionId(solutionDTO.getSolutionId());
+        // CORRECCIÓN CRÍTICA: Se elimina esta línea. El ID se autogenera.
+        // solutionEntity.setSolutionId(solutionDTO.getSolutionId());
+
         solutionEntity.setSolutionTitle(solutionDTO.getSolutionTitle());
         solutionEntity.setDescriptionS(solutionDTO.getDescriptionS());
         solutionEntity.setSolutionSteps(solutionDTO.getSolutionSteps());
@@ -75,7 +79,7 @@ public class SolutionService {
         SolutionEntity existingSolution = solutionRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("La solución con ID " + id + " no existe."));
 
         UserEntity existingUser = userRepository.findById(solutionDTO.getUserId()).orElseThrow(() -> new IllegalArgumentException("El usuario con id" + solutionDTO.getUserId() + " no existe"));
-        existingUser.setUserId(existingUser.getUserId());
+        existingSolution.setUser(existingUser); // Asignar el usuario al que se le hace el update.
 
         if (solutionDTO.getCategory() != null) {
             CategoryDTO categoryFromDTO = solutionDTO.getCategory();
@@ -146,11 +150,18 @@ public class SolutionService {
         // Accede al objeto category y luego a su ID.
         Category categoryEnum = Category.fromIdOptional(solutionEntity.getCategory().getCategoryId()).orElseThrow(() -> new IllegalArgumentException("La categoria de id " + solutionEntity.getCategory().getCategoryId() + " no existe."));
 
+        // Mapeo del objeto CategoryDTO
+        solutionDTO.setCategory(new CategoryDTO(categoryEnum.getId(), categoryEnum.getDisplayName()));
+
         solutionDTO.setSolutionId(solutionEntity.getSolutionId());
         solutionDTO.setSolutionTitle(solutionEntity.getSolutionTitle());
         solutionDTO.setDescriptionS(solutionEntity.getDescriptionS());
         solutionDTO.setSolutionSteps(solutionEntity.getSolutionSteps());
         solutionDTO.setKeyWords(solutionEntity.getKeyWords());
+
+        // CORRECCIÓN CRÍTICA: Mapear la fecha de actualización
+        solutionDTO.setUpdateDate(solutionEntity.getUpdateDate());
+
         return solutionDTO;
 
     }

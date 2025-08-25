@@ -41,5 +41,5 @@ public class SolutionDTO {
     @Size(max = 50, message = "La clave no puede exceder los 50 caracteres")
     private String keyWords;
 
-    private String updateDate;
+    private LocalDateTime updateDate;
 }

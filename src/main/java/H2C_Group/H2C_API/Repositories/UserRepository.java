@@ -15,13 +15,16 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<UserEntity, Long>{
     Optional<UserEntity> findByEmailIgnoreCase(String email);
     Optional<UserEntity> findByPhone(String phone);
+
+    // MÉTODO ÚNICO: findByRolId
     List<UserEntity> findByRolId(Long rolId);
+
     /**
      * Verifica si existe al menos un usuario asociado a un ID de categoría específico.
      * @param categoryId El ID de la categoría a verificar.
      * @return true si existe al menos un usuario, false en caso contrario.
      */
     boolean existsByCategory_CategoryId(Long categoryId);
+
     Optional<UserEntity> findByUsername(String username);
-    List<UserEntity> findByRolId(Long rolId);
 }
