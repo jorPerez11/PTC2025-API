@@ -38,24 +38,24 @@ public class SecurityConfig{
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Permite las peticiones OPTIONS para pre-vuelo de CORS
+                        // Permite explícitamente el acceso a la creación de la compañía.
+                        // Permite explícitamente el acceso a la creación de la compañía.
+                        .requestMatchers(HttpMethod.POST, "/api/PostCompany/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/PostCompany").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/companies").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/companies/**").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/users/**").permitAll()
+
+                        // Permite el acceso a todos los endpoints del "primer uso"
+                        .requestMatchers("/api/firstuse/**").permitAll()
+
+                        // Permite las peticiones OPTIONS (para pre-vuelo de CORS)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 2. Permite el acceso a los endpoints de login y registro
+                        // Permite el acceso al endpoint de login y registro
                         .requestMatchers("/api/users/login", "/api/users/register").permitAll()
 
-                        // 3. Permite el acceso a el endpoint del primer uso
-                        .requestMatchers("/api/firstuse/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/firstuse/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/firstuse/**").permitAll()
-                        .requestMatchers(HttpMethod.PUT, "/api/firstuse/**").permitAll()
-                        .requestMatchers(HttpMethod.DELETE, "/api/firstuse/**").permitAll()
-                        .requestMatchers(HttpMethod.DELETE, "/api/firstuse/categorias/**").permitAll()
-
-                        // 4. Permite el acceso a un endpoint autenticado
-                        .requestMatchers("/api/users/change-password").authenticated()
-
-                        // 5. Cualquier otra petición debe estar autenticada
+                        // Los demás endpoints requieren autenticación
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

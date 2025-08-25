@@ -3,12 +3,16 @@ package H2C_Group.H2C_API.Controllers;
 import H2C_Group.H2C_API.Entities.CategoryEntity;
 import H2C_Group.H2C_API.Exceptions.ExceptionCategoryBadRequest;
 import H2C_Group.H2C_API.Exceptions.ExceptionCategoryNotFound;
+import H2C_Group.H2C_API.Exceptions.ExceptionUserBadRequest;
+import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
+import H2C_Group.H2C_API.Models.DTO.CategoryDTO;
 import H2C_Group.H2C_API.Models.DTO.RolDTO;
 import H2C_Group.H2C_API.Models.DTO.UserDTO;
 import H2C_Group.H2C_API.Repositories.CategoryRepository;
 import H2C_Group.H2C_API.Services.CategoryService;
 import H2C_Group.H2C_API.Services.UserService;
 import jakarta.annotation.security.PermitAll;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,9 +38,9 @@ public class FirstUseController {
     @Autowired
     private CategoryService categoryService;
 
-    // Endpoint para obtener técnicos (rolId = 2 para técnicos)
+    // Endpoint para obtener técnicos
     @GetMapping("/tecnicoData")
-    public ResponseEntity<List<Map<String, Object>>> getTecnicos() {
+    public ResponseEntity<?> getTecnicos() {
         try {
             List<UserDTO> technicians = userService.findByRole(2L);
 
@@ -52,67 +56,62 @@ public class FirstUseController {
 
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            System.out.println("Error al obtener técnicos: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Error al obtener técnicos");
+            return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    // Endpoint para crear técnico
-    @PostMapping("/tecnicoData")
+    @PostMapping("/tecnicos-pendientes")
     @PermitAll
-    public ResponseEntity<Map<String, Object>> createTecnico(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<?> createTechnicianPending(@RequestBody Map<String, Object> payload) {
         try {
-            String nombre = (String) payload.get("Nombre");
-            String email = (String) payload.get("Correo Electrónico");
-            String telefono = (String) payload.get("Número de tel.");
-            String foto = (String) payload.get("Foto");
-
             UserDTO userDTO = new UserDTO();
-            userDTO.setName(nombre);
-            userDTO.setEmail(email);
-            userDTO.setPhone(telefono);
-            userDTO.setProfilePictureUrl(foto);
+            userDTO.setName((String) payload.get("Nombre"));
+            userDTO.setEmail((String) payload.get("Correo Electrónico"));
+            userDTO.setPhone((String) payload.get("Número de tel."));
+            userDTO.setProfilePictureUrl((String) payload.get("Foto"));
+            userDTO.setUsername(generateUsername(userDTO.getName()));
 
-            // Configurar el rol como técnico (ID = 2)
-            RolDTO rolDTO = new RolDTO();
-            rolDTO.setId(2L);
-            rolDTO.setDisplayName("Técnico");
-            userDTO.setRol(rolDTO);
+            // --- Validar si el companyId existe antes de usarlo ---
+            Long companyId = null;
+            Object companyIdObj = payload.get("companyId");
+            if (companyIdObj instanceof Number) {
+                companyId = ((Number) companyIdObj).longValue();
+            } else {
+                // Manejar el caso donde companyId es null o no es un número.
+                // Esto evita el NullPointerException.
+                throw new IllegalArgumentException("companyId no es válido o está ausente.");
+            }
 
-            userDTO.setUsername(generateUsername(nombre));
-            userDTO.setPassword("TempPassword123!");
-            userDTO.setIsActive(1);
-
-            UserDTO savedUser = userService.registerNewUser(userDTO);
+            // El servicio se encargará de buscar la compañía y asignar el rol de técnico
+            UserDTO savedUser = userService.registerTechnicianPending(userDTO, companyId); // Pasamos companyId al servicio
 
             Map<String, Object> response = new HashMap<>();
             response.put("id", savedUser.getId());
             response.put("Nombre", savedUser.getName());
             response.put("Correo Electrónico", savedUser.getEmail());
-            response.put("Número de tel.", savedUser.getPhone());
-            response.put("Foto", savedUser.getProfilePictureUrl());
+            response.put("Mensaje", "Técnico creado en estado pendiente.");
 
             return new ResponseEntity<>(response, HttpStatus.CREATED);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Error al crear técnico pendiente: " + e.getMessage());
+            return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     // Endpoint para actualizar técnico
     @PutMapping("/tecnicoData/{id}")
-    public ResponseEntity<Map<String, Object>> updateTecnico(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
+    public ResponseEntity<?> updateTecnico(@PathVariable Long id, @RequestBody Map<String, String> payload) {
         try {
-            String nombre = (String) payload.get("Nombre");
-            String email = (String) payload.get("Correo Electrónico");
-            String telefono = (String) payload.get("Número de tel.");
-            String foto = (String) payload.get("Foto");
-
-            UserDTO userDTO = new UserDTO();
-            userDTO.setName(nombre);
-            userDTO.setEmail(email);
-            userDTO.setPhone(telefono);
-            userDTO.setProfilePictureUrl(foto);
-
-            UserDTO updatedUser = userService.updateUser(id, userDTO);
+            UserDTO updatedUser = userService.UpdateUser(id, payload); // Pasa el payload directamente
 
             Map<String, Object> response = new HashMap<>();
             response.put("id", updatedUser.getId());
@@ -122,19 +121,75 @@ public class FirstUseController {
             response.put("Foto", updatedUser.getProfilePictureUrl());
 
             return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+        } catch (ExceptionUserNotFound e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            System.out.println("Error al actualizar técnico: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Error al actualizar técnico");
+            return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // Nuevo Endpoint para asignar categoría y activar a un técnico
+    @PatchMapping("/tecnicos/{id}/asignar-categoria")
+    @PermitAll
+    public ResponseEntity<?> assignCategoryToTechnician(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
+        try {
+            Long categoryId = ((Number) payload.get("categoryId")).longValue();
+            UserDTO updatedUser = userService.assignCategoryAndActivateTechnician(id, categoryId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", updatedUser.getId());
+            response.put("Nombre", updatedUser.getName());
+            response.put("Correo Electrónico", updatedUser.getEmail());
+            response.put("Categoría Asignada", updatedUser.getCategory().getDisplayName());
+            response.put("Mensaje", "Técnico activado y credenciales enviadas por correo electrónico.");
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+        } catch (ExceptionUserNotFound | ExceptionCategoryNotFound e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Error interno al asignar categoría y activar técnico");
+            return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     // Endpoint para eliminar técnico
     @DeleteMapping("/tecnicoData/{id}")
-    public ResponseEntity<Void> deleteTecnico(@PathVariable Long id) {
+    public ResponseEntity<?> deleteTecnico(@PathVariable Long id) {
         try {
             userService.deleteUser(id);
             return new ResponseEntity<>(HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+        } catch (ExceptionUserNotFound e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            System.out.println("Error al eliminar técnico: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Error al eliminar técnico");
+            return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -226,6 +281,48 @@ public class FirstUseController {
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();
             error.put("error", "Ocurrió un error interno del servidor al intentar eliminar la categoría.");
+            return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/finalize-admin/{userId}")
+    public ResponseEntity<?> finalizeAdmin(@PathVariable Long userId) {
+        try {
+            UserDTO finalUser = userService.finalizeAdminSetup(userId);
+            return new ResponseEntity<>(finalUser, HttpStatus.OK);
+        } catch (ExceptionUserNotFound e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Ocurrió un error al finalizar la configuración: " + e.getMessage());
+            return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // Nuevo Endpoint para el registro inicial del administrador
+    @PostMapping("/register-admin")
+    @PermitAll
+    public ResponseEntity<?> registerInitialAdmin(@RequestBody UserDTO userDTO) {
+        try {
+            UserDTO newUser = userService.registerInitialAdmin(userDTO);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", newUser.getId());
+            response.put("Nombre", newUser.getName());
+            response.put("Correo Electrónico", newUser.getEmail());
+            response.put("Mensaje", "Usuario administrador registrado en estado pendiente.");
+
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            e.printStackTrace();
+            error.put("error", "Ocurrió un error al registrar al administrador inicial: " + e.getMessage());
             return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
