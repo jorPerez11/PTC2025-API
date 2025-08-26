@@ -120,4 +120,11 @@ public class CompanyService {
     public List<CompanyDTO> getAllCompanies() {
         return findAll();
     }
+
+    public void deleteCompany(Long id) throws ExceptionCompanyNotFound {
+        if (!companyRepository.existsById(id)) {
+            throw new ExceptionCompanyNotFound("Compañía no encontrada con ID: " + id);
+        }
+        companyRepository.deleteById(id);
+    }
 }

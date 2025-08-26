@@ -1,6 +1,8 @@
 package H2C_Group.H2C_API.Entities;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -13,6 +15,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name="TBUSERS")
 
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @ToString(exclude = {"company"}) //Entidades relacionadas
 @EqualsAndHashCode(exclude = {"company"})
 @Getter
@@ -27,7 +30,10 @@ public class UserEntity {
     private Long rolId;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "COMPANYID", nullable = false)
+    @JsonIgnore
     private CompanyEntity company;
+    @Column(name="CATEGORYID", insertable = false, updatable = false)
+    private Long categoryId;
     @Column(name="FULLNAME")
     private String fullName;
     @Column(name="USERNAME")

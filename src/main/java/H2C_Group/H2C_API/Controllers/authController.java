@@ -47,6 +47,16 @@ public class authController {
         }
     }
 
+    @PostMapping("/registerTech")
+    public ResponseEntity<?> registerTech(@RequestBody UserDTO userDTO){
+        try{
+            UserDTO registeredUserTech = userService.registerNewUserTech(userDTO);
+            return new ResponseEntity<>(registeredUserTech, HttpStatus.CREATED);
+        }catch (Exception e){
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @PostMapping("/login")
     public ResponseEntity<?> createAuthenticationToken(@RequestBody UserDTO authenticationRequest) throws Exception{
         // 1. Autentica las credenciales del usuario usando AuthenticationManager
