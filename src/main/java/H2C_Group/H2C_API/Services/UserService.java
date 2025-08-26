@@ -142,6 +142,7 @@ public class UserService implements UserDetailsService {
     }
 
 
+    // Ya valio
     public UserDTO registerNewUser(UserDTO dto) {
         //Limpiar el caché antes de las validaciones esto es para que tenga que consultar la base y no guarde informacion innecesaria
         entityManager.clear();
