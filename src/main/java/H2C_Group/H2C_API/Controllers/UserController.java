@@ -81,9 +81,9 @@ public class UserController {
     }
 
 
-   // Método de actualización único y correcto, usa UserDTO y valida con @Valid.
+    // Método de actualización único y correcto, usa UserDTO y valida con @Valid.
     @PatchMapping("/users/{id}")
-    public ResponseEntity<?> UpdateUser(@PathVariable Long id, @Valid @RequestBody UserDTO dto) {
+    public ResponseEntity<?> updateUser(@PathVariable Long id, @Valid @RequestBody UserDTO dto) {
         try {
             UserDTO updatedUser = acceso.updateUser(id, dto);
             return new ResponseEntity<>(updatedUser, HttpStatus.OK);

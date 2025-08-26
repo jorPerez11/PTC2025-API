@@ -142,7 +142,6 @@ public class UserService implements UserDetailsService {
     }
 
 
-    // Ya valio
     public UserDTO registerNewUser(UserDTO dto) {
         //Limpiar el caché antes de las validaciones esto es para que tenga que consultar la base y no guarde informacion innecesaria
         entityManager.clear();
@@ -242,92 +241,92 @@ public class UserService implements UserDetailsService {
         return convertToUserDTO(savedUser);
 
     }
-  
+
     //METODO PARA REGISTRAR TECNICOS
- public UserDTO registerNewUserTech(UserDTO dto) {
-    //Limpiar el cache antes de las validaciones esto es para que tenga que consultar la base y no guarde informacion innecesaria
-    entityManager.clear();
+    public UserDTO registerNewUserTech(UserDTO dto) {
+        //Limpiar el cache antes de las validaciones esto es para que tenga que consultar la base y no guarde informacion innecesaria
+        entityManager.clear();
 
-    //Validaciones de entrada
-    //Busca en el userRepository si existe algun registro en la DB que repita el email / usuario / telefono a registrar
-    userRepository.findByEmailIgnoreCase(dto.getEmail()).ifPresent(user -> {
-        throw new IllegalArgumentException("El correo electrónico ya está registrado.");
-    });
+        //Validaciones de entrada
+        //Busca en el userRepository si existe algun registro en la DB que repita el email / usuario / telefono a registrar
+        userRepository.findByEmailIgnoreCase(dto.getEmail()).ifPresent(user -> {
+            throw new IllegalArgumentException("El correo electrónico ya está registrado.");
+        });
 
-    userRepository.findByUsername(dto.getUsername()).ifPresent(user-> {
-        throw new IllegalArgumentException(("El usuario ya esta registrado."));
-    });
+        userRepository.findByUsername(dto.getUsername()).ifPresent(user-> {
+            throw new IllegalArgumentException(("El usuario ya esta registrado."));
+        });
 
-    userRepository.findByPhone(dto.getPhone()).ifPresent(user -> {
-        throw new IllegalArgumentException(("El número ya está registrado"));
-    });
+        userRepository.findByPhone(dto.getPhone()).ifPresent(user -> {
+            throw new IllegalArgumentException(("El número ya está registrado"));
+        });
 
-    //Genera la contraseña aleatoria
-    String randomPassword = generatedRandomPassword();
+        //Genera la contraseña aleatoria
+        String randomPassword = generatedRandomPassword();
 
-    //Obtener el primer id de tbCompanies
-    Long firstCompanyId = companyRepository.findFirstCompanyId().orElseThrow(() -> new IllegalArgumentException("La compañia no existe."));
+        //Obtener el primer id de tbCompanies
+        Long firstCompanyId = companyRepository.findFirstCompanyId().orElseThrow(() -> new IllegalArgumentException("La compañia no existe."));
 
-    UserEntity userEntity = new UserEntity();
+        UserEntity userEntity = new UserEntity();
 
-    //Asignacion de rol a usuario. Por defecto, al crearlo sera "Cliente" (Se debera actualizar si el usuario es un tecnico)
-    long userCount = userRepository.count();
-
-
-    userEntity.setRolId(UserRole.TECNICO.getId());
+        //Asignacion de rol a usuario. Por defecto, al crearlo sera "Cliente" (Se debera actualizar si el usuario es un tecnico)
+        long userCount = userRepository.count();
 
 
-    if (!isValidDomain(dto.getEmail())){
-        throw new IllegalArgumentException("Dominio de correo no permistido");
+        userEntity.setRolId(UserRole.TECNICO.getId());
+
+
+        if (!isValidDomain(dto.getEmail())){
+            throw new IllegalArgumentException("Dominio de correo no permistido");
+        }
+
+        //ASIGNACION DE PRIMER ID DE COMPANIA ENCONTRADA (DESDE companyRepository) A USUARIO
+        Long foundCompanyId = companyRepository.findFirstCompanyId().orElseThrow(() -> new IllegalStateException("No se puede registrar el usuario: No hay compañías registradas."));
+
+        CompanyEntity companyToAssign = companyRepository.findById(foundCompanyId).orElseThrow(() -> new IllegalStateException("La primera compañía (ID: " + firstCompanyId + ") no fue encontrada al intentar asignarla."));
+
+        userEntity.setCompany(companyToAssign);
+
+
+        if (dto.getCategory() != null && dto.getCategory().getId() != null) {
+            Long categoryId = dto.getCategory().getId();
+
+            // 🔑 CLAVE: Forzar la búsqueda y lanzar excepción si no encuentra (revisar Logs/Output)
+            CategoryEntity categoryEntity = categoryRepository.findById(categoryId)
+                    .orElseThrow(() -> new IllegalArgumentException("ERROR: Categoría con ID " + categoryId + " no encontrada en la DB."));
+
+            // 5. Establecer la entidad
+            userEntity.setCategory(categoryEntity);
+            // userEntity.setCategoryId(categoryId); // Esta línea es redundante con el setCategory(entity) si el mapeo es correcto.
+        } else {
+            // Si no se proporciona categoría
+            userEntity.setCategoryId(null);
+            userEntity.setCategory(null);
+        }
+
+        userEntity.setFullName(dto.getName());
+        userEntity.setUsername(dto.getUsername());
+        userEntity.setEmail(dto.getEmail());
+        userEntity.setPhone(dto.getPhone());
+        String hashedPassword = passwordEncoder.encode(randomPassword); //IMPORTANTE: REQUERIDO HASHEAR ANTES DE INSERTAR A LA DB
+        userEntity.setPasswordHash(hashedPassword);
+        userEntity.setIsActive(dto.getIsActive());
+        userEntity.setProfilePictureUrl(dto.getProfilePictureUrl());
+
+        //Marca la contraseña como expirada para forzar el cambio en el primer inicio de sesion
+        userEntity.setPasswordExpired(true);
+
+        //Guarda el usuario registrado en la DB
+        UserEntity savedUser = userRepository.save(userEntity);
+
+        //Envia la contraseña temporal por correo electronico
+        String subject = "Credenciales de Acceso a Help Desk H2C";
+        String body = "Hola " + dto.getName() + " tu cuenta ha sido creada exitosamente. Tu nombre de usuario es: " + dto.getUsername() + " , tu contraseña temporal es: " + randomPassword + " Por favor no compartas con nadie esta información, Saludos del equipo de H2C";
+        emailService.sendEmail(dto.getEmail(), subject, body);
+
+        return convertToUserDTO(savedUser);
+
     }
-
-    //ASIGNACION DE PRIMER ID DE COMPANIA ENCONTRADA (DESDE companyRepository) A USUARIO
-    Long foundCompanyId = companyRepository.findFirstCompanyId().orElseThrow(() -> new IllegalStateException("No se puede registrar el usuario: No hay compañías registradas."));
-
-    CompanyEntity companyToAssign = companyRepository.findById(foundCompanyId).orElseThrow(() -> new IllegalStateException("La primera compañía (ID: " + firstCompanyId + ") no fue encontrada al intentar asignarla."));
-
-    userEntity.setCompany(companyToAssign);
-
-
-    if (dto.getCategory() != null && dto.getCategory().getId() != null) {
-        Long categoryId = dto.getCategory().getId();
-
-        // 🔑 CLAVE: Forzar la búsqueda y lanzar excepción si no encuentra (revisar Logs/Output)
-        CategoryEntity categoryEntity = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new IllegalArgumentException("ERROR: Categoría con ID " + categoryId + " no encontrada en la DB."));
-
-        // 5. Establecer la entidad
-        userEntity.setCategory(categoryEntity);
-        // userEntity.setCategoryId(categoryId); // Esta línea es redundante con el setCategory(entity) si el mapeo es correcto.
-    } else {
-        // Si no se proporciona categoría
-        userEntity.setCategoryId(null);
-        userEntity.setCategory(null);
-    }
-
-    userEntity.setFullName(dto.getName());
-    userEntity.setUsername(dto.getUsername());
-    userEntity.setEmail(dto.getEmail());
-    userEntity.setPhone(dto.getPhone());
-    String hashedPassword = passwordEncoder.encode(randomPassword); //IMPORTANTE: REQUERIDO HASHEAR ANTES DE INSERTAR A LA DB
-    userEntity.setPasswordHash(hashedPassword);
-    userEntity.setIsActive(dto.getIsActive());
-    userEntity.setProfilePictureUrl(dto.getProfilePictureUrl());
-
-    //Marca la contraseña como expirada para forzar el cambio en el primer inicio de sesion
-    userEntity.setPasswordExpired(true);
-
-    //Guarda el usuario registrado en la DB
-    UserEntity savedUser = userRepository.save(userEntity);
-
-    //Envia la contraseña temporal por correo electronico
-    String subject = "Credenciales de Acceso a Help Desk H2C";
-    String body = "Hola " + dto.getName() + " tu cuenta ha sido creada exitosamente. Tu nombre de usuario es: " + dto.getUsername() + " , tu contraseña temporal es: " + randomPassword + " Por favor no compartas con nadie esta información, Saludos del equipo de H2C";
-    emailService.sendEmail(dto.getEmail(), subject, body);
-
-    return convertToUserDTO(savedUser);
-
-}
 
     private boolean isValidDomain(String email){
         return email.endsWith("@gmail.com") || email.endsWith("@ricaldone.edu.sv");
@@ -487,85 +486,85 @@ public class UserService implements UserDetailsService {
         }
     }
 
-  //METODO DE ACTUALIZACION DE CATEGORIA DE USUARIO (TECNICOS)
-public UserDTO updateUser(Long id, UserDTO dto) {
+    //METODO DE ACTUALIZACION DE CATEGORIA DE USUARIO (TECNICOS)
+    public UserDTO updateUser(Long id, UserDTO dto) {
 
-    //Validaciones
-    if (id == null || id <= 0) {
-        throw new IllegalArgumentException("El ID del usuario a actualizar no puede ser nulo o no válido.");
-    }
-
-    UserEntity existingUser = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("El usuario con id" + id + " no existe"));
-
-    //Primera operacion: Actualizar categoria (NIVEL DE ACCESO: 3 // [ADMIN] -> [TECNICO] )
-    if (dto.getCategory() != null) { //Verifica si existe un valor (id) del atributo "category" enviado por el usuario (ADMIN)
-        if (dto.getCategory().getId() == null) {//Verifica si el valor (id) enviado por el usuario (ADMIN) existe en el registro de CategoryDTO
-            throw new IllegalArgumentException("Para actualizar la categoría, debe proporcionar un 'id' dentro de la enumeracion en 'Category'");
+        //Validaciones
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException("El ID del usuario a actualizar no puede ser nulo o no válido.");
         }
 
-        //Verifica si existe un id con la categoria indicada
-        Category category = Category.fromId(dto.getCategory().getId()).orElseThrow(() -> new IllegalArgumentException("La categoria de id " + dto.getCategory().getId() + "  no existe."));
+        UserEntity existingUser = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("El usuario con id" + id + " no existe"));
 
-        //Verifica si el usuario es un Tecnico
-        if (existingUser.getRolId().equals(UserRole.TECNICO.getId())) {
-            existingUser.setCategoryId(category.getId());
-            Optional<Category> optionalCategory = Category.fromId(dto.getCategory().getId()); //Se asignara la categoria segun el id proporcionado por el usuario (ADMIN)
-            if (optionalCategory.isEmpty()) { //Si no existe (el registro en la lista esta vacio), se avisara que esa categoria asociada con su id no existe
-                throw new IllegalArgumentException("La categoría con ID " + dto.getCategory().getId() + " no existe.");
+        //Primera operacion: Actualizar categoria (NIVEL DE ACCESO: 3 // [ADMIN] -> [TECNICO] )
+        if (dto.getCategory() != null) { //Verifica si existe un valor (id) del atributo "category" enviado por el usuario (ADMIN)
+            if (dto.getCategory().getId() == null) {//Verifica si el valor (id) enviado por el usuario (ADMIN) existe en el registro de CategoryDTO
+                throw new IllegalArgumentException("Para actualizar la categoría, debe proporcionar un 'id' dentro de la enumeracion en 'Category'");
             }
-            category = optionalCategory.get();
-        }else{
-            throw new IllegalArgumentException("Solo los técnicos pueden tener una categoría asignada. El usuario " + existingUser.getFullName() + " no es técnico.");
+
+            //Verifica si existe un id con la categoria indicada
+            Category category = Category.fromId(dto.getCategory().getId()).orElseThrow(() -> new IllegalArgumentException("La categoria de id " + dto.getCategory().getId() + "  no existe."));
+
+            //Verifica si el usuario es un Tecnico
+            if (existingUser.getRolId().equals(UserRole.TECNICO.getId())) {
+                existingUser.setCategoryId(category.getId());
+                Optional<Category> optionalCategory = Category.fromId(dto.getCategory().getId()); //Se asignara la categoria segun el id proporcionado por el usuario (ADMIN)
+                if (optionalCategory.isEmpty()) { //Si no existe (el registro en la lista esta vacio), se avisara que esa categoria asociada con su id no existe
+                    throw new IllegalArgumentException("La categoría con ID " + dto.getCategory().getId() + " no existe.");
+                }
+                category = optionalCategory.get();
+            }else{
+                throw new IllegalArgumentException("Solo los técnicos pueden tener una categoría asignada. El usuario " + existingUser.getFullName() + " no es técnico.");
+            }
+
+        }else {
+            existingUser.setCategoryId(null);
+
         }
 
-    }else {
-        existingUser.setCategoryId(null);
 
-    }
+        //Segunda operacion: Actualizar campos para cada usuario (NIVEL DE ACCESO: 1 // CONFIGURACION DE USUARIO [CLIENTE/TECNICO/ADMIN] -> [CLIENTE/TECNICO/ADMIN] )
+        //Para actualizar los datos, se valida que existan datos en el registro
+        //Si no se llega a actualizar todos los campos, se dejaran con el valor existente en su registro
+        if (dto.getUsername() != null && !dto.getUsername().isBlank()) {
+            existingUser.setUsername(dto.getUsername());
+        }
+        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
+            existingUser.setEmail(dto.getEmail());
+        }
+        if (dto.getPhone() != null && !dto.getPhone().isBlank()) {
+            existingUser.setPhone(dto.getPhone());
+        }
+        if (dto.getPassword() != null && !dto.getPassword().isBlank()) { // O dto.getPasswordHash()
+            String hashedPassword = passwordEncoder.encode(dto.getPassword());
+            existingUser.setPasswordHash(hashedPassword); // O setPasswordHash()
+        }
+        //Actualizacion de rol [PARCIAL PARA PRUEBA] para usuarios (NIVEL DE ACCESO: 3 // CAMBIO DE ROL DE USUARIO [ADMIN] -> [TECNICO])
+        //Vallidacion: Un usuario que sea admin (rol != admin) no puede efectuar el cambio de rol en otro usuario admin
+        if (dto.getRol() != null) {
+            if (dto.getRol().getId() == null) { // Asegura que el ID del rol se envió
+                throw new IllegalArgumentException("Para actualizar el rol, debe proporcionar un 'id' dentro del objeto 'rol'");
+            }
 
+            // Busca el UserRole Enum a partir del ID proporcionado en el DTO
+            UserRole newRole = UserRole.fromId(dto.getRol().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("El rol con ID " + dto.getRol().getId() + " no existe."));
 
-    //Segunda operacion: Actualizar campos para cada usuario (NIVEL DE ACCESO: 1 // CONFIGURACION DE USUARIO [CLIENTE/TECNICO/ADMIN] -> [CLIENTE/TECNICO/ADMIN] )
-    //Para actualizar los datos, se valida que existan datos en el registro
-    //Si no se llega a actualizar todos los campos, se dejaran con el valor existente en su registro
-    if (dto.getUsername() != null && !dto.getUsername().isBlank()) {
-        existingUser.setUsername(dto.getUsername());
-    }
-    if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
-        existingUser.setEmail(dto.getEmail());
-    }
-    if (dto.getPhone() != null && !dto.getPhone().isBlank()) {
-        existingUser.setPhone(dto.getPhone());
-    }
-    if (dto.getPassword() != null && !dto.getPassword().isBlank()) { // O dto.getPasswordHash()
-        String hashedPassword = passwordEncoder.encode(dto.getPassword());
-        existingUser.setPasswordHash(hashedPassword); // O setPasswordHash()
-    }
-    //Actualizacion de rol [PARCIAL PARA PRUEBA] para usuarios (NIVEL DE ACCESO: 3 // CAMBIO DE ROL DE USUARIO [ADMIN] -> [TECNICO])
-    //Vallidacion: Un usuario que sea admin (rol != admin) no puede efectuar el cambio de rol en otro usuario admin
-    if (dto.getRol() != null) {
-        if (dto.getRol().getId() == null) { // Asegura que el ID del rol se envió
-            throw new IllegalArgumentException("Para actualizar el rol, debe proporcionar un 'id' dentro del objeto 'rol'");
+            // Tu validación existente sobre no poder cambiar a ADMINISTRADOR
+            if (newRole.equals(UserRole.ADMINISTRADOR)) {
+                throw new IllegalArgumentException("No se puede cambiar el rol a ADMINISTRADOR con esta operación.");
+            }
+
+            existingUser.setRolId(newRole.getId());
         }
 
-        // Busca el UserRole Enum a partir del ID proporcionado en el DTO
-        UserRole newRole = UserRole.fromId(dto.getRol().getId())
-                .orElseThrow(() -> new IllegalArgumentException("El rol con ID " + dto.getRol().getId() + " no existe."));
-
-        // Tu validación existente sobre no poder cambiar a ADMINISTRADOR
-        if (newRole.equals(UserRole.ADMINISTRADOR)) {
-            throw new IllegalArgumentException("No se puede cambiar el rol a ADMINISTRADOR con esta operación.");
+        if(dto.getProfilePictureUrl() != null && !dto.getProfilePictureUrl().isBlank()){
+            existingUser.setProfilePictureUrl(dto.getProfilePictureUrl());
         }
 
-        existingUser.setRolId(newRole.getId());
+        UserEntity savedUser = userRepository.save(existingUser);
+        return convertToUserDTO(savedUser);
     }
-
-    if(dto.getProfilePictureUrl() != null && !dto.getProfilePictureUrl().isBlank()){
-        existingUser.setProfilePictureUrl(dto.getProfilePictureUrl());
-    }
-
-    UserEntity savedUser = userRepository.save(existingUser);
-    return convertToUserDTO(savedUser);
-}
 
 
     public void deleteUser(Long id) {
@@ -584,34 +583,34 @@ public UserDTO updateUser(Long id, UserDTO dto) {
     }
 
 
-   //Manda datos del usuario. Convierte de UserEntity a DTOUser
-private UserDTO convertToUserDTO(UserEntity usuario) {
-    UserDTO dto = new UserDTO();
-    dto.setId(usuario.getUserId());
-    UserRole userRoleEnum = UserRole.fromId(usuario.getRolId()).orElseThrow(() -> new IllegalArgumentException("ID de Rol de usuario inválido en la entidad: " + usuario.getRolId()));
-    dto.setRol(new RolDTO(userRoleEnum));
+    //Manda datos del usuario. Convierte de UserEntity a DTOUser
+    private UserDTO convertToUserDTO(UserEntity usuario) {
+        UserDTO dto = new UserDTO();
+        dto.setId(usuario.getUserId());
+        UserRole userRoleEnum = UserRole.fromId(usuario.getRolId()).orElseThrow(() -> new IllegalArgumentException("ID de Rol de usuario inválido en la entidad: " + usuario.getRolId()));
+        dto.setRol(new RolDTO(userRoleEnum));
 
-    if (usuario.getCategoryId() != null) {
-        Category categoryEnum = Category.fromId(usuario.getCategoryId()).orElseThrow(() -> new IllegalArgumentException("ID de Categoría inválido en la entidad para el usuario: " + usuario.getUserId() + " con categoryId: " + usuario.getCategoryId()));
-        // Creacion de CategoryDTO para la respuesta, incluyendo ambos id y displayName
-        dto.setCategory(new CategoryDTO(categoryEnum.getId(), categoryEnum.getDisplayName()));
+        if (usuario.getCategoryId() != null) {
+            Category categoryEnum = Category.fromId(usuario.getCategoryId()).orElseThrow(() -> new IllegalArgumentException("ID de Categoría inválido en la entidad para el usuario: " + usuario.getUserId() + " con categoryId: " + usuario.getCategoryId()));
+            // Creacion de CategoryDTO para la respuesta, incluyendo ambos id y displayName
+            dto.setCategory(new CategoryDTO(categoryEnum.getId(), categoryEnum.getDisplayName()));
 
-    } else {
-        dto.setCategory(null);
+        } else {
+            dto.setCategory(null);
+        }
+
+        if (usuario.getCompany() != null) { // userEntity.getCompany() devuelve un CompanyEntity
+            dto.setCompanyId(usuario.getCompany().getCompanyId()); // userEntity.getCompany().getCompanyId() devuelve el Long ID
+        }
+        dto.setName(usuario.getFullName());
+        dto.setUsername(usuario.getUsername());
+        dto.setEmail(usuario.getEmail());
+        dto.setPhone(usuario.getPhone());
+        dto.setIsActive(usuario.getIsActive());
+        dto.setProfilePictureUrl(usuario.getProfilePictureUrl());
+        dto.setRegistrationDate(usuario.getRegistrationDate());
+        return dto;
     }
-
-    if (usuario.getCompany() != null) { // userEntity.getCompany() devuelve un CompanyEntity
-        dto.setCompanyId(usuario.getCompany().getCompanyId()); // userEntity.getCompany().getCompanyId() devuelve el Long ID
-    }
-    dto.setName(usuario.getFullName());
-    dto.setUsername(usuario.getUsername());
-    dto.setEmail(usuario.getEmail());
-    dto.setPhone(usuario.getPhone());
-    dto.setIsActive(usuario.getIsActive());
-    dto.setProfilePictureUrl(usuario.getProfilePictureUrl());
-    dto.setRegistrationDate(usuario.getRegistrationDate());
-    return dto;
-}
 
 
 
@@ -711,7 +710,45 @@ private UserDTO convertToUserDTO(UserEntity usuario) {
         return convertToUserDTO(savedUser);
     }
 
+    public UserDTO UpdateUser(Long id, Map<String, String> updates) throws ExceptionUserNotFound {
+        // 1. Encontrar el usuario por su ID
+        UserEntity user = userRepository.findById(id)
+                .orElseThrow(() -> new ExceptionUserNotFound("Usuario no encontrado con ID: " + id));
 
+        // 2. Iterar sobre el Map de actualizaciones y aplicar los cambios
+        updates.forEach((key, value) -> {
+            switch (key) {
+                case "Nombre": // Ahora coincide con el key "Nombre" del frontend
+                    user.setFullName(value);
+                    break;
+                case "username":
+                    user.setUsername(value);
+                    break;
+                case "Correo Electrónico": // Coincide con el key del frontend
+                    user.setEmail(value);
+                    break;
+                case "Número de tel.": // Coincide con el key del frontend
+                    user.setPhone(value);
+                    break;
+                case "password":
+                    // 1. Hash de la nueva contraseña recibida
+                    String hashedPassword = passwordEncoder.encode(value);
+                    // 2. Usar el metodo correcto para la entidad: setPasswordHash
+                    user.setPasswordHash(hashedPassword);
+                    break;
+                case "Foto": // Coincide con el key del frontend
+                    user.setProfilePictureUrl(value);
+                    break;
+                // Agrega más casos para otros campos si es necesario
+            }
+        });
+
+        // 3. Guardar el usuario actualizado en la base de datos
+        UserEntity updatedUser = userRepository.save(user);
+
+        // 4. Convertir la entidad a DTO y devolverla
+        return convertToUserDTO(updatedUser);
+    }
 
     public UserDTO assignCategoryAndActivateTechnician(Long userId, Long categoryId) {
         UserEntity userEntity = userRepository.findById(userId)
