@@ -22,6 +22,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
     Optional<UserEntity> findByPhone(String phone);
 
     List<UserEntity> findByRolId(Long rolId);
+    List<UserEntity> findByRolIdInAndCategory_CategoryId(List<Long> roleIds, Long categoryId);
 
     /**
      * Verifica si existe al menos un usuario asociado a un ID de categoría específico.
