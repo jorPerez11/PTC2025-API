@@ -57,6 +57,4 @@ public class TicketDTO {
     private Integer percentage;
 
     private String imageUrl;
-
-    private UserDTO createdBy;
 }
