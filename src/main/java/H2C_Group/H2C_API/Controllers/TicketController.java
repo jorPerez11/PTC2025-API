@@ -3,6 +3,7 @@ package H2C_Group.H2C_API.Controllers;
 import H2C_Group.H2C_API.Exceptions.ExceptionTicketNotFound;
 import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
 import H2C_Group.H2C_API.Models.DTO.TicketDTO;
+import H2C_Group.H2C_API.Models.DTO.TicketStatusDTO;
 import H2C_Group.H2C_API.Services.TicketService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +50,27 @@ public class TicketController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
+
+    @PatchMapping("/UpdateTicketStatus/{ticketId}")
+    public ResponseEntity<?> updateTicketStatus(@PathVariable Long ticketId, @RequestBody TicketStatusDTO ticketDTO) {
+        try {
+            TicketDTO updatedTicket = acceso.updateTicketStatus(ticketId, ticketDTO);
+            return new ResponseEntity<>(updatedTicket, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+        } catch (ExceptionTicketNotFound e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", "Ocurrió un error interno del servidor al actualizar el ticket.");
+            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
     @GetMapping("/GetRecentTicketsByUser/{userId}")
     public ResponseEntity<List<TicketDTO>> getTicketsByUserId(@PathVariable Long userId) {

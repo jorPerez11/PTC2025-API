@@ -599,45 +599,7 @@ private UserDTO convertToUserDTO(UserEntity usuario) {
         return convertToUserDTO(savedUser);
     }
 
-    public UserDTO UpdateUser(Long id, Map<String, String> updates) throws ExceptionUserNotFound {
-        // 1. Encontrar el usuario por su ID
-        UserEntity user = userRepository.findById(id)
-                .orElseThrow(() -> new ExceptionUserNotFound("Usuario no encontrado con ID: " + id));
 
-        // 2. Iterar sobre el Map de actualizaciones y aplicar los cambios
-        updates.forEach((key, value) -> {
-            switch (key) {
-                case "Nombre": // Ahora coincide con el key "Nombre" del frontend
-                    user.setFullName(value);
-                    break;
-                case "username":
-                    user.setUsername(value);
-                    break;
-                case "Correo Electrónico": // Coincide con el key del frontend
-                    user.setEmail(value);
-                    break;
-                case "Número de tel.": // Coincide con el key del frontend
-                    user.setPhone(value);
-                    break;
-                case "password":
-                    // 1. Hash de la nueva contraseña recibida
-                    String hashedPassword = passwordEncoder.encode(value);
-                    // 2. Usar el metodo correcto para la entidad: setPasswordHash
-                    user.setPasswordHash(hashedPassword);
-                    break;
-                case "Foto": // Coincide con el key del frontend
-                    user.setProfilePictureUrl(value);
-                    break;
-                // Agrega más casos para otros campos si es necesario
-            }
-        });
-
-        // 3. Guardar el usuario actualizado en la base de datos
-        UserEntity updatedUser = userRepository.save(user);
-
-        // 4. Convertir la entidad a DTO y devolverla
-        return convertToUserDTO(updatedUser);
-    }
 
     public UserDTO assignCategoryAndActivateTechnician(Long userId, Long categoryId) {
         UserEntity userEntity = userRepository.findById(userId)
