@@ -19,4 +19,8 @@ public interface TicketRepository extends JpaRepository<TicketEntity,Long> {
     boolean existsByCategoryId(Long categoryId);
     //Busca tickets por el Id del usuario creador y los ordena por fecha de creacion descendente
     List<TicketEntity> findByUserCreator_UserIdOrderByCreationDate(Long userId);
+    // Busca tickets por el ID del técnico asignado
+    List<TicketEntity> findByAssignedTechUser_UserId(Long assignedTechUserId);
+
+    long countByAssignedTechUser_UserIdAndTicketStatusIdIn(Long userId, List<Long> statusIds);
 }
