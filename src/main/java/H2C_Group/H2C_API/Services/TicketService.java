@@ -16,7 +16,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -299,5 +301,15 @@ public class TicketService {
 
     }
 
-
+    public Map<String, Long> getTicketCountsByStatus() {
+        List<Object[]> results = ticketRepository.countTicketsByStatus();
+        Map<String, Long> counts = new HashMap<>();
+        for (Object[] result : results) {
+            String statusName = (String) result[0];
+            // Castea a BigDecimal y luego usa longValue() para obtener el Long
+            Long count = ((java.math.BigDecimal) result[1]).longValue();
+            counts.put(statusName, count);
+        }
+        return counts;
+    }
 }

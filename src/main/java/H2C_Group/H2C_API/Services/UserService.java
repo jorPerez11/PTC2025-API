@@ -9,6 +9,7 @@ import H2C_Group.H2C_API.Enums.UserRole;
 import H2C_Group.H2C_API.Exceptions.ExceptionCategoryNotFound;
 import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
 import H2C_Group.H2C_API.Exceptions.ExceptionCategoryBadRequest;
+import H2C_Group.H2C_API.Models.DTO.AllUsersDTO;
 import H2C_Group.H2C_API.Models.DTO.CategoryDTO;
 import H2C_Group.H2C_API.Models.DTO.UserDTO;
 import H2C_Group.H2C_API.Models.DTO.RolDTO;
@@ -19,8 +20,10 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -32,7 +35,10 @@ import org.springframework.stereotype.Service;
 
 
 import java.security.SecureRandom;
+import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.Collections;
 import java.util.List;
@@ -59,6 +65,10 @@ public class UserService implements UserDetailsService {
 
     @Autowired
     private EntityManager entityManager;
+
+    public UserService(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
 
     //Implementacion del metodo que requiere UserDetailsService si lo quito deja de funcionar :(. Spring Security lo usa para encontrar a un usuario por su nombre de usuario
     @Override
@@ -129,14 +139,6 @@ public class UserService implements UserDetailsService {
         //6.Guarda los cambios en la base de datos
         userRepository.save(userEntity);
         return convertToUserDTO(userEntity);
-    }
-
-
-    public Page<UserDTO> findAll(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-
-        Page<UserEntity> usuarios = userRepository.findAll(pageable);
-        return usuarios.map(this::convertToUserDTO);
     }
 
 
@@ -328,6 +330,160 @@ public class UserService implements UserDetailsService {
 
     private boolean isValidDomain(String email){
         return email.endsWith("@gmail.com") || email.endsWith("@ricaldone.edu.sv");
+    }
+
+    // 💡 Inyección de dependencia de JdbcTemplate
+    private final JdbcTemplate jdbcTemplate;
+
+    /**
+     * Obtiene una página de usuarios filtrados y paginados, incluyendo el estado de su último ticket.
+     *
+     * @param page         Número de página (basado en 0).
+     * @param size         Cantidad de elementos por página.
+     * @param searchTerm   Término de búsqueda para fullName, email o userId.
+     * @param statusFilter Filtro por estado del ticket (ej. 'En Proceso', 'Cerrado', 'all').
+     * @param periodFilter Filtro por período de registro del usuario (ej. 'today', 'week', 'month', 'all').
+     * @return Una página de UserDTOs.
+     */
+    public Page<UserDTO> findAll(int page, int size, String searchTerm, String statusFilter, String periodFilter) {
+        // --- Paso 1: Construir las cláusulas FROM y WHERE básicas para filtrar usuarios ---
+        StringBuilder baseQueryBuilder = new StringBuilder();
+        baseQueryBuilder.append("FROM tbUsers u ");
+        baseQueryBuilder.append("WHERE 1=1 "); // Condición base para facilitar la adición de filtros
+
+        List<Object> params = new ArrayList<>();
+
+        // 1. Aplicar filtro de búsqueda por término
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            String lowerSearchTerm = "%" + searchTerm.toLowerCase() + "%";
+            baseQueryBuilder.append("AND (LOWER(u.fullName) LIKE ? OR LOWER(u.email) LIKE ? OR CAST(u.userId AS VARCHAR2(20)) LIKE ?) ");
+            params.add(lowerSearchTerm);
+            params.add(lowerSearchTerm);
+            params.add(lowerSearchTerm);
+        }
+
+        // 2. Aplicar filtro por período de registro del usuario
+        if (periodFilter != null && !periodFilter.equalsIgnoreCase("all")) {
+            LocalDateTime startDateTime = null;
+            LocalDateTime endDateTime = LocalDateTime.now();
+
+            switch (periodFilter.toLowerCase()) {
+                case "today":
+                    startDateTime = endDateTime.toLocalDate().atStartOfDay();
+                    break;
+                case "week":
+                    startDateTime = endDateTime.minus(7, ChronoUnit.DAYS).toLocalDate().atStartOfDay();
+                    break;
+                case "month":
+                    startDateTime = endDateTime.minus(30, ChronoUnit.DAYS).toLocalDate().atStartOfDay();
+                    break;
+            }
+            if (startDateTime != null) {
+                baseQueryBuilder.append("AND u.registrationDate BETWEEN ? AND ? ");
+                params.add(Timestamp.valueOf(startDateTime));
+                params.add(Timestamp.valueOf(endDateTime));
+            }
+        }
+
+        // 3. Aplicar filtro por estado de ticket (si el usuario tiene tickets con ese estado)
+        if (statusFilter != null && !statusFilter.equalsIgnoreCase("all")) {
+            baseQueryBuilder.append("AND u.userId IN (SELECT tk.userId FROM tbTickets tk ");
+            baseQueryBuilder.append("                 JOIN tbTicketStatus tts ON tk.ticketStatusId = tts.ticketStatusId ");
+            baseQueryBuilder.append("                 WHERE tts.status = ?) ");
+            params.add(statusFilter);
+        }
+
+        // --- Paso 2: Obtener el conteo total de elementos con los filtros aplicados (sin subconsulta compleja ni paginación) ---
+        // Se usa el baseQueryBuilder para esta consulta de conteo.
+        String countSql = "SELECT COUNT(u.userId) " + baseQueryBuilder.toString();
+        Integer totalElements = jdbcTemplate.queryForObject(countSql, Integer.class, params.toArray());
+        if (totalElements == null) totalElements = 0;
+
+
+        // --- Paso 3: Construir la consulta principal para la recuperación de datos (con subconsulta compleja y paginación) ---
+        StringBuilder dataQueryBuilder = new StringBuilder();
+        dataQueryBuilder.append("SELECT u.userId, u.fullName, u.email, u.registrationDate, u.profilePictureUrl, ");
+        dataQueryBuilder.append("    (SELECT ts.status FROM tbTickets tk ");
+        dataQueryBuilder.append("     JOIN tbTicketStatus ts ON tk.ticketStatusId = ts.ticketStatusId ");
+        dataQueryBuilder.append("     WHERE tk.userId = u.userId ");
+        dataQueryBuilder.append("     ORDER BY tk.creationDate DESC "); // Obtener el último ticket creado
+        dataQueryBuilder.append("     FETCH FIRST 1 ROW ONLY) AS latestTicketStatus ");
+        dataQueryBuilder.append(baseQueryBuilder.toString()); // Añadir las cláusulas FROM y WHERE ya construidas
+
+        // Añadir ORDER BY y paginación
+        dataQueryBuilder.append(" ORDER BY u.registrationDate DESC "); // Orden por defecto para los resultados
+        dataQueryBuilder.append("OFFSET ? ROWS FETCH NEXT ? ROWS ONLY");
+        params.add((long) page * size);
+        params.add(size);
+
+        List<UserDTO> users = jdbcTemplate.query(dataQueryBuilder.toString(), params.toArray(), (rs, rowNum) -> {
+            UserDTO dto = new UserDTO();
+            dto.setId(rs.getLong("userId"));
+            dto.setName(rs.getString("fullName"));
+            dto.setEmail(rs.getString("email"));
+
+            Timestamp registrationTimestamp = rs.getTimestamp("registrationDate");
+            if (registrationTimestamp != null) {
+                dto.setRegistrationDate(registrationTimestamp.toLocalDateTime());
+            }
+
+            dto.setProfilePictureUrl(Optional.ofNullable(rs.getString("profilePictureUrl")).orElse("https://cdn-icons-png.flaticon.com/512/149/149071.png"));
+            dto.setLatestTicketStatus(Optional.ofNullable(rs.getString("latestTicketStatus")).orElse("Sin solicitudes"));
+
+            return dto;
+        });
+
+        return new PageImpl<>(users, PageRequest.of(page, size), totalElements);
+    }
+
+    /**
+     * Obtiene los detalles de un ticket específico para el modal.
+     * @param ticketId El ID del ticket.
+     * @return Un AllUsersDTO con los detalles del ticket.
+     */
+    public AllUsersDTO getTicketDetailsForModal(Long ticketId) {
+        String sql = "SELECT " +
+                "    tk.ticketId AS id, " +
+                "    tu_solicitante.fullName AS Solicitante, " +
+                "    tr.rol AS Rol, " +
+                "    tk.creationDate AS Creacion, " +
+                "    tu_tecnico.fullName AS Tecnico_Encargado, " +
+                "    tts.status AS Estado_de_Ticket " +
+                "FROM " +
+                "    tbTickets tk " +
+                "JOIN " +
+                "    tbUsers tu_solicitante ON tk.userId = tu_solicitante.userId " +
+                "JOIN " +
+                "    tbRol tr ON tu_solicitante.rolId = tr.rolId " +
+                "LEFT JOIN " +
+                "    tbUsers tu_tecnico ON tk.assignedTech = tu_tecnico.userId " +
+                "LEFT JOIN " +
+                "    tbTicketStatus tts ON tk.ticketStatusId = tts.ticketStatusId " +
+                "WHERE " +
+                "    tk.ticketId = ?";
+
+        try {
+            return jdbcTemplate.queryForObject(sql, new Object[]{ticketId}, (rs, rowNum) -> {
+                AllUsersDTO dto = new AllUsersDTO();
+                // Si agregas 'id' al AllUsersDTO
+                // dto.setId(rs.getLong("id"));
+                dto.setSolicitante(rs.getString("Solicitante"));
+                dto.setRol(rs.getString("Rol"));
+
+                Timestamp creationTimestamp = rs.getTimestamp("Creacion");
+                if (creationTimestamp != null) {
+                    dto.setRegistroDate(new Date(creationTimestamp.getTime()));
+                } else {
+                    dto.setRegistroDate(null);
+                }
+
+                dto.setTecnicoEncargado(Optional.ofNullable(rs.getString("Tecnico_Encargado")).orElse("No asignado"));
+                dto.setEstadoDeTicket(rs.getString("Estado_de_Ticket"));
+                return dto;
+            });
+        } catch (org.springframework.dao.EmptyResultDataAccessException e) {
+            throw new ExceptionUserNotFound("Ticket con ID " + ticketId + " no encontrado.");
+        }
     }
 
   //METODO DE ACTUALIZACION DE CATEGORIA DE USUARIO (TECNICOS)

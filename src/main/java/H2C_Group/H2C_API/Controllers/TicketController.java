@@ -24,6 +24,20 @@ public class TicketController {
     @Autowired
     private TicketService acceso;
 
+    // Nuevo endpoint para obtener el conteo de tickets por estado
+    @GetMapping("/GetTicketCounts")
+    public ResponseEntity<?> getTicketCounts() {
+        try {
+            System.out.println("Solicitud recibida para /GetTicketCounts");
+            Map<String, Long> counts = acceso.getTicketCountsByStatus();
+            return new ResponseEntity<>(counts, HttpStatus.OK);
+        } catch (Exception e) {
+            System.out.println("Error al procesar la solicitud: " + e.getMessage());
+            e.printStackTrace(); // Imprime el stack trace completo
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error interno del servidor");
+        }
+    }
+
     @GetMapping("/GetTickets")
     public ResponseEntity<Page<TicketDTO>> getTickets(
             @RequestParam(defaultValue = "0") int page,
