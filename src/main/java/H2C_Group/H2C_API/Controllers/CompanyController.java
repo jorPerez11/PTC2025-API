@@ -44,6 +44,11 @@ public class CompanyController {
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+        } catch (DataIntegrityViolationException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Ya existe una compañía con este correo electrónico o nombre de usuario.");
+            e.printStackTrace();
+            return new ResponseEntity<>(error, HttpStatus.CONFLICT); // Código 409
         }
     }
 
@@ -51,19 +56,32 @@ public class CompanyController {
     public ResponseEntity<?> createCompany(@Valid @RequestBody CompanyDTO company) {
         try {
             CompanyDTO newCompany = acceso.registerNewCompany(company);
+            // Devuelve el objeto de la compañía creada
             return new ResponseEntity<>(newCompany, HttpStatus.CREATED);
         } catch (DataIntegrityViolationException e) {
-            // Atrapa la excepción de restricción única
             Map<String, String> error = new HashMap<>();
             error.put("error", "Ya existe una compañía con este correo electrónico o nombre de usuario.");
-            e.printStackTrace(); // Para ver el error completo en el log del servidor
-            return new ResponseEntity<>(error, HttpStatus.CONFLICT); // Código 409
+            return new ResponseEntity<>(error, HttpStatus.CONFLICT);
         } catch (ExceptionCompanyBadRequest e) {
-            // Si hay otros errores de validación
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
-            e.printStackTrace();
-            return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST); // Código 400
+            return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @DeleteMapping("/companies/{id}")
+    public ResponseEntity<?> deleteCompany(@PathVariable Long id) {
+        try {
+            acceso.deleteCompany(id);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        } catch (ExceptionCompanyNotFound e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Ocurrió un error interno del servidor al eliminar la compañía.");
+            return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

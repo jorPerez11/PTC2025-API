@@ -31,6 +31,7 @@ public class TicketDTO {
     //Estado del ticket. Se asigna automaticamente (En espera, En progreso) a excepcion del estado "Completado"
     private TicketStatusDTO status;
 
+    private String userName;
 
     //CLIENTE
     @NotNull(message = "El id del usuario es obligatorio.")
@@ -56,4 +57,6 @@ public class TicketDTO {
     private Integer percentage;
 
     private String imageUrl;
+
+    private UserDTO createdBy;
 }

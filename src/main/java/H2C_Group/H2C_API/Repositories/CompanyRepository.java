@@ -16,4 +16,5 @@ public interface CompanyRepository extends JpaRepository<CompanyEntity, Long> {
     @Query("SELECT MIN(c.companyId) FROM CompanyEntity c")
     Optional<Long> findFirstCompanyId(); //Usamos Optional<Long> para manejar el caso de que no haya compañías
 
+    Optional<CompanyEntity> findByEmailCompany(String emailCompany);
 }

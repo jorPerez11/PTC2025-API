@@ -6,10 +6,12 @@ import H2C_Group.H2C_API.Exceptions.ExceptionCompanyNotFound;
 import H2C_Group.H2C_API.Models.DTO.CompanyDTO;
 import H2C_Group.H2C_API.Repositories.CompanyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,7 +39,16 @@ public class CompanyService {
                     company.setCompanyName(value);
                     break;
                 case "emailCompany":
-                    company.setEmailCompany(value);
+                    // Lógica de validación para el email único
+                    if (updates.containsKey("emailCompany")) {
+                        String newEmail = updates.get("emailCompany");
+                        Optional<CompanyEntity> companyWithSameEmail = companyRepository.findByEmailCompany(newEmail);
+
+                        if (companyWithSameEmail.isPresent() && !companyWithSameEmail.get().getCompanyId().equals(id)) {
+                            throw new DataIntegrityViolationException("Ya existe una compañía con este correo electrónico.");
+                        }
+                        company.setEmailCompany(newEmail);
+                    }
                     break;
                 case "contactPhone":
                     company.setContactPhone(value);
@@ -108,5 +119,12 @@ public class CompanyService {
 
     public List<CompanyDTO> getAllCompanies() {
         return findAll();
+    }
+
+    public void deleteCompany(Long id) throws ExceptionCompanyNotFound {
+        if (!companyRepository.existsById(id)) {
+            throw new ExceptionCompanyNotFound("Compañía no encontrada con ID: " + id);
+        }
+        companyRepository.deleteById(id);
     }
 }

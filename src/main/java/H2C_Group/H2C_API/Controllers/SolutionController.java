@@ -65,15 +65,15 @@ public class SolutionController {
         } catch (ExceptionSolutionBadRequest e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
-            return new ResponseEntity<>(errors.toString(), HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST); // CORRECTO: Devuelve el Map
         }catch (ExceptionSolutionNotFound e){
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
-            return new ResponseEntity<>(errors.toString(), HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND); // CORRECTO: Devuelve el Map
         } catch (Exception e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", "Ocurrió un error interno del servidor al actualizar la solucion.");
-            return new ResponseEntity<>(errors.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR); // CORRECTO: Devuelve el Map
         }
     }
 
