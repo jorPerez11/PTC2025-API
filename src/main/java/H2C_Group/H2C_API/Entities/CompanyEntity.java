@@ -1,5 +1,6 @@
 package H2C_Group.H2C_API.Entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -31,6 +32,7 @@ public class CompanyEntity {
     @Column(name="WEBSITEURL")
     private String websiteUrl;
     @OneToMany(mappedBy = "company", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<UserEntity> users = new ArrayList<>();
 
 }

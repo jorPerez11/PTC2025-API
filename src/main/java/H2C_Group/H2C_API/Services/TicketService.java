@@ -11,10 +11,12 @@ import H2C_Group.H2C_API.Repositories.TicketRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,7 +30,8 @@ public class TicketService {
     private TicketRepository ticketRepository;
 
 
-    public Page<TicketDTO> getAllTickets(Pageable pageable) {
+    public Page<TicketDTO> getAllTickets(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
         Page<TicketEntity> tickets = ticketRepository.findAll(pageable);
         return tickets.map(this::convertToTicketDTO);
     }
@@ -47,6 +50,16 @@ public class TicketService {
         return convertToTicketDTO(ticket);
     }
 
+    public List<TicketDTO> getAssignedTicketsByTechnicianId(Long technicianId) {
+        userRepository.findById(technicianId)
+                .orElseThrow(() -> new ExceptionUserNotFound("El id del tecnico " + technicianId + " no existe"));
+
+        List<TicketEntity> tickets = ticketRepository.findByAssignedTechUser_UserId(technicianId);
+        return tickets.stream()
+                .map(this::convertToTicketDTO)
+                .collect(Collectors.toList());
+    }
+
     public TicketDTO createTicket(TicketDTO ticketDTO) {
 
         //Validaciones
@@ -63,6 +76,12 @@ public class TicketService {
         //Conversion DTO -> Entity
         TicketEntity ticketEntity = new TicketEntity();
 
+        //Asignacion del procentaje
+        ticketEntity.setPercentage(ticketDTO.getPercentage());
+
+        //Asignacion de url de imagen del ticket
+        ticketEntity.setImageUrl(ticketDTO.getImageUrl());
+
         ticketEntity.setTicketId(ticketDTO.getTicketId());
         //Asignacion de categoria
         Category category = Category.fromId(ticketDTO.getCategory().getId()).orElseThrow(() -> new IllegalArgumentException("La categoria de id " + ticketDTO.getCategory().getId() + "  no existe."));
@@ -75,25 +94,41 @@ public class TicketService {
         //Asignacion de estado para ticket. Por defecto, el estado de creacion es "En espera"
         ticketEntity.setTicketStatusId(TicketStatus.EN_ESPERA.getId());
 
+        // Lógica de Asignación Automática:
+        // 1. Busca todos los técnicos y administradores que manejan esta categoría
+        List<UserEntity> availableTechs = userRepository.findByRolIdInAndCategory_CategoryId(List.of(UserRole.TECNICO.getId(), UserRole.ADMINISTRADOR.getId()), category.getId());
+
+        // 2. Si se encuentran técnicos, se asigna el ticket al primero de la lista.
+        //    Esto garantiza que el ticket siempre tenga un dueño desde el principio.
+        if (!availableTechs.isEmpty()) {
+            UserEntity technicianWithLeastTickets = availableTechs.stream()
+                    .min(Comparator.comparingLong(
+                            tech -> ticketRepository.countByAssignedTechUser_UserIdAndTicketStatusIdIn(
+                                    tech.getUserId(),
+                                    List.of(TicketStatus.EN_ESPERA.getId(), TicketStatus.EN_PROGRESO.getId())
+                            )
+                    ))
+                    .orElse(null);
+
+            ticketEntity.setAssignedTechUser(technicianWithLeastTickets);
+        } else {
+            ticketEntity.setAssignedTechUser(null);
+        }
+
+
         UserEntity creatorUser = userRepository.findById(ticketDTO.getUserId()).orElseThrow(() -> new IllegalArgumentException("El usuario (cliente) con id " + ticketDTO.getUserId() + " no existe."));
         ticketEntity.setUserCreator(creatorUser);
 
         ticketEntity.setTitle(ticketDTO.getTitle());
-        ticketEntity.setDescription(ticketDTO.getDescription());
 
-        ticketEntity.setAssignedTechUser(null); //Al crear un ticket, este estara en estado de espera, por lo tanto, no tendra un tecnico asignado
+        ticketEntity.setDescription(ticketDTO.getDescription());
 
 
         ticketEntity.setCreationDate(ticketDTO.getCreationDate());
 
-        //Asignacion de fecha de cierre como NULL al crearse. La fecha se asignara cuando se cierre la solicitud (es decir, ticketStatus = "Cerrado")
-        ticketEntity.setCloseDate(null);
 
         //Asignacion del procentaje
         ticketEntity.setPercentage(ticketDTO.getPercentage());
-
-        //Asignacion de url de imagen del ticket
-        ticketEntity.setImageUrl(ticketDTO.getImageUrl());
 
         //Almacenamiento de ticket creado en la DB
         TicketEntity savedTicket = ticketRepository.save(ticketEntity);
@@ -101,6 +136,28 @@ public class TicketService {
         //Conversion del ticket almacenado de vuelta a DTO para la respuesta del Frontend
         return  convertToTicketDTO(savedTicket);
     }
+
+    public TicketDTO acceptTicket(Long ticketId, Long technicianId) {
+        TicketEntity ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new IllegalArgumentException("Ticket con ID " + ticketId + " no encontrado."));
+
+        // Validar que el ticket tiene un técnico asignado y es el que está intentando aceptarlo
+        if (ticket.getAssignedTechUser() == null || !ticket.getAssignedTechUser().getUserId().equals(technicianId)) {
+            throw new IllegalArgumentException("El usuario no tiene permiso para aceptar este ticket.");
+        }
+
+        // Validar que el ticket está en estado "En espera" antes de cambiarlo
+        if (!ticket.getTicketStatusId().equals(TicketStatus.EN_ESPERA.getId())) {
+            throw new IllegalArgumentException("El ticket no puede ser aceptado, su estado actual no es 'En espera'.");
+        }
+
+        // Cambiar el estado a "En progreso"
+        ticket.setTicketStatusId(TicketStatus.EN_PROGRESO.getId());
+
+        TicketEntity savedTicket = ticketRepository.save(ticket);
+        return convertToTicketDTO(savedTicket);
+    }
+
 
 
 
@@ -137,8 +194,6 @@ public class TicketService {
             } else {
                 throw new IllegalArgumentException("El usuario con ID " + userTech.getUserId() + " no tiene un rol válido para ser asignado como técnico (debe ser Administrador o Técnico).");
             }
-        } else {
-            throw new IllegalArgumentException("El tecnico proporcionado no existe.");
         }
 
 
@@ -263,13 +318,27 @@ public class TicketService {
 
         if (ticket.getUserCreator() != null) {
             dto.setUserId(ticket.getUserCreator().getUserId());
+
+
+
+
+
+            //Crea un nuevo DTO para el usuario creador
+            UserDTO creatorDTO = new UserDTO();
+            creatorDTO.setId(ticket.getUserCreator().getUserId());
+            creatorDTO.setDisplayName(ticket.getUserCreator().getFullName());
+
+
+            //Asigna el DTO del creador al campo createdBy
+            dto.setCreatedBy(creatorDTO);
+
         } else {
             throw new IllegalArgumentException("El ID del usuario no puede ser nulo.");
         }
 
+
         dto.setTitle(ticket.getTitle());
         dto.setDescription(ticket.getDescription());
-
 
         if (ticket.getAssignedTechUser() != null) {
             UserDTO techDTO = new UserDTO();
@@ -279,7 +348,6 @@ public class TicketService {
         } else {
             dto.setAssignedTech(null); // Establece el ID del técnico a null en el DTO si no hay técnico asignado
         }
-
         dto.setCreationDate(ticket.getCreationDate());
 
         dto.setCloseDate(ticket.getCloseDate());
@@ -287,10 +355,8 @@ public class TicketService {
         dto.setPercentage(ticket.getPercentage());
 
         dto.setImageUrl(ticket.getImageUrl());
-
         return dto;
 
     }
-
 
 }
