@@ -57,6 +57,13 @@ public class TicketController {
     }
 
 
+    @GetMapping("/GetAssignedTicketsByTech/{technicianId}")
+    public ResponseEntity<List<TicketDTO>> getAssignedTicketsByTechnicianId(@PathVariable Long technicianId){
+        List<TicketDTO> tickets = acceso.getAssignedTicketsByTechnicianId(technicianId);
+        return new ResponseEntity<>(tickets, HttpStatus.OK);
+    }
+
+
     @PostMapping("/PostTicket")
     public ResponseEntity<?> postTicket(@Valid @RequestBody TicketDTO ticketDTO) {
         try {
@@ -77,6 +84,12 @@ public class TicketController {
             return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR); // Código 500
         }
 
+    }
+
+    @PutMapping("/accept/{ticketId}/{technicianId}")
+    public ResponseEntity<TicketDTO> acceptTicket(@PathVariable Long ticketId, @PathVariable Long technicianId) {
+        TicketDTO acceptedTicket = acceso.acceptTicket(ticketId, technicianId);
+        return new ResponseEntity<>(acceptedTicket, HttpStatus.OK);
     }
 
 

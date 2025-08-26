@@ -32,6 +32,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
 
     Optional<UserEntity> findByUsername(String username);
 
+
     Page<UserEntity> findAll(Pageable pageable);
 
     Page<UserEntity> findByRolId(Long rolId, Pageable pageable);
@@ -54,6 +55,11 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
             @Param("categoryId") Long categoryId,
             String period
     );
+
+}
+
+    List<UserEntity> findByRolIdInAndCategory_CategoryId(List<Long> roleIds, Long categoryId);
+
 
 }
 
