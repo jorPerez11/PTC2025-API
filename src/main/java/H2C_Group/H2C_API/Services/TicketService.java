@@ -16,7 +16,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,16 +49,6 @@ public class TicketService {
         TicketEntity ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new ExceptionTicketNotFound("Ticket con ID " + id + " no encontrado."));
         return convertToTicketDTO(ticket);
-    }
-
-    public List<TicketDTO> getAssignedTicketsByTechnicianId(Long technicianId) {
-        userRepository.findById(technicianId)
-                .orElseThrow(() -> new ExceptionUserNotFound("El id del tecnico " + technicianId + " no existe"));
-
-        List<TicketEntity> tickets = ticketRepository.findByAssignedTechUser_UserId(technicianId);
-        return tickets.stream()
-                .map(this::convertToTicketDTO)
-                .collect(Collectors.toList());
     }
 
     public TicketDTO createTicket(TicketDTO ticketDTO) {
@@ -96,38 +85,19 @@ public class TicketService {
         //Asignacion de estado para ticket. Por defecto, el estado de creacion es "En espera"
         ticketEntity.setTicketStatusId(TicketStatus.EN_ESPERA.getId());
 
-        // Lógica de Asignación Automática:
-        // 1. Busca todos los técnicos y administradores que manejan esta categoría
-        List<UserEntity> availableTechs = userRepository.findByRolIdInAndCategory_CategoryId(List.of(UserRole.TECNICO.getId(), UserRole.ADMINISTRADOR.getId()), category.getId());
-
-        // 2. Si se encuentran técnicos, se asigna el ticket al primero de la lista.
-        //    Esto garantiza que el ticket siempre tenga un dueño desde el principio.
-        if (!availableTechs.isEmpty()) {
-            UserEntity technicianWithLeastTickets = availableTechs.stream()
-                    .min(Comparator.comparingLong(
-                            tech -> ticketRepository.countByAssignedTechUser_UserIdAndTicketStatusIdIn(
-                                    tech.getUserId(),
-                                    List.of(TicketStatus.EN_ESPERA.getId(), TicketStatus.EN_PROGRESO.getId())
-                            )
-                    ))
-                    .orElse(null);
-
-            ticketEntity.setAssignedTechUser(technicianWithLeastTickets);
-        } else {
-            ticketEntity.setAssignedTechUser(null);
-        }
-
-
         UserEntity creatorUser = userRepository.findById(ticketDTO.getUserId()).orElseThrow(() -> new IllegalArgumentException("El usuario (cliente) con id " + ticketDTO.getUserId() + " no existe."));
         ticketEntity.setUserCreator(creatorUser);
 
         ticketEntity.setTitle(ticketDTO.getTitle());
-
         ticketEntity.setDescription(ticketDTO.getDescription());
+
+        ticketEntity.setAssignedTechUser(null); //Al crear un ticket, este estara en estado de espera, por lo tanto, no tendra un tecnico asignado
 
 
         ticketEntity.setCreationDate(ticketDTO.getCreationDate());
 
+        //Asignacion de fecha de cierre como NULL al crearse. La fecha se asignara cuando se cierre la solicitud (es decir, ticketStatus = "Cerrado")
+        ticketEntity.setCloseDate(null);
 
         //Asignacion del procentaje
         ticketEntity.setPercentage(ticketDTO.getPercentage());
@@ -138,28 +108,7 @@ public class TicketService {
         //Conversion del ticket almacenado de vuelta a DTO para la respuesta del Frontend
         return  convertToTicketDTO(savedTicket);
     }
-  
-    public TicketDTO acceptTicket(Long ticketId, Long technicianId) {
-        TicketEntity ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new IllegalArgumentException("Ticket con ID " + ticketId + " no encontrado."));
 
-        // Validar que el ticket tiene un técnico asignado y es el que está intentando aceptarlo
-        if (ticket.getAssignedTechUser() == null || !ticket.getAssignedTechUser().getUserId().equals(technicianId)) {
-            throw new IllegalArgumentException("El usuario no tiene permiso para aceptar este ticket.");
-        }
-
-        // Validar que el ticket está en estado "En espera" antes de cambiarlo
-        if (!ticket.getTicketStatusId().equals(TicketStatus.EN_ESPERA.getId())) {
-            throw new IllegalArgumentException("El ticket no puede ser aceptado, su estado actual no es 'En espera'.");
-        }
-
-        // Cambiar el estado a "En progreso"
-        ticket.setTicketStatusId(TicketStatus.EN_PROGRESO.getId());
-
-        TicketEntity savedTicket = ticketRepository.save(ticket);
-        return convertToTicketDTO(savedTicket);
-    }
-  
     public TicketDTO updateTicketStatus(Long id, TicketStatusDTO ticketDTO) {
         // 1. Encuentra el ticket existente o lanza una excepción si no existe.
         TicketEntity existingTicket = ticketRepository.findById(id)
@@ -187,6 +136,9 @@ public class TicketService {
         TicketEntity savedTicket = ticketRepository.save(existingTicket);
         return convertToTicketDTO(savedTicket);
     }
+
+
+
 
     public TicketDTO updateTicket(Long id, TicketDTO ticketDTO) {
 
@@ -244,11 +196,11 @@ public class TicketService {
 
             // Validacion: Si el estado cambia a "Completado", establecer closeDate automáticamente
             if (statusEnum.equals(TicketStatus.COMPLETADO)) {
-                 existingTicket.setCloseDate(LocalDateTime.now());
-             } else if (existingTicket.getCloseDate() != null) {
+                existingTicket.setCloseDate(LocalDateTime.now());
+            } else if (existingTicket.getCloseDate() != null) {
                 // Si el estado cambia de "Cerrado" a otro, eliminar closeDate
-                 existingTicket.setCloseDate(null);
-             }
+                existingTicket.setCloseDate(null);
+            }
         }
 
 
@@ -344,21 +296,13 @@ public class TicketService {
         dto.setStatus(new TicketStatusDTO(statusEnum.getId(), statusEnum.getDisplayName()));
 
         if (ticket.getUserCreator() != null) {
-            dto.setUserId(ticket.getUserCreator().getUserId());
+
+            Long userCreatorId = ticket.getUserCreator().getUserId(); //Declaracion de variable para almacenamiento del id de tipo Long
+
+            dto.setUserId(userCreatorId); //Asignacion de ID del usuario creador del ticket
 
 
-
-
-
-            //Crea un nuevo DTO para el usuario creador
-            UserDTO creatorDTO = new UserDTO();
-            creatorDTO.setId(ticket.getUserCreator().getUserId());
-            creatorDTO.setDisplayName(ticket.getUserCreator().getFullName());
-
-
-            //Asigna el DTO del creador al campo createdBy
-            dto.setCreatedBy(creatorDTO);
-
+            userRepository.findById(userCreatorId).ifPresent(user -> {dto.setUserName(user.getFullName());}); //Asignacion de nombre completo para campo userName en TicketDTO
         } else {
             throw new IllegalArgumentException("El ID del usuario no puede ser nulo.");
         }
@@ -396,5 +340,36 @@ public class TicketService {
             counts.put(statusName, count);
         }
         return counts;
+    }
+
+    public List<TicketDTO> getAssignedTicketsByTechnicianId(Long technicianId) {
+        userRepository.findById(technicianId)
+                .orElseThrow(() -> new ExceptionUserNotFound("El id del tecnico " + technicianId + " no existe"));
+
+        List<TicketEntity> tickets = ticketRepository.findByAssignedTechUser_UserId(technicianId);
+        return tickets.stream()
+                .map(this::convertToTicketDTO)
+                .collect(Collectors.toList());
+    }
+
+    public TicketDTO acceptTicket(Long ticketId, Long technicianId) {
+        TicketEntity ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new IllegalArgumentException("Ticket con ID " + ticketId + " no encontrado."));
+
+        // Validar que el ticket tiene un técnico asignado y es el que está intentando aceptarlo
+        if (ticket.getAssignedTechUser() == null || !ticket.getAssignedTechUser().getUserId().equals(technicianId)) {
+            throw new IllegalArgumentException("El usuario no tiene permiso para aceptar este ticket.");
+        }
+
+        // Validar que el ticket está en estado "En espera" antes de cambiarlo
+        if (!ticket.getTicketStatusId().equals(TicketStatus.EN_ESPERA.getId())) {
+            throw new IllegalArgumentException("El ticket no puede ser aceptado, su estado actual no es 'En espera'.");
+        }
+
+        // Cambiar el estado a "En progreso"
+        ticket.setTicketStatusId(TicketStatus.EN_PROGRESO.getId());
+
+        TicketEntity savedTicket = ticketRepository.save(ticket);
+        return convertToTicketDTO(savedTicket);
     }
 }
