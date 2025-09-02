@@ -22,6 +22,10 @@ public interface TicketRepository extends JpaRepository<TicketEntity,Long> {
     //Busca tickets por el Id del usuario creador y los ordena por fecha de creacion descendente
     List<TicketEntity> findByUserCreator_UserIdOrderByCreationDate(Long userId);
 
+    List<TicketEntity> findByAssignedTechUser_UserId(Long assignedTechUserId);
+
+    long countByAssignedTechUser_UserIdAndTicketStatusIdIn(Long userId, List<Long> statusIds);
+
     @Query(value = "SELECT TS.STATUS, COUNT(T.TICKETID) FROM TBTICKETS T JOIN TBTICKETSTATUS TS ON T.TICKETSTATUSID = TS.TICKETSTATUSID GROUP BY TS.STATUS", nativeQuery = true)
     List<Object[]> countTicketsByStatus();
 
