@@ -47,6 +47,6 @@ public class TicketEntity {
     private LocalDateTime closeDate;
     @Column(name="PERCENTAGE")
     private Integer percentage;
-    @Column(name = "IMAGE_URL")
+    @Column(name = "IMAGEURL")
     private String imageUrl;
 }

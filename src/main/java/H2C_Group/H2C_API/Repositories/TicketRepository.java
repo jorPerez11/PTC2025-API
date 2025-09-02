@@ -3,6 +3,7 @@ package H2C_Group.H2C_API.Repositories;
 
 import H2C_Group.H2C_API.Entities.TicketEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -24,4 +25,10 @@ public interface TicketRepository extends JpaRepository<TicketEntity,Long> {
     List<TicketEntity> findByAssignedTechUser_UserId(Long assignedTechUserId);
 
     long countByAssignedTechUser_UserIdAndTicketStatusIdIn(Long userId, List<Long> statusIds);
+
+    @Query(value = "SELECT TS.STATUS, COUNT(T.TICKETID) FROM TBTICKETS T JOIN TBTICKETSTATUS TS ON T.TICKETSTATUSID = TS.TICKETSTATUSID GROUP BY TS.STATUS", nativeQuery = true)
+    List<Object[]> countTicketsByStatus();
+
+    @Query("SELECT t FROM TicketEntity t WHERE t.id = ?1")
+    TicketEntity findTicketById(Integer id);
 }
