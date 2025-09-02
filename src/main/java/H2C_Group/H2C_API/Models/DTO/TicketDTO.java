@@ -22,10 +22,10 @@ import java.time.LocalDateTime;
 public class TicketDTO {
     private Long ticketId;
 
-    @NotNull(message = "La categoria es obligatoria.")
+//    @NotNull(message = "La categoria es obligatoria.")
     private CategoryDTO category;
 
-    @NotNull(message = "La prioridad es obligatoria.")
+//    @NotNull(message = "La prioridad es obligatoria.")
     private TicketPriorityDTO priority;
 
     //Estado del ticket. Se asigna automaticamente (En espera, En progreso) a excepcion del estado "Completado"
@@ -34,14 +34,14 @@ public class TicketDTO {
     private String userName;
 
     //CLIENTE
-    @NotNull(message = "El id del usuario es obligatorio.")
+//    @NotNull(message = "El id del usuario es obligatorio.")
     private Long userId;
 
-    @NotBlank(message = "El título es obligatorio.")
+//    @NotBlank(message = "El título es obligatorio.")
     @Size(max = 100, message = "El título no puede exceder los 200 caracteres.")
     private String title;
 
-    @NotBlank(message = "La descripción es obligatoria.")
+//    @NotBlank(message = "La descripción es obligatoria.")
     @Size(max = 200, message = "La descripción no puede exceder el límite de 200 caracteres.")
     private String description;
 

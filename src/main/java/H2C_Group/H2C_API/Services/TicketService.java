@@ -109,6 +109,35 @@ public class TicketService {
         return  convertToTicketDTO(savedTicket);
     }
 
+    public TicketDTO updateTicketStatus(Long id, TicketStatusDTO ticketDTO) {
+        // 1. Encuentra el ticket existente o lanza una excepción si no existe.
+        TicketEntity existingTicket = ticketRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("El ID del ticket " + id + " no existe."));
+
+        // 2. Procesa la actualización del estado si el DTO no es nulo.
+        if (ticketDTO != null && ticketDTO.getId() != null) {
+            TicketStatus statusEnum = TicketStatus.fromIdOptional(ticketDTO.getId())
+                    .orElseThrow(() -> new IllegalArgumentException("El ID de estado proporcionado no existe en la enumeración de TicketStatus: " + ticketDTO.getId()));
+
+            if (ticketDTO.getDisplayName() != null && !statusEnum.getDisplayName().equalsIgnoreCase(ticketDTO.getDisplayName())) {
+                throw new IllegalArgumentException("El 'displayName' del estado no coincide con el 'id' proporcionado. Se esperaba: '" + statusEnum.getDisplayName() + "'");
+            }
+
+            existingTicket.setTicketStatusId(statusEnum.getId());
+
+            if (statusEnum.equals(TicketStatus.COMPLETADO)) {
+                existingTicket.setCloseDate(LocalDateTime.now());
+            } else if (existingTicket.getCloseDate() != null) {
+                existingTicket.setCloseDate(null);
+            }
+        }
+
+        // 3. Guarda la entidad actualizada y conviértela a DTO.
+        TicketEntity savedTicket = ticketRepository.save(existingTicket);
+        return convertToTicketDTO(savedTicket);
+    }
+
+
 
 
     public TicketDTO updateTicket(Long id, TicketDTO ticketDTO) {
