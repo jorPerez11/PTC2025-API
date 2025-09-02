@@ -137,9 +137,6 @@ public class TicketService {
         return convertToTicketDTO(savedTicket);
     }
 
-
-
-
     public TicketDTO updateTicket(Long id, TicketDTO ticketDTO) {
 
         // Validaciones básicas de entrada
