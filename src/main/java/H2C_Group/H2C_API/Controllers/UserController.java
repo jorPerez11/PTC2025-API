@@ -4,12 +4,14 @@ package H2C_Group.H2C_API.Controllers;
 import H2C_Group.H2C_API.Entities.UserEntity;
 import H2C_Group.H2C_API.Exceptions.ExceptionUserBadRequest;
 import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
+import H2C_Group.H2C_API.Models.DTO.AllUsersDTO;
 import H2C_Group.H2C_API.Models.DTO.UserDTO;
 import H2C_Group.H2C_API.Services.UserService;
 import jakarta.validation.Valid;
 import org.apache.catalina.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -26,14 +28,48 @@ public class UserController {
     @Autowired
     private UserService acceso;
 
+//    @GetMapping("/GetUsers")
+//    public ResponseEntity<Page<UserDTO>> GetUserData(
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size
+//    ) {
+//        Page<UserDTO> userPage = acceso.findAll(page, size);
+//        return ResponseEntity.ok(userPage);
+//    }
+
+    @GetMapping("/GetTicketDetailsForModal/{ticketId}")
+    public ResponseEntity<?> getTicketDetailsForModal(@PathVariable Long ticketId) {
+        try {
+            AllUsersDTO ticketDetails = acceso.getTicketDetailsForModal(ticketId);
+            return new ResponseEntity<>(ticketDetails, HttpStatus.OK);
+        } catch (ExceptionUserNotFound e) { // Usar ExceptionUserNotFound si así la maneja el servicio
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND); // Código 404
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error interno del servidor al obtener los detalles del ticket.", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // --- Endpoint para obtener usuarios con paginación y filtros (/GetUsers) ---
     @GetMapping("/GetUsers")
     public ResponseEntity<Page<UserDTO>> GetUserData(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String term, // Nuevo: Término de búsqueda
+            @RequestParam(defaultValue = "all") String category, // Nuevo: Filtro por categoría/estado
+            @RequestParam(defaultValue = "all") String period // Nuevo: Filtro por período
     ) {
-        Page<UserDTO> userPage = acceso.findAll(page, size);
+        if(size <= 0 || size > 50){
+            return ResponseEntity.badRequest().body(Page.empty(PageRequest.of(page, size))); // Retorna Page vacía
+        }
+        Page<UserDTO> userPage = acceso.findAll(page, size, term, category, period); // Pasa los nuevos parámetros
+        if (userPage == null || userPage.isEmpty()) {
+            return ResponseEntity.noContent().build(); // Devuelve 204 No Content si no hay usuarios
+        }
         return ResponseEntity.ok(userPage);
     }
+
 
     @GetMapping("/GetTech")
     public ResponseEntity<List<UserDTO>> getTechs(){
@@ -45,7 +81,7 @@ public class UserController {
     }
 
 
-   // Método de actualización único y correcto, usa UserDTO y valida con @Valid.
+    // Método de actualización único y correcto, usa UserDTO y valida con @Valid.
     @PatchMapping("/users/{id}")
     public ResponseEntity<?> updateUser(@PathVariable Long id, @Valid @RequestBody UserDTO dto) {
         try {

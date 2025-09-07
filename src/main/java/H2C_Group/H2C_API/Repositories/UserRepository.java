@@ -22,6 +22,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
     Optional<UserEntity> findByPhone(String phone);
 
     List<UserEntity> findByRolId(Long rolId);
+    List<UserEntity> findByRolIdInAndCategory_CategoryId(List<Long> roleIds, Long categoryId);
 
     /**
      * Verifica si existe al menos un usuario asociado a un ID de categoría específico.
@@ -31,7 +32,6 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
     boolean existsByCategory_CategoryId(Long categoryId);
 
     Optional<UserEntity> findByUsername(String username);
-
 
     Page<UserEntity> findAll(Pageable pageable);
 
@@ -55,11 +55,6 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
             @Param("categoryId") Long categoryId,
             String period
     );
-
-}
-
-    List<UserEntity> findByRolIdInAndCategory_CategoryId(List<Long> roleIds, Long categoryId);
-
 
 }
 

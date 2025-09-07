@@ -3,6 +3,7 @@ package H2C_Group.H2C_API.Controllers;
 import H2C_Group.H2C_API.Exceptions.ExceptionTicketNotFound;
 import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
 import H2C_Group.H2C_API.Models.DTO.TicketDTO;
+import H2C_Group.H2C_API.Models.DTO.TicketStatusDTO;
 import H2C_Group.H2C_API.Services.TicketService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,20 @@ import java.util.Map;
 public class TicketController {
     @Autowired
     private TicketService acceso;
+
+    // Nuevo endpoint para obtener el conteo de tickets por estado
+    @GetMapping("/GetTicketCounts")
+    public ResponseEntity<?> getTicketCounts() {
+        try {
+            System.out.println("Solicitud recibida para /GetTicketCounts");
+            Map<String, Long> counts = acceso.getTicketCountsByStatus();
+            return new ResponseEntity<>(counts, HttpStatus.OK);
+        } catch (Exception e) {
+            System.out.println("Error al procesar la solicitud: " + e.getMessage());
+            e.printStackTrace(); // Imprime el stack trace completo
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error interno del servidor");
+        }
+    }
 
     @GetMapping("/GetTickets")
     public ResponseEntity<Page<TicketDTO>> getTickets(
@@ -50,17 +65,44 @@ public class TicketController {
         }
     }
 
+    @PatchMapping("/UpdateTicketStatus/{ticketId}")
+    public ResponseEntity<?> updateTicketStatus(@PathVariable Long ticketId, @RequestBody TicketStatusDTO ticketDTO) {
+        try {
+            TicketDTO updatedTicket = acceso.updateTicketStatus(ticketId, ticketDTO);
+            return new ResponseEntity<>(updatedTicket, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+        } catch (ExceptionTicketNotFound e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", "Ocurrió un error interno del servidor al actualizar el ticket.");
+            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
     @GetMapping("/GetRecentTicketsByUser/{userId}")
     public ResponseEntity<List<TicketDTO>> getTicketsByUserId(@PathVariable Long userId) {
         List<TicketDTO> tickets = acceso.geTicketByUserId(userId);
         return new ResponseEntity<>(tickets, HttpStatus.OK);
     }
 
-
     @GetMapping("/GetAssignedTicketsByTech/{technicianId}")
     public ResponseEntity<List<TicketDTO>> getAssignedTicketsByTechnicianId(@PathVariable Long technicianId){
         List<TicketDTO> tickets = acceso.getAssignedTicketsByTechnicianId(technicianId);
         return new ResponseEntity<>(tickets, HttpStatus.OK);
+    }
+
+
+    @PutMapping("/accept/{ticketId}/{technicianId}")
+    public ResponseEntity<TicketDTO> acceptTicket(@PathVariable Long ticketId, @PathVariable Long technicianId) {
+        TicketDTO acceptedTicket = acceso.acceptTicket(ticketId, technicianId);
+        return new ResponseEntity<>(acceptedTicket, HttpStatus.OK);
     }
 
 
@@ -84,12 +126,6 @@ public class TicketController {
             return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR); // Código 500
         }
 
-    }
-
-    @PutMapping("/accept/{ticketId}/{technicianId}")
-    public ResponseEntity<TicketDTO> acceptTicket(@PathVariable Long ticketId, @PathVariable Long technicianId) {
-        TicketDTO acceptedTicket = acceso.acceptTicket(ticketId, technicianId);
-        return new ResponseEntity<>(acceptedTicket, HttpStatus.OK);
     }
 
 
