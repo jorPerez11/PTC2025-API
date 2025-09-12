@@ -13,7 +13,10 @@ public enum     Category {
     CONSULTAS(2L, "Consultas"),
     GESTION_DE_USUARIOS(3L, "Gestión de Usuarios"),
     REDES(4L, "Redes"),
-    INCIDENTES_CRITICOS(5L, "Incidentes Críticos");
+    INCIDENTES_CRITICOS(5L, "Incidentes Críticos"),
+    SISTEMA(6L, "Sistema"),
+    EQUIPO(7L, "Equipo");
+
 
     private final Long id;
     private final String displayName;
