@@ -3,14 +3,12 @@ package H2C_Group.H2C_API.Services;
 
 import H2C_Group.H2C_API.Entities.CategoryEntity;
 import H2C_Group.H2C_API.Entities.SolutionEntity;
-import H2C_Group.H2C_API.Entities.TicketEntity;
 import H2C_Group.H2C_API.Entities.UserEntity;
 import H2C_Group.H2C_API.Enums.Category;
 import H2C_Group.H2C_API.Exceptions.ExceptionSolutionBadRequest;
 import H2C_Group.H2C_API.Exceptions.ExceptionSolutionNotFound;
 import H2C_Group.H2C_API.Models.DTO.CategoryDTO;
 import H2C_Group.H2C_API.Models.DTO.SolutionDTO;
-import H2C_Group.H2C_API.Models.DTO.TicketDTO;
 import H2C_Group.H2C_API.Repositories.CategoryRepository;
 import H2C_Group.H2C_API.Repositories.SolutionRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
@@ -18,9 +16,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class SolutionService {
@@ -35,8 +30,6 @@ public class SolutionService {
 
 
     public Page<SolutionDTO> getAllSolutions(Pageable pageable) {
-        // NOTA: Para evitar la LazyInitializationException (LIE) del UserEntity,
-        // Tu SolutionRepository debe usar @Query con JOIN FETCH en su findAll.
         Page<SolutionEntity> solutions = solutionRepository.findAll(pageable);
         return solutions.map(this::convertToSolutionDTO);
     }
@@ -163,10 +156,21 @@ public class SolutionService {
 
     }
 
-    public List<SolutionDTO> findByTitle (String value) {
-        List<SolutionEntity> entities = solutionRepository.searchBySolutionTitleOrKeyWords(value);
-        return entities.stream()
-                .map(this::convertToSolutionDTO)
-                .collect(Collectors.toList());
+    public Page<SolutionDTO> findByTitle (String value, Pageable pageable) {
+        Page<SolutionEntity> entities = solutionRepository.searchBySolutionTitleOrKeyWords(value, pageable);
+        return entities.map(this::convertToSolutionDTO);
+    }
+
+    public Page<SolutionDTO> getSolutionsByCategory(Long categoryId, Pageable pageable) {
+        // Valida que la categoría exista antes de consultar
+        if (!categoryRepository.existsById(categoryId)) {
+            throw new ExceptionSolutionNotFound("La categoría con ID " + categoryId + " no existe.");
+        }
+
+        // Llama a la nueva consulta del repositorio
+        Page<SolutionEntity> solutions = solutionRepository.findByCategory_CategoryId(categoryId, pageable);
+
+        // Mapea y retorna los DTOs
+        return solutions.map(this::convertToSolutionDTO);
     }
 }
