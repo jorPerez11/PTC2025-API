@@ -82,22 +82,12 @@ public class UserController {
     }
 
 
-<<<<<<< Updated upstream
     // Método de actualización único y correcto, usa UserDTO y valida con @Valid.
     @PatchMapping("/users/{id}")
     public ResponseEntity<?> updateUser(@PathVariable Long id, @Valid @RequestBody UserDTO dto) {
         try {
             UserDTO updatedUser = acceso.updateUser(id, dto);
             return new ResponseEntity<>(updatedUser, HttpStatus.OK);
-=======
-   // Método de actualización único y correcto, usa UserDTO y valida con @Valid.
-   @PutMapping("/users/{id}")
-   public ResponseEntity<?> updateUser(@PathVariable Long id, @Valid @RequestBody UserDTO dto) {
-       try {
-           UserDTO updatedUser = acceso.updateUser(id, dto);
-           return new ResponseEntity<>(updatedUser, HttpStatus.OK);
->>>>>>> Stashed changes
-
        } catch (ExceptionUserBadRequest e) {
            Map<String, String> errors = new HashMap<>();
            errors.put("error", e.getMessage());

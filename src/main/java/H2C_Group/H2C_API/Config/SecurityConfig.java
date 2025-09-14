@@ -110,9 +110,5 @@ public class SecurityConfig{
         return source;
     }
 
-<<<<<<< Updated upstream
 }
 
-=======
-}
->>>>>>> Stashed changes
