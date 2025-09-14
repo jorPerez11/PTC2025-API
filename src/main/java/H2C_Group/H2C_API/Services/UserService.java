@@ -7,6 +7,7 @@ import H2C_Group.H2C_API.Entities.UserEntity;
 import H2C_Group.H2C_API.Enums.Category;
 import H2C_Group.H2C_API.Enums.UserRole;
 import H2C_Group.H2C_API.Exceptions.ExceptionCategoryNotFound;
+import H2C_Group.H2C_API.Exceptions.ExceptionUserBadRequest;
 import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
 import H2C_Group.H2C_API.Exceptions.ExceptionCategoryBadRequest;
 import H2C_Group.H2C_API.Models.DTO.AllUsersDTO;
@@ -332,6 +333,7 @@ public class UserService implements UserDetailsService {
         return email.endsWith("@gmail.com") || email.endsWith("@ricaldone.edu.sv");
     }
 
+<<<<<<< Updated upstream
     // 💡 Inyección de dependencia de JdbcTemplate
     private final JdbcTemplate jdbcTemplate;
 
@@ -565,6 +567,43 @@ public class UserService implements UserDetailsService {
         UserEntity savedUser = userRepository.save(existingUser);
         return convertToUserDTO(savedUser);
     }
+=======
+  //METODO DE ACTUALIZACION DE CATEGORIA DE USUARIO (TECNICOS)
+  @Transactional // Agrega esta anotación para que la transacción sea atómica.
+  public UserDTO updateUser(Long id, UserDTO dto) {
+      // 1. Validar que el ID es válido
+      if (id == null || id <= 0) {
+          throw new ExceptionUserBadRequest("El ID del usuario a actualizar no puede ser nulo o no válido.");
+      }
+
+      // 2. Buscar al usuario existente por ID
+      UserEntity existingUser = userRepository.findById(id)
+              .orElseThrow(() -> new ExceptionUserNotFound("El usuario con ID " + id + " no existe."));
+
+      // 3. Aplicar las actualizaciones desde el DTO
+      if (dto.getName() != null && !dto.getName().isBlank()) {
+          existingUser.setFullName(dto.getName());
+      }
+      if (dto.getUsername() != null && !dto.getUsername().isBlank()) {
+          existingUser.setUsername(dto.getUsername());
+      }
+      if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
+          existingUser.setEmail(dto.getEmail());
+      }
+      if (dto.getPhone() != null && !dto.getPhone().isBlank()) {
+          existingUser.setPhone(dto.getPhone());
+      }
+      if (dto.getProfilePictureUrl() != null && !dto.getProfilePictureUrl().isBlank()) {
+          existingUser.setProfilePictureUrl(dto.getProfilePictureUrl());
+      }
+
+      // 4. Guardar la entidad actualizada en la base de datos
+      UserEntity savedUser = userRepository.save(existingUser);
+
+      // 5. Convertir la entidad a DTO y devolverla
+      return convertToUserDTO(savedUser);
+  }
+>>>>>>> Stashed changes
 
 
     public void deleteUser(Long id) {
