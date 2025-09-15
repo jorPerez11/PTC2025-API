@@ -2,6 +2,7 @@ package H2C_Group.H2C_API.Repositories;
 
 
 import H2C_Group.H2C_API.Entities.TicketEntity;
+import H2C_Group.H2C_API.Entities.Views.TicketView;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -21,6 +22,10 @@ public interface TicketRepository extends JpaRepository<TicketEntity,Long> {
     boolean existsByCategoryId(Long categoryId);
     //Busca tickets por el Id del usuario creador y los ordena por fecha de creacion descendente
     List<TicketEntity> findByUserCreator_UserIdOrderByCreationDate(Long userId);
+
+    List<TicketEntity> findByAssignedTechUser_UserId(Long assignedTechUserId);
+
+    long countByAssignedTechUser_UserIdAndTicketStatusIdIn(Long userId, List<Long> statusIds);
 
     @Query(value = "SELECT TS.STATUS, COUNT(T.TICKETID) FROM TBTICKETS T JOIN TBTICKETSTATUS TS ON T.TICKETSTATUSID = TS.TICKETSTATUSID GROUP BY TS.STATUS", nativeQuery = true)
     List<Object[]> countTicketsByStatus();
