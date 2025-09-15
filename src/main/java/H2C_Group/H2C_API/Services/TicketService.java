@@ -2,13 +2,16 @@ package H2C_Group.H2C_API.Services;
 
 
 import H2C_Group.H2C_API.Entities.TicketEntity;
+import H2C_Group.H2C_API.Entities.TicketStatusEntity;
 import H2C_Group.H2C_API.Entities.UserEntity;
 import H2C_Group.H2C_API.Enums.*;
 import H2C_Group.H2C_API.Exceptions.ExceptionTicketNotFound;
 import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
 import H2C_Group.H2C_API.Models.DTO.*;
 import H2C_Group.H2C_API.Repositories.TicketRepository;
+import H2C_Group.H2C_API.Repositories.TicketStatusRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +33,9 @@ public class TicketService {
 
     @Autowired
     private TicketRepository ticketRepository;
+
+    @Autowired
+    private TicketStatusRepository ticketStatusRepository;
 
 
     public Page<TicketDTO> getAllTickets(int page, int size) {
@@ -137,8 +144,43 @@ public class TicketService {
         return convertToTicketDTO(savedTicket);
     }
 
+    @Transactional
+    public TicketDTO UpdateTicketStatus(Long ticketId, TicketDTO ticketDTO) {
+        // Usar el repositorio para encontrar el ticket.
+        Optional<TicketEntity> optionalTicket = ticketRepository.findById(ticketId);
 
+        if (optionalTicket.isPresent()) {
+            TicketEntity ticket = optionalTicket.get();
 
+            // Asegúrate de que el DTO contenga un estado válido
+            if (ticketDTO.getStatus() == null || ticketDTO.getStatus().getId() == null) {
+                throw new IllegalArgumentException("El estado del ticket no puede ser nulo.");
+            }
+
+            // Buscar el ID del estado en la tabla de estados
+            TicketStatusEntity status = ticketStatusRepository.findById(Math.toIntExact(ticketDTO.getStatus().getId()))
+                    .orElseThrow(() -> new IllegalArgumentException("ID de estado no válido: " + ticketDTO.getStatus().getId()));
+
+            // Actualizar el estado con el ID encontrado
+            ticket.setTicketStatusId(Long.valueOf(status.getTicketStatusId()));
+
+            // Manejar la fecha de cierre según el estado
+            if (ticket.getTicketStatusId().equals(TicketStatus.COMPLETADO.getId())) {
+                ticket.setCloseDate(java.time.LocalDateTime.now());
+            } else {
+                // Si el estado no es "Completado", la fecha debe ser nula
+                ticket.setCloseDate(null);
+            }
+
+            // Guardar el ticket para persistir el cambio
+            ticketRepository.save(ticket);
+
+            // Retornar el DTO actualizado
+            return convertToTicketDTO(ticket);
+        } else {
+            throw new IllegalArgumentException("Ticket no encontrado con el ID: " + ticketId);
+        }
+    }
 
     public TicketDTO updateTicket(Long id, TicketDTO ticketDTO) {
 

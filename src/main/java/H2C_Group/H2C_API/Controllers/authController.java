@@ -81,7 +81,7 @@ public class authController {
             jwt = jwtUtil.generateToken(userEntity, JwUtil.JWT_TOKEN_VALIDITY_LONG);
         }
 
-        // 5.. Retorna el token en la respuesta
+        // 5. Retorna el token en la respuesta
         LoginResponse response = new LoginResponse(jwt, userEntity.getUsername(), userEntity.getRolId(), passwordExpired, userEntity.getUserId());
         return ResponseEntity.ok(response);
     }
@@ -113,6 +113,12 @@ public class authController {
         public void setUserId(Long userId){this.userId = userId;}
     }
 
+    @GetMapping("/check-company-existence")
+    public ResponseEntity<Boolean> checkCompanyExistence() {
+        // Verifica si existe al menos un usuario en la base de datos
+        boolean hasUsers = userRepository.count() > 0;
+        return ResponseEntity.ok(hasUsers);
+    }
 
     @PostMapping("/change-password")
     public ResponseEntity<?> changePassword(@RequestBody ChangePasswordDTO changePasswordDTO){
