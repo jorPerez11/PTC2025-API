@@ -14,7 +14,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -88,21 +87,22 @@ public class UserController {
         try {
             UserDTO updatedUser = acceso.updateUser(id, dto);
             return new ResponseEntity<>(updatedUser, HttpStatus.OK);
-       } catch (ExceptionUserBadRequest e) {
-           Map<String, String> errors = new HashMap<>();
-           errors.put("error", e.getMessage());
-           return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
-       }catch(ExceptionUserNotFound e) {
-           Map<String, String> errors = new HashMap<>();
-           errors.put("error", e.getMessage());
-           return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND);
-       } catch (Exception e) {
-           Map<String, String> errors = new HashMap<>();
-           e.printStackTrace();
-           errors.put("error", "Ocurrió un error interno del servidor al actualizar el usuario.");
-           return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
-       }
-   }
+
+        } catch (ExceptionUserBadRequest e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+        }catch(ExceptionUserNotFound e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            Map<String, String> errors = new HashMap<>();
+            //e.printStackTrace();
+            errors.put("error", "Ocurrió un error interno del servidor al actualizar el usuario.");
+            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 
 
     //metodo para obtener usuarios con rol de tecnico
@@ -124,7 +124,7 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al obtener los técnicos");
         }
     }
-  
+
     @PostMapping("/PostUser")
     public ResponseEntity<?> createUser(@RequestBody @Valid UserDTO user) {
         try {
@@ -142,6 +142,28 @@ public class UserController {
         } catch (Exception e) {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", "Ocurrió un error interno del servidor al crear el usuario.");
+            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PatchMapping("/UpdateUser/{id}")
+    public ResponseEntity<?> UpdateUser(@PathVariable Long id, @Valid @RequestBody UserDTO dto) {
+        try {
+            UserDTO updatedUser = acceso.updateUser(id, dto);
+            return new ResponseEntity<>(updatedUser, HttpStatus.OK);
+
+        } catch (ExceptionUserBadRequest e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+        }catch(ExceptionUserNotFound e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            Map<String, String> errors = new HashMap<>();
+            //e.printStackTrace();
+            errors.put("error", "Ocurrió un error interno del servidor al actualizar el usuario.");
             return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

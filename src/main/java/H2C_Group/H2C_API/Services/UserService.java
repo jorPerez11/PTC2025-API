@@ -7,7 +7,6 @@ import H2C_Group.H2C_API.Entities.UserEntity;
 import H2C_Group.H2C_API.Enums.Category;
 import H2C_Group.H2C_API.Enums.UserRole;
 import H2C_Group.H2C_API.Exceptions.ExceptionCategoryNotFound;
-import H2C_Group.H2C_API.Exceptions.ExceptionUserBadRequest;
 import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
 import H2C_Group.H2C_API.Exceptions.ExceptionCategoryBadRequest;
 import H2C_Group.H2C_API.Models.DTO.AllUsersDTO;
