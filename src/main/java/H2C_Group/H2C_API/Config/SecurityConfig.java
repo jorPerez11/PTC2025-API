@@ -38,28 +38,28 @@ public class SecurityConfig{
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                        // Permite explícitamente el acceso a la creación de la compañía.
-                        // Permite explícitamente el acceso a la creación de la compañía.
-                        .requestMatchers(HttpMethod.POST, "/api/PostCompany/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/PostCompany").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/companies").permitAll()
-                        .requestMatchers(HttpMethod.PATCH, "/api/companies/**").permitAll()
-                        .requestMatchers(HttpMethod.PATCH, "/api/users/**").permitAll()
+                                // Permite explícitamente el acceso a la creación de la compañía.
+                                // Permite explícitamente el acceso a la creación de la compañía.
+                                .requestMatchers(HttpMethod.POST, "/api/PostCompany/**").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/api/PostCompany").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/api/companies").permitAll()
+                                .requestMatchers(HttpMethod.PATCH, "/api/companies/**").permitAll()
+                                .requestMatchers(HttpMethod.PATCH, "/api/users/**").permitAll()
 //                        .requestMatchers(HttpMethod.POST, "/api/**").permitAll()
 //                        .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
 
-                        // Permite el acceso a todos los endpoints del "primer uso"
-                        .requestMatchers("/api/firstuse/**").permitAll()
+                                // Permite el acceso a todos los endpoints del "primer uso"
+                                .requestMatchers("/api/firstuse/**").permitAll()
 
-                        // Permite las peticiones OPTIONS (para pre-vuelo de CORS)
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                                // Permite las peticiones OPTIONS (para pre-vuelo de CORS)
+                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Permite acceso público a los endpoints de login y registro
-                        .requestMatchers("/api/users/login", "/api/users/register", "api/users/registerTech").permitAll()
-                        //Permite el acceso a este endpoint solo si el usuario esta autenticado
-                        .requestMatchers("/api/users/change-password").authenticated()
-                        // Cualquier otra petición debe estar autenticada
-                        .anyRequest().authenticated()
+                                // Permite acceso público a los endpoints de login y registro
+                                .requestMatchers("/api/users/login", "/api/users/register", "api/users/registerTech").permitAll()
+                                //Permite el acceso a este endpoint solo si el usuario esta autenticado
+                                .requestMatchers("/api/users/change-password").authenticated()
+                                // Cualquier otra petición debe estar autenticada
+                                .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
@@ -111,4 +111,3 @@ public class SecurityConfig{
     }
 
 }
-
