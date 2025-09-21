@@ -16,7 +16,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -194,11 +196,11 @@ public class TicketService {
 
             // Validacion: Si el estado cambia a "Completado", establecer closeDate automáticamente
             if (statusEnum.equals(TicketStatus.COMPLETADO)) {
-                 existingTicket.setCloseDate(LocalDateTime.now());
-             } else if (existingTicket.getCloseDate() != null) {
+                existingTicket.setCloseDate(LocalDateTime.now());
+            } else if (existingTicket.getCloseDate() != null) {
                 // Si el estado cambia de "Cerrado" a otro, eliminar closeDate
-                 existingTicket.setCloseDate(null);
-             }
+                existingTicket.setCloseDate(null);
+            }
         }
 
 
@@ -328,5 +330,46 @@ public class TicketService {
 
     }
 
+    public Map<String, Long> getTicketCountsByStatus() {
+        List<Object[]> results = ticketRepository.countTicketsByStatus();
+        Map<String, Long> counts = new HashMap<>();
+        for (Object[] result : results) {
+            String statusName = (String) result[0];
+            // Castea a BigDecimal y luego usa longValue() para obtener el Long
+            Long count = ((java.math.BigDecimal) result[1]).longValue();
+            counts.put(statusName, count);
+        }
+        return counts;
+    }
 
+    public List<TicketDTO> getAssignedTicketsByTechnicianId(Long technicianId) {
+        userRepository.findById(technicianId)
+                .orElseThrow(() -> new ExceptionUserNotFound("El id del tecnico " + technicianId + " no existe"));
+
+        List<TicketEntity> tickets = ticketRepository.findByAssignedTechUser_UserId(technicianId);
+        return tickets.stream()
+                .map(this::convertToTicketDTO)
+                .collect(Collectors.toList());
+    }
+
+    public TicketDTO acceptTicket(Long ticketId, Long technicianId) {
+        TicketEntity ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new IllegalArgumentException("Ticket con ID " + ticketId + " no encontrado."));
+
+        // Validar que el ticket tiene un técnico asignado y es el que está intentando aceptarlo
+        if (ticket.getAssignedTechUser() == null || !ticket.getAssignedTechUser().getUserId().equals(technicianId)) {
+            throw new IllegalArgumentException("El usuario no tiene permiso para aceptar este ticket.");
+        }
+
+        // Validar que el ticket está en estado "En espera" antes de cambiarlo
+        if (!ticket.getTicketStatusId().equals(TicketStatus.EN_ESPERA.getId())) {
+            throw new IllegalArgumentException("El ticket no puede ser aceptado, su estado actual no es 'En espera'.");
+        }
+
+        // Cambiar el estado a "En progreso"
+        ticket.setTicketStatusId(TicketStatus.EN_PROGRESO.getId());
+
+        TicketEntity savedTicket = ticketRepository.save(ticket);
+        return convertToTicketDTO(savedTicket);
+    }
 }

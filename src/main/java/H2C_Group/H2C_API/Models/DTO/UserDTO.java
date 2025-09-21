@@ -36,7 +36,6 @@ public class UserDTO {
         private String phone;
 
 
-        @NotBlank(message = "La contraseña es obligatoria.")
         @Size(min = 8, max = 30, message = "La contraseña debe tener entre 8 y 30 caracteres.")
         @Pattern(regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=])(?=\\S+$).{8,}$", message = "La contraseña debe contener al menos una mayúscula, una minúscula, un número y un carácter especial.")
         private String password;
@@ -64,5 +63,5 @@ public class UserDTO {
 
         private LocalDateTime registrationDate;
 
-
+        private String latestTicketStatus;
 }

@@ -17,10 +17,10 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<UserEntity, Long>{
-
     Optional<UserEntity> findByEmailIgnoreCase(String email);
     Optional<UserEntity> findByPhone(String phone);
 
+    // MÉTODO ÚNICO: findByRolId
     List<UserEntity> findByRolId(Long rolId);
 
     /**
@@ -32,9 +32,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
 
     Optional<UserEntity> findByUsername(String username);
 
-    Page<UserEntity> findAll(Pageable pageable);
-
-    Page<UserEntity> findByRolId(Long rolId, Pageable pageable);
+    List<UserEntity> findByRolIdInAndCategory_CategoryId(List<Long> roleIds, Long categoryId);
 
     @Query("SELECT u FROM UserEntity u " +
             // 🔑 CLAVE: Usar LEFT JOIN FETCH para cargar la categoría junto con el usuario.
@@ -53,7 +51,5 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
             @Param("term") String term,
             @Param("categoryId") Long categoryId,
             String period
-    );
-
+                    );
 }
-

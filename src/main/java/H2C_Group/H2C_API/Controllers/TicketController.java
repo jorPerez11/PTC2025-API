@@ -25,6 +25,20 @@ public class TicketController {
     @Autowired
     private TicketService acceso;
 
+    // Nuevo endpoint para obtener el conteo de tickets por estado
+    @GetMapping("/GetTicketCounts")
+    public ResponseEntity<?> getTicketCounts() {
+        try {
+            System.out.println("Solicitud recibida para /GetTicketCounts");
+            Map<String, Long> counts = acceso.getTicketCountsByStatus();
+            return new ResponseEntity<>(counts, HttpStatus.OK);
+        } catch (Exception e) {
+            System.out.println("Error al procesar la solicitud: " + e.getMessage());
+            e.printStackTrace(); // Imprime el stack trace completo
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error interno del servidor");
+        }
+    }
+
     @GetMapping("/GetTickets")
     public ResponseEntity<Page<TicketDTO>> getTickets(
             @RequestParam(defaultValue = "0") int page,
@@ -76,6 +90,19 @@ public class TicketController {
     public ResponseEntity<List<TicketDTO>> getTicketsByUserId(@PathVariable Long userId) {
         List<TicketDTO> tickets = acceso.geTicketByUserId(userId);
         return new ResponseEntity<>(tickets, HttpStatus.OK);
+    }
+
+    @GetMapping("/GetAssignedTicketsByTech/{technicianId}")
+    public ResponseEntity<List<TicketDTO>> getAssignedTicketsByTechnicianId(@PathVariable Long technicianId){
+        List<TicketDTO> tickets = acceso.getAssignedTicketsByTechnicianId(technicianId);
+        return new ResponseEntity<>(tickets, HttpStatus.OK);
+    }
+
+
+    @PutMapping("/accept/{ticketId}/{technicianId}")
+    public ResponseEntity<TicketDTO> acceptTicket(@PathVariable Long ticketId, @PathVariable Long technicianId) {
+        TicketDTO acceptedTicket = acceso.acceptTicket(ticketId, technicianId);
+        return new ResponseEntity<>(acceptedTicket, HttpStatus.OK);
     }
 
 
