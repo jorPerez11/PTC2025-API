@@ -55,6 +55,5 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
             @Param("categoryId") Long categoryId,
             String period
     );
-
 }
 
