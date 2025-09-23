@@ -1,22 +1,34 @@
 package H2C_Group.H2C_API.Controllers;
 
 import H2C_Group.H2C_API.Entities.UserEntity;
+import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
 import H2C_Group.H2C_API.Models.DTO.ChangePasswordDTO;
 import H2C_Group.H2C_API.Models.DTO.UserDTO;
 import H2C_Group.H2C_API.Repositories.UserRepository;
 import H2C_Group.H2C_API.Services.UserService;
 import H2C_Group.H2C_API.Utils.JwUtil;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.Serializable;
 
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
+
+import jakarta.servlet.http.HttpServletResponse;
+
+
+@Slf4j
 @RestController
 @CrossOrigin(origins = "*")
 @RequestMapping("/api/users")
@@ -58,59 +70,62 @@ public class authController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> createAuthenticationToken(@RequestBody UserDTO authenticationRequest) throws Exception{
-        // 1. Autentica las credenciales del usuario usando AuthenticationManager
-        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authenticationRequest.getUsername(), authenticationRequest.getPassword()));
+    public ResponseEntity<?> login(@RequestBody UserDTO authenticationRequest, HttpServletResponse httpResponse) throws Exception{
+        try {
+            // 1. Autentica las credenciales del usuario usando AuthenticationManager
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authenticationRequest.getUsername(), authenticationRequest.getPassword()));
 
-        // 2. Si la autenticación fue exitosa, carga los detalles del usuario
-        UserEntity userEntity = userRepository.findByUsername(authenticationRequest.getUsername())
-                .orElseThrow(() -> new Exception ("Usuario no encontrado después de la autenticación"));
+            //2. Si la autenticacion fue exitosa, llama al metodo auxiliar para agregar la cookie
+            addTokenCookie(authenticationRequest.getUsername(), httpResponse);
 
-        // 3. Obtenemos el estado de la contraseña expirada del usuario
-        boolean passwordExpired = userEntity.isPasswordExpired();
-
-        //4. genera el token de larga o corta duracion
-        String jwt;
-
-        //Si la contraseña no esta expirada genera el token de larga duracion
-        if (passwordExpired){
-            //Si la contraseña es de corta duracion genera un token de corta duracion
-            jwt = jwtUtil.generateToken(userEntity, JwUtil.JWT_TOKEN_VALIDITY_SHORT);
-        } else {
-            //Si la contraseña es de larga duracion genera un token de larga duracion
-            jwt = jwtUtil.generateToken(userEntity, JwUtil.JWT_TOKEN_VALIDITY_LONG);
+            //3. Retornamos los datos del /authme
+            return ResponseEntity.ok().body(Map.of(
+                    "message", "Login exitoso",
+                    "status", "success"
+            ));
+        } catch (Exception e){
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(
+                            "error", "Login fallido",
+                            "message", "Credenciales invalidas"
+                    ));
         }
 
-        // 5.. Retorna el token en la respuesta
-        LoginResponse response = new LoginResponse(jwt, userEntity.getUsername(), userEntity.getRolId(), passwordExpired, userEntity.getUserId());
-        return ResponseEntity.ok(response);
     }
 
-    // DTO para la respuesta del login
-    static class LoginResponse implements Serializable {
-        private String token;
-        private String username;
-        private Long rolId;
-        private boolean passwordExpired;
-        private Long userId;
+    private void addTokenCookie(String username, HttpServletResponse httpServletResponse) throws Exception{
+        //1. Carga los datos del usuario
+        final UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-        public LoginResponse(String token, String username, Long rolId, boolean passwordExpired, Long userId){
-            this.token = token;
-            this.username = username;
-            this.rolId = rolId;
-            this.passwordExpired = passwordExpired;
-            this.userId = userId;
-        }
-        public String getToken(){return token;}
-        public void setToken(String token){ this.token = token;}
-        public String getUsername(){return username;}
-        public void setUsername(String username){ this.username = username;}
-        public Long getRolId(){return rolId;}
-        public void setRolId(Long rolId){ this.rolId = rolId;}
-        public boolean isPasswordExpired(){return passwordExpired;}
-        public void setPasswordExpired(boolean passwordExpired){ this.passwordExpired = passwordExpired;}
-        public Long getUserId(){return userId;}
-        public void setUserId(Long userId){this.userId = userId;}
+        //2. Obtiene el estado de la contraseña expirada del usuario
+        UserEntity userEntity = userRepository.findByUsername(username)
+                .orElseThrow(()-> new ExceptionUserNotFound("Usuario no encontrado despues de la autenticacion"));
+        boolean passwordExpired = userEntity.isPasswordExpired();
+
+        //3. General el token de larga o corta duracion
+        long expirationTime = passwordExpired ? (long) jwtUtil.JWT_TOKEN_VALIDITY_SHORT : jwtUtil.JWT_TOKEN_VALIDITY_LONG;
+
+
+        String jwt = jwtUtil.generateToken(userDetails, expirationTime);
+
+
+
+        //4. Construye la cadena de la cookie y la añade a la respuesta
+        String coockieValue = String.format(
+                "authToken=%s; " +
+                        "Path=/; " +
+                        "HttpOnly; " +
+                        "Secure=false; " +
+                        "SameSite=None; " +
+                        "MaxAge=%d; " ,
+                jwt,
+                expirationTime / 1000
+        );
+
+        System.out.println("Cookie creada"+ coockieValue);
+        httpServletResponse.addHeader("Set-Cookie", coockieValue);
+        httpServletResponse.addHeader("Access-Control-Expose-Headers", "Set-Cookie");
+        System.out.println("Headers añadidos a la respuesta");
     }
 
 
@@ -126,5 +141,88 @@ public class authController {
         } catch (Exception e){
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(HttpServletResponse httpServletResponse){
+        //Elimina la cookie del navegador
+        String cookieValue = "authToken=; Path=/; HttpOnly; Secure; SameSite=None; MaxAge=0";
+        httpServletResponse.addHeader("Set-Cookie", cookieValue);
+        httpServletResponse.addHeader("Access-Control-Expose-Headers", "Set-Cookie");
+
+        return ResponseEntity.ok().body("Sesion cerrada con exito");
+    }
+
+    @PostMapping("/authme")
+    public ResponseEntity<?> getCurrentUser(HttpServletRequest request) {
+        try {
+            //1. Extraer el token de la cookie
+            String token = extractTokenFromCookie(request);
+
+            if (token == null){
+                log.warn("No se encontro ningun token en las cookies");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(
+                                "error", "no autenticado",
+                                "message", "Token no encontrado"
+                        ));
+            }
+
+            //2. Validar el token
+            if (!jwtUtil.validateToken(token)){
+                log.warn("token invalido o expirado");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(
+                                "error", "No autenticado",
+                                "message", "Token invalido o expirado"
+                        ));
+            }
+
+            //3. Extraer todos los datos del token
+
+            String username = jwtUtil.getUsernameFromToken(token);
+            String rol = jwtUtil.extractRol(token);
+            Long userId = jwtUtil.getUserIdFromToken(token);
+            Boolean passwordExpired = jwtUtil.getIsPasswordExpiredFromToken(token);
+
+            log.info("Usuario autenticado: {} (ID: {}, Rol: {})" , username, userId, rol);
+
+            //4. Crear respuesta con datos del token
+            Map<String, Object> response = new HashMap<>();
+            response.put("username", username);
+            response.put("rol", rol);
+            response.put("passwordExpired", passwordExpired);
+            response.put("userId", userId);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e){
+            log.error("Error al autenticarse en /authme:", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "error", "Error del servidor",
+                            "message", e.getMessage()
+                    ));
+        }
+    }
+
+    private String extractTokenFromCookie(HttpServletRequest request){
+        try {
+            if (request.getCookies() != null ){
+                for (Cookie cookie: request.getCookies()){
+                    if ("authToken".equals(cookie.getName())){
+                        log.debug("Cookie authToken encontrada");
+                        return cookie.getValue();
+                    }
+                }
+            }
+            log.debug("No se encontraron cookies");
+            return null;
+
+        } catch (Exception e){
+            log.error("Error al extraer token de cookie: " , e);
+            return null;
+        }
+
     }
 }
