@@ -38,6 +38,7 @@ public class SecurityConfig{
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
+
                         // Endpoints públicos
                         .requestMatchers(HttpMethod.POST, "/api/PostCompany/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/PostCompany").permitAll()
@@ -63,7 +64,7 @@ public class SecurityConfig{
                                 .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-                http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
@@ -115,4 +116,3 @@ public class SecurityConfig{
     }
 
 }
-
