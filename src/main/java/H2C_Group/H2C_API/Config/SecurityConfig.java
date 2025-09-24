@@ -35,30 +35,32 @@ public class SecurityConfig{
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtRequestFilter jwtRequestFilter) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                                // Permite explícitamente el acceso a la creación de la compañía.
-                                // Permite explícitamente el acceso a la creación de la compañía.
-                                .requestMatchers(HttpMethod.POST, "/api/PostCompany/**").permitAll()
-                                .requestMatchers(HttpMethod.POST, "/api/PostCompany").permitAll()
-                                .requestMatchers(HttpMethod.POST, "/api/companies").permitAll()
-                                .requestMatchers(HttpMethod.PATCH, "/api/companies/**").permitAll()
-                                .requestMatchers(HttpMethod.PATCH, "/api/users/**").permitAll()
-//                        .requestMatchers(HttpMethod.POST, "/api/**").permitAll()
-//                        .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
 
-                                // Permite el acceso a todos los endpoints del "primer uso"
-                                .requestMatchers("/api/firstuse/**").permitAll()
+                        // Endpoints públicos
+                        .requestMatchers(HttpMethod.POST, "/api/PostCompany/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/PostCompany").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/companies").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/companies/**").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/users/**").permitAll()
+                        .requestMatchers("/api/firstuse/**").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/api/users/login", "/api/users/register", "api/users/registerTech").permitAll()
 
-                                // Permite las peticiones OPTIONS (para pre-vuelo de CORS)
-                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                                // Permite acceso público a los endpoints de login y registro
-                                .requestMatchers("/api/users/login", "/api/users/register", "api/users/registerTech").permitAll()
-                                //Permite el acceso a este endpoint solo si el usuario esta autenticado
+                                // Endpoints autenticados
                                 .requestMatchers("/api/users/change-password").authenticated()
-                                // Cualquier otra petición debe estar autenticada
+
+                                // ✅ CORREGIDO: Endpoints para clientes
+                                .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
+
+                                // ✅ CORREGIDO: Endpoints para técnicos Y administradores
+                                .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+                                // ✅ CORREGIDO: Endpoints solo para administradores
+                                .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMINISTRADOR")
+
                                 .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
@@ -92,9 +94,10 @@ public class SecurityConfig{
         //Ip de origen que pueden ACCEDER A LA API AGREGAR TODAS LAS IP DEL EQUIPO (JORGE, DANIELA, FERNANDO, ASTRID, HERBERT)
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://127.0.0.1:5501", //
+                "http://127.0.0.1:5500", //
                 "http://localhost:5501", //
                 "http://127.0.0.1",     //
-                "http://localhost",     //
+                "http://localhost:5500",     //
                 "http://127.0.0.2:5501",
                 "http://179.5.94.204:5501",
                 "http://192.168.1.42:5501",
@@ -104,6 +107,8 @@ public class SecurityConfig{
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
+
+        configuration.setExposedHeaders(Arrays.asList("Set-Cookie", "Cookie", "Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
