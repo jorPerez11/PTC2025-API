@@ -809,6 +809,11 @@ public class UserService implements UserDetailsService {
         String body = "Hola " + updatedUser.getFullName() + " tu cuenta de técnico ha sido activada. Tu nombre de usuario es: " + updatedUser.getUsername() + " , tu contraseña temporal es: " + randomPassword + " Por favor no compartas con nadie esta información, Saludos del equipo de H2C";
         emailService.sendEmail(updatedUser.getEmail(), subject, body);
 
+        //Notificación para el técnico
+        String notificationMessage = "Tu cuenta de técnico ha sido activada y se te ha asignado la categoría " + updatedUser.getCategory().getCategoryName() + ".";
+        String techId = String.valueOf(updatedUser.getUserId());
+        messagingTemplate.convertAndSendToUser(techId, "/queue/notifications", notificationMessage);
+
         return convertToUserDTO(updatedUser);
     }
 
