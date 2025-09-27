@@ -15,6 +15,7 @@ import H2C_Group.H2C_API.Repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -27,6 +28,9 @@ public class SolutionService {
 
     @Autowired
     private CategoryRepository categoryRepository;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
 
     public Page<SolutionDTO> getAllSolutions(Pageable pageable) {
@@ -59,9 +63,15 @@ public class SolutionService {
         solutionEntity.setKeyWords(solutionDTO.getKeyWords());
 
         SolutionEntity savedSolutionEntity = solutionRepository.save(solutionEntity);
+
+        //Notificación para el técnico
+        String notificationMessage = "Tu solución '" + savedSolutionEntity.getSolutionTitle() + "' ha sido agregada a la Base de Conocimientos exitosamente.";
+        String userId = String.valueOf(existingUser.getUserId());
+
+        // El mensaje se envía solo al técnico que realizó la acción
+        messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
+
         return convertToSolutionDTO(savedSolutionEntity);
-
-
     }
 
     public SolutionDTO updateSolution(Long id, SolutionDTO solutionDTO) {
@@ -108,6 +118,15 @@ public class SolutionService {
         }
 
         SolutionEntity savedSolutionEntity = solutionRepository.save(existingSolution);
+
+        //Notificación para el técnico
+        String notificationMessage = "La solución '" + savedSolutionEntity.getSolutionTitle() + "' ha sido actualizada exitosamente.";
+        String userId = String.valueOf(existingSolution.getUser().getUserId());
+
+        // Notificar al usuario que modificó (que ya está asignado a existingSolution.getUser())
+        messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
+
+
         return convertToSolutionDTO(savedSolutionEntity);
 
     }
