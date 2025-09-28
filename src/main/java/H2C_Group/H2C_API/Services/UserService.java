@@ -585,6 +585,33 @@ public class UserService implements UserDetailsService {
         return convertToUserDTO(savedUser);
     }
 
+    public UserDTO updateUserProfile(Long id, UserDTO dto) {
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException("El ID del usuario a actualizar no puede ser nulo o no válido.");
+        }
+
+        UserEntity existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("El usuario con id" + id + " no existe"));
+
+        // SOLO actualizar campos del perfil, IGNORAR rol y categoría
+        if (dto.getName() != null && !dto.getName().isBlank()) {
+            existingUser.setFullName(dto.getName());
+        }
+        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
+            existingUser.setEmail(dto.getEmail());
+        }
+        if (dto.getPhone() != null && !dto.getPhone().isBlank()) {
+            existingUser.setPhone(dto.getPhone());
+        }
+        if (dto.getProfilePictureUrl() != null && !dto.getProfilePictureUrl().isBlank()) {
+            existingUser.setProfilePictureUrl(dto.getProfilePictureUrl());
+        }
+
+        // NO actualizar: username, password, rol, categoría
+
+        UserEntity savedUser = userRepository.save(existingUser);
+        return convertToUserDTO(savedUser);
+    }
 
     //Manda datos del usuario. Convierte de UserEntity a DTOUser
     private UserDTO convertToUserDTO(UserEntity usuario) {
@@ -814,6 +841,45 @@ public class UserService implements UserDetailsService {
         emailService.sendEmail(admin.getEmail(), subject, body);
 
         return convertToUserDTO(savedAdmin);
+    }
+
+    public List<UserDTO> activatePendingTechnicians(Long companyId) {
+        // 1. Buscar todos los técnicos pendientes de la compañía
+        List<UserEntity> pendingTechnicians = userRepository.findByCompanyIdAndIsActive(companyId, 0);
+
+        List<UserDTO> activatedTechnicians = new ArrayList<>();
+
+        for (UserEntity technician : pendingTechnicians) {
+            // 2. Solo procesar técnicos (rolId = 2)
+            if (!technician.getRolId().equals(2L)) {
+                continue;
+            }
+
+            // 3. Generar contraseña temporal
+            String randomPassword = generatedRandomPassword();
+            String hashedPassword = passwordEncoder.encode(randomPassword);
+
+            // 4. Activar el técnico
+            technician.setPasswordHash(hashedPassword);
+            technician.setIsActive(1);
+            technician.setPasswordExpired(true);
+
+            UserEntity savedTechnician = userRepository.save(technician);
+
+            // 5. Enviar correo
+            String subject = "Credenciales de Acceso a Help Desk H2C";
+            String body = "Hola " + savedTechnician.getFullName() +
+                    " tu cuenta de técnico ha sido activada. Tu nombre de usuario es: " +
+                    savedTechnician.getUsername() +
+                    ", tu contraseña temporal es: " + randomPassword +
+                    ". Por favor no compartas esta información. Saludos del equipo de H2C";
+
+            emailService.sendEmail(savedTechnician.getEmail(), subject, body);
+
+            activatedTechnicians.add(convertToUserDTO(savedTechnician));
+        }
+
+        return activatedTechnicians;
     }
 
     public UserDTO registerInitialAdmin(UserDTO dto) {
