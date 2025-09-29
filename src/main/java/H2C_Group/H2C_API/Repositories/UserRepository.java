@@ -52,4 +52,12 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
             @Param("categoryId") Long categoryId,
             String period
                     );
+
+
+    @Query(value = "SELECT TO_CHAR(u.REGISTRATIONDATE, 'YYYY-MM') AS month_key, COUNT(u.USERID) " +
+            "FROM TBUSERS u " +
+            "GROUP BY TO_CHAR(u.REGISTRATIONDATE, 'YYYY-MM') " +
+            "ORDER BY month_key",
+            nativeQuery = true)
+    List<Object[]> countUsersByRegistrationMonthNative();
 }

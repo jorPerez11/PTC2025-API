@@ -33,9 +33,18 @@ public class ActivityController {
     @GetMapping("/GetActivities")
     public ResponseEntity<Page<ActivityDTO>> getActivities(
             @PageableDefault(page = 0, size = 10)
-            Pageable pageable) {
-        Page<ActivityDTO> auditTrail = acceso.getAllActivities(pageable);
-        return new ResponseEntity<>(auditTrail,  HttpStatus.OK);
+            Pageable pageable,
+            @RequestParam(required = false, defaultValue = "") String search) {
+
+        Page<ActivityDTO> activitiesPage;
+
+        if(search != null && !search.trim().isEmpty()){
+            activitiesPage = acceso.findActivitiesBySearchTerm(search, pageable);
+        }else{
+            activitiesPage = acceso.getAllActivities(pageable);
+        }
+
+        return new ResponseEntity<>(activitiesPage,  HttpStatus.OK);
     }
 
     @PostMapping("/PostActivity")

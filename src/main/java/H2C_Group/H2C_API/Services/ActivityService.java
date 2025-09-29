@@ -83,4 +83,8 @@ public class ActivityService {
     }
 
 
+    public Page<ActivityDTO> findActivitiesBySearchTerm(String search, Pageable pageable) {
+        Page<ActivityEntity> activityEntities = activityRepository.findBySearchTerm(search, pageable);
+        return activityEntities.map(this::convertToACtivityDTO);
+    }
 }

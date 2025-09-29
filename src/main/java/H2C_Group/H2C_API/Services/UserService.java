@@ -881,4 +881,25 @@ public class UserService implements UserDetailsService {
         // Convierte la entidad a DTO para enviarla al frontend.
         return convertToUserDTO(userEntity);
     }
+
+    public Map<String, Integer> getNewUsersCountsMap() {
+        // 1. Obtener la lista de resultados de la consulta agregada
+        List<Object[]> results = userRepository.countUsersByRegistrationMonthNative();
+
+        // 2. Inicializar el mapa para mantener el orden de los meses
+        Map<String, Integer> analyticsData = new LinkedHashMap<>();
+
+        // 3. Mapear los resultados de la consulta
+        for (Object[] result : results) {
+            String monthKey = (String) result[0]; // La clave de mes (ej: "2023-09")
+
+            // El resultado del COUNT() de SQL puede ser Long, BigInteger, etc.
+            // Lo convertimos a Integer, que es lo que espera el frontend.
+            Integer count = ((Number) result[1]).intValue();
+
+            analyticsData.put(monthKey, count);
+        }
+
+        return analyticsData;
+    }
 }

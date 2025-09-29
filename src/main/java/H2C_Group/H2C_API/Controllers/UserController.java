@@ -207,4 +207,12 @@ public class UserController {
             return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @GetMapping("/users/counts-by-month")
+    public ResponseEntity<Map<String, Integer>> getNewUsersCountsByMonth() {
+        // Llama a tu servicio para obtener el mapa
+        Map<String, Integer> data = acceso.getNewUsersCountsMap();
+
+        return ResponseEntity.ok(data);
+    }
 }
