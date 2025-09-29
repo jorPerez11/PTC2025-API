@@ -258,47 +258,51 @@ public class UserController {
     public ResponseEntity<?> updateUserProfile(
             @PathVariable Long id,
             @RequestParam(value = "profilePicture", required = false) MultipartFile file,
-            @ModelAttribute @Valid ProfileDTO updateDto) {
+            @RequestParam(value = "name", required = false) String name,
+            @RequestParam(value = "email", required = false) String email,
+            @RequestParam(value = "phone", required = false) String phone) {
 
         try {
-            // 1. Obtén el usuario existente para no sobrescribir los campos que no se actualizan.
+            System.out.println("🔄 Actualizando perfil para usuario ID: " + id);
+            System.out.println("📊 Datos recibidos - Name: " + name + ", Email: " + email + ", Phone: " + phone);
+            System.out.println("📸 Archivo recibido: " + (file != null ? file.getOriginalFilename() + " (" + file.getSize() + " bytes)" : "null"));
+
+            // 1. Obtén el usuario existente
             UserDTO existingUser = acceso.findUserById(id);
 
-            // 2. Actualiza los campos solo si se proporcionaron.
-            if (updateDto.getName() != null) {
-                existingUser.setName(updateDto.getName());
+            // 2. Actualiza solo los campos proporcionados
+            if (name != null && !name.trim().isEmpty()) {
+                existingUser.setName(name.trim());
             }
-            if (updateDto.getEmail() != null) {
-                existingUser.setEmail(updateDto.getEmail());
+            if (email != null && !email.trim().isEmpty()) {
+                existingUser.setEmail(email.trim());
             }
-            if (updateDto.getPhone() != null) {
-                existingUser.setPhone(updateDto.getPhone());
+            if (phone != null && !phone.trim().isEmpty()) {
+                existingUser.setPhone(phone.trim());
             }
 
-            // 3. Sube la imagen si se proporciona una y actualiza la URL.
+            // 3. Sube la imagen si se proporciona
             if (file != null && !file.isEmpty()) {
-                String imageUrl = cloudinaryService.uploadImage(file, "profile_pictures");
+                System.out.println("🖼️ Subiendo imagen a Cloudinary...");
+                String imageUrl = cloudinaryService.uploadImage(file);
+                System.out.println("✅ Imagen subida, URL: " + imageUrl);
                 existingUser.setProfilePictureUrl(imageUrl);
+            } else {
+                System.out.println("⚠️ No se recibió archivo de imagen");
             }
 
-            // 4. Llama al servicio para guardar los cambios.
-            UserDTO updatedUser = acceso.
-                    updateUser(id, existingUser);
+            // 4. Usa el nuevo método específico para perfil
+            UserDTO updatedUser = acceso.updateUserProfile(id, existingUser);
+            System.out.println("✅ Perfil actualizado exitosamente");
 
             return new ResponseEntity<>(updatedUser, HttpStatus.OK);
 
-        } catch (ExceptionUserNotFound e) {
+        } catch (Exception e) {
+            System.out.println("❌ Error en updateUserProfile: " + e.getMessage());
+            e.printStackTrace();
             Map<String, String> errors = new HashMap<>();
             errors.put("error", e.getMessage());
             return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
-        } catch (IOException e) {
-            Map<String, String> errors = new HashMap<>();
-            errors.put("error", "Error al subir la imagen: " + e.getMessage());
-            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (Exception e) {
-            Map<String, String> errors = new HashMap<>();
-            errors.put("error", "Ocurrió un error interno del servidor al actualizar el usuario.");
-            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

@@ -55,5 +55,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
             @Param("categoryId") Long categoryId,
             String period
     );
+
+    @Query("SELECT u FROM UserEntity u WHERE u.company.companyId = :companyId AND u.isActive = :isActive")
+    List<UserEntity> findByCompanyIdAndIsActive(@Param("companyId") Long companyId, @Param("isActive") Integer isActive);
 }
 
