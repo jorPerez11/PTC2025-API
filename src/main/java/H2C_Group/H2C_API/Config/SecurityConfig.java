@@ -48,20 +48,23 @@ public class SecurityConfig{
                         .requestMatchers("/api/firstuse/**").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/users/login", "/api/users/register", "api/users/registerTech").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
 
-                                // Endpoints autenticados
-                                .requestMatchers("/api/users/change-password").authenticated()
+                        // Endpoints autenticados
+                        .requestMatchers("/api/users/change-password").authenticated()
+                        .requestMatchers("/ws/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/users/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR", "ROLE_CLIENTE")
 
-                                // ✅ CORREGIDO: Endpoints para clientes
-                                .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
+                        // ✅ CORREGIDO: Endpoints para clientes
+                        .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
 
-                                // ✅ CORREGIDO: Endpoints para técnicos Y administradores
-                                .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        // ✅ CORREGIDO: Endpoints para técnicos Y administradores
+                        .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
-                                // ✅ CORREGIDO: Endpoints solo para administradores
-                                .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMINISTRADOR")
+                        // ✅ CORREGIDO: Endpoints solo para administradores
+                        .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMINISTRADOR")
 
-                                .anyRequest().authenticated()
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
@@ -98,11 +101,10 @@ public class SecurityConfig{
                 "http://localhost:5501", //
                 "http://127.0.0.1",     //
                 "http://localhost:5500",     //
+                "http://localhost",
                 "http://127.0.0.2:5501",
                 "http://179.5.94.204:5501",
-                "http://192.168.1.42:5501",
-                "http://IPDANIELA:5501",
-                "http://IPHERBERT:5501"
+                "http://192.168.1.42:5501"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));

@@ -394,4 +394,8 @@ public class TicketService {
 
         return convertToTicketDTO(savedTicket);
     }
+
+    public Long countByUserId(Long userId) {
+        return ticketRepository.countTicketsByUserId(userId);
+    }
 }

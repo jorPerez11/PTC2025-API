@@ -4,6 +4,7 @@ package H2C_Group.H2C_API.Repositories;
 import H2C_Group.H2C_API.Entities.TicketEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -31,4 +32,7 @@ public interface TicketRepository extends JpaRepository<TicketEntity,Long> {
 
     @Query("SELECT t FROM TicketEntity t WHERE t.id = ?1")
     TicketEntity findTicketById(Integer id);
+
+    @Query("SELECT COUNT(t) FROM TicketEntity t WHERE t.userCreator = :userId")
+    Long countTicketsByUserId(@Param("userId") Long userId);
 }
