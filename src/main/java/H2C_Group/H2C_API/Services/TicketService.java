@@ -1,12 +1,14 @@
 package H2C_Group.H2C_API.Services;
 
 
+import H2C_Group.H2C_API.Entities.DeclinedTicketEntity;
 import H2C_Group.H2C_API.Entities.TicketEntity;
 import H2C_Group.H2C_API.Entities.UserEntity;
 import H2C_Group.H2C_API.Enums.*;
 import H2C_Group.H2C_API.Exceptions.ExceptionTicketNotFound;
 import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
 import H2C_Group.H2C_API.Models.DTO.*;
+import H2C_Group.H2C_API.Repositories.DeclinedTicketRepository;
 import H2C_Group.H2C_API.Repositories.TicketRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,12 +16,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,6 +37,9 @@ public class TicketService {
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+
+    @Autowired
+    private DeclinedTicketRepository declinedTicketRepository;
 
 
     public Page<TicketDTO> getAllTickets(int page, int size) {
@@ -55,67 +62,72 @@ public class TicketService {
         return convertToTicketDTO(ticket);
     }
 
+
+    //Obtiene los tickets disponibles para un tecnico (mientras estan en espera y no rechazados)
+    public List<TicketDTO> getAvailableTicketsForTechnician(Long technicianId) {
+        // 1. Obtener los IDs de los tickets que el técnico ha rechazado.
+        List<DeclinedTicketEntity> declinedTickets = declinedTicketRepository.findByTechnicianId(technicianId);
+        Set<Long> declinedTicketIds = declinedTickets.stream()
+                .map(DeclinedTicketEntity::getTicketId)
+                .collect(Collectors.toSet()); // Usamos un Set para un acceso más rápido
+
+        // 2. Buscar tickets en estado "En espera".
+        Long enEsperaId = TicketStatus.EN_ESPERA.getId();
+        List<TicketEntity> allEnEsperaTickets = ticketRepository.findByTicketStatusId(enEsperaId);
+
+        // 3. Filtrar los tickets rechazados.
+        List<TicketEntity> availableTickets = allEnEsperaTickets.stream()
+                .filter(ticket -> !declinedTicketIds.contains(ticket.getTicketId()))
+                .collect(Collectors.toList());
+
+        // 4. Convertir a DTO y devolver.
+        return availableTickets.stream()
+                .map(this::convertToTicketDTO)
+                .collect(Collectors.toList());
+    }
+
+
     public TicketDTO createTicket(TicketDTO ticketDTO) {
 
-        //Validaciones
-        userRepository.findById(ticketDTO.getUserId()).orElseThrow(() -> new IllegalArgumentException("El ID del usuario " + ticketDTO.getUserId() + " no existe"));
+        // ✅ LÓGICA CORREGIDA: Primero, validamos y asignamos al usuario creador
+        UserEntity creatorUser = userRepository.findById(ticketDTO.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("El usuario (cliente) con id " + ticketDTO.getUserId() + " no existe."));
 
-        //Si se proporciona un id de tecnico (en caso de haber tomado un ticket como tecnico), verificar si existe el usuario
-        if (ticketDTO.getAssignedTech() != null){
-            userRepository.findById(ticketDTO.getAssignedTech().getId()).orElseThrow(() ->  new IllegalArgumentException("El ID del usuario " + ticketDTO.getUserId() + " no existe"));
-        }
-
-
-        //Creacion (Insercion) de Ticket --
-
-        //Conversion DTO -> Entity
+        // Creación e inicialización de la entidad
         TicketEntity ticketEntity = new TicketEntity();
-
-        //Asignacion del procentaje
         ticketEntity.setPercentage(ticketDTO.getPercentage());
-
-        //Asignacion de url de imagen del ticket
         ticketEntity.setImageUrl(ticketDTO.getImageUrl());
-
-        ticketEntity.setTicketId(ticketDTO.getTicketId());
-        //Asignacion de categoria
-        Category category = Category.fromId(ticketDTO.getCategory().getId()).orElseThrow(() -> new IllegalArgumentException("La categoria de id " + ticketDTO.getCategory().getId() + "  no existe."));
-        ticketEntity.setCategoryId(ticketDTO.getCategory().getId());
-
-        //Asignacion de prioridad
-        TicketPriority priority = TicketPriority.fromId(ticketDTO.getPriority().getId()).orElseThrow(() -> new IllegalArgumentException("El id de priodidad " +  ticketDTO.getPriority().getId() + "  no existe."));
-        ticketEntity.setPriorityId(ticketDTO.getPriority().getId());
-
-        //Asignacion de estado para ticket. Por defecto, el estado de creacion es "En espera"
-        ticketEntity.setTicketStatusId(TicketStatus.EN_ESPERA.getId());
-
-        UserEntity creatorUser = userRepository.findById(ticketDTO.getUserId()).orElseThrow(() -> new IllegalArgumentException("El usuario (cliente) con id " + ticketDTO.getUserId() + " no existe."));
-        ticketEntity.setUserCreator(creatorUser);
-
         ticketEntity.setTitle(ticketDTO.getTitle());
         ticketEntity.setDescription(ticketDTO.getDescription());
+        ticketEntity.setUserCreator(creatorUser); // Asignación del usuario creador
 
-        ticketEntity.setAssignedTechUser(null); //Al crear un ticket, este estara en estado de espera, por lo tanto, no tendra un tecnico asignado
+        // Asignación de la categoría
+        Category category = Category.fromId(ticketDTO.getCategory().getId())
+                .orElseThrow(() -> new IllegalArgumentException("La categoria de id " + ticketDTO.getCategory().getId() + "  no existe."));
+        ticketEntity.setCategoryId(category.getId());
+
+        // Asignación de la prioridad
+        TicketPriority priority = TicketPriority.fromId(ticketDTO.getPriority().getId())
+                .orElseThrow(() -> new IllegalArgumentException("El id de priodidad " +  ticketDTO.getPriority().getId() + "  no existe."));
+        ticketEntity.setPriorityId(priority.getId());
+
+        ticketEntity.setTicketStatusId(TicketStatus.EN_ESPERA.getId());
+
+            ticketEntity.setAssignedTechUser(null);
+            ticketEntity.setCreationDate(ticketDTO.getCreationDate());
+            ticketEntity.setCloseDate(null);
 
 
-        ticketEntity.setCreationDate(ticketDTO.getCreationDate());
-
-        //Asignacion de fecha de cierre como NULL al crearse. La fecha se asignara cuando se cierre la solicitud (es decir, ticketStatus = "Cerrado")
-        ticketEntity.setCloseDate(null);
-
-        //Asignacion del procentaje
-        ticketEntity.setPercentage(ticketDTO.getPercentage());
-
-        //Almacenamiento de ticket creado en la DB
+        // Almacenamiento de ticket creado en la DB
         TicketEntity savedTicket = ticketRepository.save(ticketEntity);
 
-        //Notificación para el cliente
+        // Notificación para el cliente
         String notificationMessage = "Tu ticket #" + savedTicket.getTicketId() + " - " + savedTicket.getTitle() + " ha sido creado exitosamente.";
-        String userId = String.valueOf(savedTicket.getUserCreator().getUserId()); //Obtiene el ID del usuario creador del ticket
+        String userId = String.valueOf(savedTicket.getUserCreator().getUserId());
 
         messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
 
-        //Conversion del ticket almacenado de vuelta a DTO para la respuesta del Frontend
+        // Conversión del ticket almacenado de vuelta a DTO para la respuesta del Frontend
         return  convertToTicketDTO(savedTicket);
     }
 
@@ -296,6 +308,20 @@ public class TicketService {
         ticketRepository.deleteById(id);
     }
 
+    public void declineTicket(Long ticketId, Long technicianId) {
+        // 1. Verificar si el ticket ya fue declinado por este técnico para evitar duplicados.
+        boolean alreadyDeclined = declinedTicketRepository.existsByTicketIdAndTechnicianId(ticketId, technicianId);
+        if (alreadyDeclined) {
+            return; // No hacer nada si ya existe el registro.
+        }
+
+        // 2. Crear una nueva entidad y guardarla.
+        DeclinedTicketEntity declinedTicket = new DeclinedTicketEntity();
+        declinedTicket.setTicketId(ticketId);
+        declinedTicket.setTechnicianId(technicianId);
+        declinedTicketRepository.save(declinedTicket);
+    }
+
 
 
     private TicketDTO convertToTicketDTO(TicketEntity ticket) {
@@ -372,9 +398,14 @@ public class TicketService {
         TicketEntity ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new IllegalArgumentException("Ticket con ID " + ticketId + " no encontrado."));
 
-        // Validar que el ticket tiene un técnico asignado y es el que está intentando aceptarlo
-        if (ticket.getAssignedTechUser() == null || !ticket.getAssignedTechUser().getUserId().equals(technicianId)) {
-            throw new IllegalArgumentException("El usuario no tiene permiso para aceptar este ticket.");
+        if (ticket.getAssignedTechUser() == null){
+            //asignar al tecnico que acepto el ticket
+            UserEntity techinicia = userRepository.findById(technicianId)
+                    .orElseThrow(() -> new UsernameNotFoundException("El tecnico con el id" + technicianId + "no existe"));
+            ticket.setAssignedTechUser(techinicia);
+        } else if(!ticket.getAssignedTechUser().getUserId().equals(technicianId)){
+            //Si el ticket ya esta asignado a otro tecnico, deniega el acceso
+            throw new IllegalArgumentException("El usuario no tiene permiso para aceptar el ticket");
         }
 
         // Validar que el ticket está en estado "En espera" antes de cambiarlo
@@ -393,5 +424,16 @@ public class TicketService {
         messagingTemplate.convertAndSendToUser(techId, "/queue/notifications", notificationMessage);
 
         return convertToTicketDTO(savedTicket);
+    }
+
+    public List<TicketDTO> getTicketsEnespera() {
+        Long enEsperaId = TicketStatus.EN_ESPERA.getId();
+
+        //Busca todos los tickets que tienen ese id de estado y no tienen un tecnico asignado
+        List<TicketEntity> tickets = ticketRepository.findByTicketStatusIdAndAssignedTechUserIsNull(enEsperaId);
+
+        return tickets.stream()
+                .map(this::convertToTicketDTO)
+                .collect(Collectors.toList());
     }
 }
