@@ -124,7 +124,7 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al obtener los técnicos");
         }
     }
-  
+
     @PostMapping("/PostUser")
     public ResponseEntity<?> createUser(@RequestBody @Valid UserDTO user) {
         try {

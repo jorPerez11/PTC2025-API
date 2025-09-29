@@ -26,7 +26,7 @@ public class TicketController {
     private TicketService acceso;
 
     // Nuevo endpoint para obtener el conteo de tickets por estado
-    @GetMapping("/GetTicketCounts")
+    @GetMapping("/admin/GetTicketCounts")
     public ResponseEntity<?> getTicketCounts() {
         try {
             System.out.println("Solicitud recibida para /GetTicketCounts");
@@ -39,7 +39,7 @@ public class TicketController {
         }
     }
 
-    @GetMapping("/GetTickets")
+    @GetMapping("/admin/GetTickets")
     public ResponseEntity<Page<TicketDTO>> getTickets(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "5") int size
@@ -55,7 +55,7 @@ public class TicketController {
         return ResponseEntity.ok(tickets);
     }
 
-    @GetMapping("/GetTicketById/{id}")
+    @GetMapping("/client/GetTicketById/{id}")
     public ResponseEntity<TicketDTO> getTicketById(@PathVariable Long id){
         try {
             TicketDTO ticket = acceso.getTicketById(id);
@@ -65,7 +65,24 @@ public class TicketController {
         }
     }
 
-    @PatchMapping("/UpdateTicketStatus/{ticketId}")
+    @GetMapping("/tech/GetTicketsEnEspera")
+    public ResponseEntity<?> getTicketsEnEspera(){
+        try {
+            List<TicketDTO> tickets = acceso.getTicketsEnespera();
+            if (tickets.isEmpty()){
+                return ResponseEntity.noContent().build();
+            }
+            return new ResponseEntity<>(tickets, HttpStatus.OK);
+        }catch (Exception e){
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "error", "Error al obtener la lista de tickets en espera"
+                    ));
+        }
+    }
+
+
+    @PatchMapping("/admin/UpdateTicketStatus/{ticketId}")
     public ResponseEntity<?> updateTicketStatus(@PathVariable Long ticketId, @RequestBody TicketStatusDTO ticketDTO) {
         try {
             TicketDTO updatedTicket = acceso.updateTicketStatus(ticketId, ticketDTO);
@@ -86,27 +103,27 @@ public class TicketController {
     }
 
 
-    @GetMapping("/GetRecentTicketsByUser/{userId}")
+    @GetMapping("/client/GetRecentTicketsByUser/{userId}")
     public ResponseEntity<List<TicketDTO>> getTicketsByUserId(@PathVariable Long userId) {
         List<TicketDTO> tickets = acceso.geTicketByUserId(userId);
         return new ResponseEntity<>(tickets, HttpStatus.OK);
     }
 
-    @GetMapping("/GetAssignedTicketsByTech/{technicianId}")
+    @GetMapping("/tech/GetAssignedTicketsByTech/{technicianId}")
     public ResponseEntity<List<TicketDTO>> getAssignedTicketsByTechnicianId(@PathVariable Long technicianId){
         List<TicketDTO> tickets = acceso.getAssignedTicketsByTechnicianId(technicianId);
         return new ResponseEntity<>(tickets, HttpStatus.OK);
     }
 
 
-    @PutMapping("/accept/{ticketId}/{technicianId}")
+    @PutMapping("/tech/accept/{ticketId}/{technicianId}")
     public ResponseEntity<TicketDTO> acceptTicket(@PathVariable Long ticketId, @PathVariable Long technicianId) {
         TicketDTO acceptedTicket = acceso.acceptTicket(ticketId, technicianId);
         return new ResponseEntity<>(acceptedTicket, HttpStatus.OK);
     }
 
 
-    @PostMapping("/PostTicket")
+    @PostMapping("/client/PostTicket")
     public ResponseEntity<?> postTicket(@Valid @RequestBody TicketDTO ticketDTO) {
         try {
             TicketDTO newTicket = acceso.createTicket(ticketDTO);
@@ -129,7 +146,7 @@ public class TicketController {
     }
 
 
-    @PatchMapping("/UpdateTicket/{ticketId}")
+    @PatchMapping("/client/UpdateTicket/{ticketId}")
     public ResponseEntity<?> updateTicket(@PathVariable Long ticketId, @Valid @RequestBody TicketDTO payload) {
         try {
             TicketDTO updatedTicket = acceso.updateTicket(ticketId, payload);
@@ -150,7 +167,7 @@ public class TicketController {
     }
 
 
-    @DeleteMapping("/DeleteTicket/{id}")
+    @DeleteMapping("/client/DeleteTicket/{id}")
     public ResponseEntity<?> deleteTicket(@PathVariable Long id) {
         try {
             acceso.deleteTicket(id);
@@ -167,6 +184,28 @@ public class TicketController {
             Map<String, String> errors = new HashMap<>();
             errors.put("error", "Ocurrió un error interno del servidor al intentar eliminar el ticket.");
             return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/tech/available-tickets")
+    public ResponseEntity<?> getAvailableTicketsForTechnician(@RequestParam("technicianId") Long technicianId) {
+        try {
+            List<TicketDTO> tickets = acceso.getAvailableTicketsForTechnician(technicianId);
+            return new ResponseEntity<>(tickets, HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error al obtener los tickets disponibles."));
+        }
+    }
+
+    @PostMapping("/tech/decline-ticket/{ticketId}/{technicianId}")
+    public ResponseEntity<?> declineTicket(@PathVariable Long ticketId, @PathVariable Long technicianId) {
+        try {
+            acceso.declineTicket(ticketId, technicianId);
+            return ResponseEntity.ok(Map.of("message", "Ticket declinado exitosamente."));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error al declinar el ticket."));
         }
     }
 
