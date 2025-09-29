@@ -17,12 +17,11 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<UserEntity, Long>{
-
     Optional<UserEntity> findByEmailIgnoreCase(String email);
     Optional<UserEntity> findByPhone(String phone);
 
+    // MÉTODO ÚNICO: findByRolId
     List<UserEntity> findByRolId(Long rolId);
-    List<UserEntity> findByRolIdInAndCategory_CategoryId(List<Long> roleIds, Long categoryId);
 
     /**
      * Verifica si existe al menos un usuario asociado a un ID de categoría específico.
@@ -33,9 +32,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
 
     Optional<UserEntity> findByUsername(String username);
 
-    Page<UserEntity> findAll(Pageable pageable);
-
-    Page<UserEntity> findByRolId(Long rolId, Pageable pageable);
+    List<UserEntity> findByRolIdInAndCategory_CategoryId(List<Long> roleIds, Long categoryId);
 
     @Query("SELECT u FROM UserEntity u " +
             // 🔑 CLAVE: Usar LEFT JOIN FETCH para cargar la categoría junto con el usuario.
@@ -54,9 +51,16 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
             @Param("term") String term,
             @Param("categoryId") Long categoryId,
             String period
-    );
+                    );
 
     @Query("SELECT u FROM UserEntity u WHERE u.company.companyId = :companyId AND u.isActive = :isActive")
     List<UserEntity> findByCompanyIdAndIsActive(@Param("companyId") Long companyId, @Param("isActive") Integer isActive);
 }
 
+    @Query(value = "SELECT TO_CHAR(u.REGISTRATIONDATE, 'YYYY-MM') AS month_key, COUNT(u.USERID) " +
+            "FROM TBUSERS u " +
+            "GROUP BY TO_CHAR(u.REGISTRATIONDATE, 'YYYY-MM') " +
+            "ORDER BY month_key",
+            nativeQuery = true)
+    List<Object[]> countUsersByRegistrationMonthNative();
+}

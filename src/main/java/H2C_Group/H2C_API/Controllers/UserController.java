@@ -131,7 +131,7 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al obtener los técnicos");
         }
     }
-  
+
     @PostMapping("/PostUser")
     public ResponseEntity<?> createUser(@RequestBody @Valid UserDTO user) {
         try {
@@ -324,5 +324,13 @@ public class UserController {
             errors.put("error", "Ocurrió un error interno del servidor al eliminar el usuario.");
             return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @GetMapping("/users/counts-by-month")
+    public ResponseEntity<Map<String, Integer>> getNewUsersCountsByMonth() {
+        // Llama a tu servicio para obtener el mapa
+        Map<String, Integer> data = acceso.getNewUsersCountsMap();
+
+        return ResponseEntity.ok(data);
     }
 }

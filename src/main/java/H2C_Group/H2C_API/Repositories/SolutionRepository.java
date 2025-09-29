@@ -8,17 +8,34 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
 @Repository
 public interface SolutionRepository extends JpaRepository<SolutionEntity,Long> {
     // **NUEVA QUERY PARA CARGAR EL USUARIO**
     @Query("SELECT s FROM SolutionEntity s JOIN FETCH s.user")
     Page<SolutionEntity> findAll(Pageable pageable);
 
+    // *** NUEVA QUERY PARA FILTRAR POR CATEGORÍA ***
+    @Query("SELECT s FROM SolutionEntity s JOIN FETCH s.user u WHERE s.category.categoryId = :categoryId")
+    Page<SolutionEntity> findByCategory_CategoryId(@Param("categoryId") Long categoryId, Pageable pageable);
+
     @Query("SELECT s FROM SolutionEntity s " +
             "WHERE LOWER(s.solutionTitle) LIKE LOWER(CONCAT('%', :value, '%')) " +
             "   OR LOWER(s.keyWords) LIKE LOWER(CONCAT('%', :value, '%'))")
-    List<SolutionEntity> searchBySolutionTitleOrKeyWords(@Param("value") String value);
+    Page<SolutionEntity> searchBySolutionTitleOrKeyWords(@Param("value") String value, Pageable pageable);
+
     boolean existsByCategory_CategoryId(Long categoryId);
+
+    //** QUERY PARA FILTRAR BUSQUEDA Y CATEGORIA EN APP WEB
+    @Query("SELECT s FROM SolutionEntity s WHERE " +
+            // 1. FILTRO DE BÚSQUEDA (si el parámetro 'search' no está vacío)
+            "(:search IS NULL OR :search = '' OR " +
+            "LOWER(s.solutionTitle) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(s.descriptionS) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(s.keyWords) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+            // 2. FILTRO DE CATEGORÍA (si el parámetro 'categoryId' no es nulo)
+            "(:categoryId IS NULL OR s.category.id = :categoryId)")
+    Page<SolutionEntity> findSolutionsBySearchAndCategory(
+            @Param("search") String search,
+            @Param("categoryId") Long categoryId,
+            Pageable pageable);
 }

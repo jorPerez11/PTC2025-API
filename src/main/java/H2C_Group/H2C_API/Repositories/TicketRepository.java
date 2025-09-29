@@ -2,7 +2,8 @@ package H2C_Group.H2C_API.Repositories;
 
 
 import H2C_Group.H2C_API.Entities.TicketEntity;
-import H2C_Group.H2C_API.Entities.Views.TicketView;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -32,4 +33,11 @@ public interface TicketRepository extends JpaRepository<TicketEntity,Long> {
 
     @Query("SELECT t FROM TicketEntity t WHERE t.id = ?1")
     TicketEntity findTicketById(Integer id);
+
+    // 🚨 Nueva consulta para evitar el problema N+1 y LazyInitializationException
+    @Query(value = "SELECT t FROM TicketEntity t " +
+            "JOIN FETCH t.userCreator u " + // Creador del ticket
+            "LEFT JOIN FETCH t.assignedTechUser a ", // Técnico asignado
+            countQuery = "SELECT count(t) FROM TicketEntity t")
+    Page<TicketEntity> findAllWithUsers(Pageable pageable);
 }

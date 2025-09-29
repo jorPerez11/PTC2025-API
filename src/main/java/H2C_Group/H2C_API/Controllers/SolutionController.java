@@ -28,10 +28,44 @@ public class SolutionController {
     @GetMapping("/GetSolutions")
     public ResponseEntity<Page<SolutionDTO>> getAllSolutions(
             @PageableDefault(page = 0, size = 10)
-            Pageable pageable
+            Pageable pageable,
+            @RequestParam(required = false) Long categoryId
     ) {
-        Page<SolutionDTO> solutions = acceso.getAllSolutions(pageable);
+        Page<SolutionDTO> solutions;
+
+        if (categoryId != null && categoryId > 0) {
+            // Llama a un nuevo método en el servicio que filtra por categoría
+            solutions = acceso.getSolutionsByCategory(categoryId, pageable);
+        } else {
+            // Llama al método original para obtener todas las soluciones (o sin filtro)
+            solutions = acceso.getAllSolutions(pageable);
+        }
+
         return new ResponseEntity<>(solutions, HttpStatus.OK);
+    }
+
+    @GetMapping("/GetSolutionsWeb")
+    public ResponseEntity<Page<SolutionDTO>> getSolutions(
+            @PageableDefault(page = 0, size = 10)
+            Pageable pageable,
+            // Parámetro de Búsqueda
+            @RequestParam(required = false, defaultValue = "") String search,
+            // Parámetro de Categoría (asumo que se pasa el ID)
+            @RequestParam(required = false) Long category) { // Usamos Long para el ID de la categoría
+
+        Page<SolutionDTO> solutionsPage;
+
+        // Lógica Unificada para Búsqueda y Filtro de Categoría
+        if (search != null && !search.trim().isEmpty() || category != null) {
+            // Llama a un nuevo metodo en la capa de acceso que maneje ambos filtros
+            // Debes crear este metodo: acceso.findSolutionsBySearchAndCategory(search, category, pageable);
+            solutionsPage = acceso.findSolutionsBySearchAndCategory(search, category, pageable);
+        } else {
+            // Carga normal paginada (sin filtros)
+            solutionsPage = acceso.getAllSolutions(pageable);
+        }
+
+        return new ResponseEntity<>(solutionsPage, HttpStatus.OK);
     }
 
 
@@ -101,10 +135,14 @@ public class SolutionController {
 
     //Búsqueda
     @GetMapping("/searchSolution")
-    public ResponseEntity<?> findSolutions(@RequestParam String title) {
-        List<SolutionDTO> results = acceso.findByTitle(title);
+    public ResponseEntity<Page<SolutionDTO>> findSolutions(
+            @PageableDefault(page = 0, size = 10)
+            Pageable pageable,
+            @RequestParam String title) {
+        Page<SolutionDTO> results = acceso.findByTitle(title, pageable);
+
         if (results.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Ninguna solución coincide con la búsqueda");
+            return new ResponseEntity<>(Page.empty(), HttpStatus.NOT_FOUND);
         }
         return ResponseEntity.ok(results);
     }

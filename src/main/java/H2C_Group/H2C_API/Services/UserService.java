@@ -24,6 +24,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -65,6 +66,9 @@ public class UserService implements UserDetailsService {
 
     @Autowired
     private EntityManager entityManager;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
     public UserService(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -138,6 +142,12 @@ public class UserService implements UserDetailsService {
 
         //6.Guarda los cambios en la base de datos
         userRepository.save(userEntity);
+
+        //Notificación para cliente y técnico
+        String notificationMessage = "Tu contraseña fue cambiada con éxito";
+        String userId = String.valueOf(userEntity.getUserId());
+        messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
+
         return convertToUserDTO(userEntity);
     }
 
@@ -233,6 +243,11 @@ public class UserService implements UserDetailsService {
         //Guarda el usuario registrado en la DB
         UserEntity savedUser = userRepository.save(userEntity);
 
+        //Notificación para el cliente
+        String notificationMessage = "Tu cuenta ha sido creada exitosamente. Tu nombre de usuario es " + savedUser.getUsername() + ".";
+        String userId = String.valueOf(savedUser.getUserId());
+        messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
+
         //Envia la contraseña temporal por correo electronico
         String subject = "Credenciales de Acceso a Help Desk H2C";
         String body = "Hola " + dto.getName() + " tu cuenta ha sido creada exitosamente. Tu nombre de usuario es: " + dto.getUsername() + " , tu contraseña temporal es: " + randomPassword + " Por favor no compartas con nadie esta información, Saludos del equipo de H2C";
@@ -318,6 +333,11 @@ public class UserService implements UserDetailsService {
 
         //Guarda el usuario registrado en la DB
         UserEntity savedUser = userRepository.save(userEntity);
+
+        //Notificación para el técnico
+        String notificationMessage = "Tu cuenta ha sido creada exitosamente. Tu nombre de usuario es " + savedUser.getUsername() + ".";
+        String userId = String.valueOf(savedUser.getUserId());
+        messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
 
         //Envia la contraseña temporal por correo electronico
         String subject = "Credenciales de Acceso a Help Desk H2C";
@@ -546,6 +566,12 @@ public class UserService implements UserDetailsService {
             existingUser.setFullName(dto.getName());
         }
         if (dto.getUsername() != null && !dto.getUsername().isBlank()) {
+            //Notificación
+            if (!existingUser.getUsername().equals(dto.getUsername())) {
+                String notificationMessage = "Tu nombre de usuario ha sido cambiado de '" + existingUser.getUsername() + "' a '" + dto.getUsername() + "'.";
+                String userId = String.valueOf(existingUser.getUserId());
+                messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
+            }
             existingUser.setUsername(dto.getUsername());
         }
         if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
@@ -813,6 +839,11 @@ public class UserService implements UserDetailsService {
         String body = "Hola " + updatedUser.getFullName() + " tu cuenta de técnico ha sido activada. Tu nombre de usuario es: " + updatedUser.getUsername() + " , tu contraseña temporal es: " + randomPassword + " Por favor no compartas con nadie esta información, Saludos del equipo de H2C";
         emailService.sendEmail(updatedUser.getEmail(), subject, body);
 
+        //Notificación para el técnico
+        String notificationMessage = "Tu cuenta de técnico ha sido activada y se te ha asignado la categoría " + updatedUser.getCategory().getCategoryName() + ".";
+        String techId = String.valueOf(updatedUser.getUserId());
+        messagingTemplate.convertAndSendToUser(techId, "/queue/notifications", notificationMessage);
+
         return convertToUserDTO(updatedUser);
     }
 
@@ -949,6 +980,27 @@ public class UserService implements UserDetailsService {
 
         // Convierte la entidad a DTO para enviarla al frontend.
         return convertToUserDTO(userEntity);
+    }
+
+    public Map<String, Integer> getNewUsersCountsMap() {
+        // 1. Obtener la lista de resultados de la consulta agregada
+        List<Object[]> results = userRepository.countUsersByRegistrationMonthNative();
+
+        // 2. Inicializar el mapa para mantener el orden de los meses
+        Map<String, Integer> analyticsData = new LinkedHashMap<>();
+
+        // 3. Mapear los resultados de la consulta
+        for (Object[] result : results) {
+            String monthKey = (String) result[0]; // La clave de mes (ej: "2023-09")
+
+            // El resultado del COUNT() de SQL puede ser Long, BigInteger, etc.
+            // Lo convertimos a Integer, que es lo que espera el frontend.
+            Integer count = ((Number) result[1]).intValue();
+
+            analyticsData.put(monthKey, count);
+        }
+
+        return analyticsData;
     }
 
     public UserDTO findUserByUsername(String username) throws ExceptionUserNotFound {

@@ -35,34 +35,57 @@ public class SecurityConfig{
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtRequestFilter jwtRequestFilter) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                        // Permite explícitamente el acceso a la creación de la compañía.
-                        // Permite explícitamente el acceso a la creación de la compañía.
+
+                        // Endpoints públicos
                         .requestMatchers(HttpMethod.POST, "/api/PostCompany/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/PostCompany").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/companies").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/companies/**").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/users/**").permitAll()
-//                        .requestMatchers(HttpMethod.POST, "/api/**").permitAll()
-//                        .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
-
-                        // Permite el acceso a todos los endpoints del "primer uso"
                         .requestMatchers("/api/firstuse/**").permitAll()
-
-                        // Permite las peticiones OPTIONS (para pre-vuelo de CORS)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                        // Permite acceso público a los endpoints de login y registro
                         .requestMatchers("/api/users/login", "/api/users/register", "api/users/registerTech").permitAll()
-                        //Permite el acceso a este endpoint solo si el usuario esta autenticado
-                        .requestMatchers("/api/users/change-password").authenticated()
-                        // Cualquier otra petición debe estar autenticada
-                        .anyRequest().authenticated()
+                        .requestMatchers("/api/client/PostTicket").permitAll()
+                        .requestMatchers("/api/client/UpdateTicket/**").permitAll()
+                        .requestMatchers("/api/client/DeleteTicket").permitAll()
+                        .requestMatchers("/api/searchSolution").permitAll()
+                        .requestMatchers("/api/GetSolutions").permitAll()
+                        .requestMatchers("api/GetSolutionsWeb/**").permitAll() //ENDPOINT PARA APP WEB
+
+                                // Endpoints autenticados
+                                .requestMatchers("/api/users/change-password").authenticated()
+
+                                // ✅ CORREGIDO: Endpoints para clientes
+                                .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
+
+
+                                // ✅ CORREGIDO: Endpoints para técnicos Y administradores
+                                .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                // ENDPOINTS PARA TICKETS
+                                .requestMatchers("/api/admin/GetTicketCounts").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/admin/GetTickets").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                // ENDPOINTS PARA SOLUCIONES
+                                .requestMatchers("/api/PostSolution").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/UpdateSolution/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/DeleteSolution/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                // ENDPOINTS PARA ACTIVIDADES
+                                .requestMatchers("/api/GetActivities").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/PostActivity").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/UpdateActivity/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/DeleteActivity/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                // ENDPOINTS PARA ANALITICA
+                                .requestMatchers("/api/users/counts-by-month").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+                                // ✅ CORREGIDO: Endpoints solo para administradores
+                                .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMINISTRADOR")
+
+                                .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-                http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
@@ -91,19 +114,30 @@ public class SecurityConfig{
         CorsConfiguration configuration = new CorsConfiguration();
         //Ip de origen que pueden ACCEDER A LA API AGREGAR TODAS LAS IP DEL EQUIPO (JORGE, DANIELA, FERNANDO, ASTRID, HERBERT)
         configuration.setAllowedOrigins(Arrays.asList(
-                "http://127.0.0.1:5501", //
-                "http://localhost:5501", //
-                "http://127.0.0.1",     //
-                "http://localhost",     //
-                "http://127.0.0.2:5501",
-                "http://179.5.94.204:5501",
-                "http://192.168.1.42:5501",
-                "http://IPDANIELA:5501",
-                "http://IPHERBERT:5501"
+                // Localhost y 127.0.0.1 con puertos comunes de desarrollo
+                "http://localhost:5500",
+                "http://localhost:5501",
+                "http://127.0.0.1:5500",
+                "http://127.0.0.1:5501",
+                "http://localhost:8080",
+
+                // Orígenes sin puerto (si accedes a la página directamente por localhost)
+                "http://localhost",
+                "http://127.0.0.1",
+
+                // Tu IP local con puerto de desarrollo (192.168.0.183)
+                "http://192.168.0.183:5500",
+                "http://192.168.0.183:5501"
+
+                // Agrega aquí las IPs de tus compañeros si son estáticas y necesarias
+                // "http://IPDANIELA:5501",
+                // "http://IPHERBERT:5501"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
+
+        configuration.setExposedHeaders(Arrays.asList("Set-Cookie", "Cookie", "Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
@@ -111,4 +145,3 @@ public class SecurityConfig{
     }
 
 }
-

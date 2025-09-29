@@ -3,24 +3,21 @@ package H2C_Group.H2C_API.Services;
 
 import H2C_Group.H2C_API.Entities.CategoryEntity;
 import H2C_Group.H2C_API.Entities.SolutionEntity;
-import H2C_Group.H2C_API.Entities.TicketEntity;
 import H2C_Group.H2C_API.Entities.UserEntity;
 import H2C_Group.H2C_API.Enums.Category;
 import H2C_Group.H2C_API.Exceptions.ExceptionSolutionBadRequest;
 import H2C_Group.H2C_API.Exceptions.ExceptionSolutionNotFound;
 import H2C_Group.H2C_API.Models.DTO.CategoryDTO;
 import H2C_Group.H2C_API.Models.DTO.SolutionDTO;
-import H2C_Group.H2C_API.Models.DTO.TicketDTO;
+import H2C_Group.H2C_API.Repositories.ActivityRepository;
 import H2C_Group.H2C_API.Repositories.CategoryRepository;
 import H2C_Group.H2C_API.Repositories.SolutionRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class SolutionService {
@@ -33,10 +30,11 @@ public class SolutionService {
     @Autowired
     private CategoryRepository categoryRepository;
 
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
 
     public Page<SolutionDTO> getAllSolutions(Pageable pageable) {
-        // NOTA: Para evitar la LazyInitializationException (LIE) del UserEntity,
-        // Tu SolutionRepository debe usar @Query con JOIN FETCH en su findAll.
         Page<SolutionEntity> solutions = solutionRepository.findAll(pageable);
         return solutions.map(this::convertToSolutionDTO);
     }
@@ -66,9 +64,15 @@ public class SolutionService {
         solutionEntity.setKeyWords(solutionDTO.getKeyWords());
 
         SolutionEntity savedSolutionEntity = solutionRepository.save(solutionEntity);
+
+        //Notificación para el técnico
+        String notificationMessage = "Tu solución '" + savedSolutionEntity.getSolutionTitle() + "' ha sido agregada a la Base de Conocimientos exitosamente.";
+        String userId = String.valueOf(existingUser.getUserId());
+
+        // El mensaje se envía solo al técnico que realizó la acción
+        messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
+
         return convertToSolutionDTO(savedSolutionEntity);
-
-
     }
 
     public SolutionDTO updateSolution(Long id, SolutionDTO solutionDTO) {
@@ -115,6 +119,15 @@ public class SolutionService {
         }
 
         SolutionEntity savedSolutionEntity = solutionRepository.save(existingSolution);
+
+        //Notificación para el técnico
+        String notificationMessage = "La solución '" + savedSolutionEntity.getSolutionTitle() + "' ha sido actualizada exitosamente.";
+        String userId = String.valueOf(existingSolution.getUser().getUserId());
+
+        // Notificar al usuario que modificó (que ya está asignado a existingSolution.getUser())
+        messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
+
+
         return convertToSolutionDTO(savedSolutionEntity);
 
     }
@@ -163,10 +176,26 @@ public class SolutionService {
 
     }
 
-    public List<SolutionDTO> findByTitle (String value) {
-        List<SolutionEntity> entities = solutionRepository.searchBySolutionTitleOrKeyWords(value);
-        return entities.stream()
-                .map(this::convertToSolutionDTO)
-                .collect(Collectors.toList());
+    public Page<SolutionDTO> findByTitle (String value, Pageable pageable) {
+        Page<SolutionEntity> entities = solutionRepository.searchBySolutionTitleOrKeyWords(value, pageable);
+        return entities.map(this::convertToSolutionDTO);
+    }
+
+    public Page<SolutionDTO> getSolutionsByCategory(Long categoryId, Pageable pageable) {
+        // Valida que la categoría exista antes de consultar
+        if (!categoryRepository.existsById(categoryId)) {
+            throw new ExceptionSolutionNotFound("La categoría con ID " + categoryId + " no existe.");
+        }
+
+        // Llama a la nueva consulta del repositorio
+        Page<SolutionEntity> solutions = solutionRepository.findByCategory_CategoryId(categoryId, pageable);
+
+        // Mapea y retorna los DTOs
+        return solutions.map(this::convertToSolutionDTO);
+    }
+
+    public Page<SolutionDTO> findSolutionsBySearchAndCategory(String search, Long category, Pageable pageable) {
+        Page<SolutionEntity> activitiesEntity = solutionRepository.findSolutionsBySearchAndCategory(search, category, pageable);
+        return activitiesEntity.map(this::convertToSolutionDTO);
     }
 }

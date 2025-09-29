@@ -2,6 +2,7 @@ package H2C_Group.H2C_API.Controllers;
 
 import H2C_Group.H2C_API.Exceptions.ExceptionTicketNotFound;
 import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
+import H2C_Group.H2C_API.Models.DTO.PagedResponseDTO;
 import H2C_Group.H2C_API.Models.DTO.TicketDTO;
 import H2C_Group.H2C_API.Models.DTO.TicketStatusDTO;
 import H2C_Group.H2C_API.Services.TicketService;
@@ -14,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,36 +28,61 @@ public class TicketController {
     private TicketService acceso;
 
     // Nuevo endpoint para obtener el conteo de tickets por estado
-    @GetMapping("/GetTicketCounts")
+    @GetMapping("/admin/GetTicketCounts")
     public ResponseEntity<?> getTicketCounts() {
         try {
             System.out.println("Solicitud recibida para /GetTicketCounts");
             Map<String, Long> counts = acceso.getTicketCountsByStatus();
+            System.out.println("Resultados de la consulta: " + counts);
             return new ResponseEntity<>(counts, HttpStatus.OK);
         } catch (Exception e) {
+            System.out.println("🔥 ERROR DE EJECUCIÓN: " + e.getMessage());
             System.out.println("Error al procesar la solicitud: " + e.getMessage());
             e.printStackTrace(); // Imprime el stack trace completo
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error interno del servidor");
         }
     }
 
-    @GetMapping("/GetTickets")
-    public ResponseEntity<Page<TicketDTO>> getTickets(
+    @GetMapping("/admin/GetTickets")
+    public ResponseEntity<PagedResponseDTO<TicketDTO>> getTickets(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "5") int size
     ) {
         if(size <= 0 || size > 50){
             ResponseEntity.badRequest().body(Map.of("status", "el tamaño de la página debe estar entre 1 y 50"));
-            return ResponseEntity.ok(null);
+            return ResponseEntity.badRequest().body(null);
         }
         Page<TicketDTO> tickets = acceso.getAllTickets(page, size);
         if (tickets == null) {
             ResponseEntity.badRequest().body(Map.of("status", "No hay tickets registrados."));
         }
-        return ResponseEntity.ok(tickets);
+
+        try{
+            Page<TicketDTO> ticketPage = acceso.getAllTickets(page, size);
+
+            PagedResponseDTO<TicketDTO> response = new PagedResponseDTO<>();
+            response.setContent(ticketPage.getContent());
+
+            response.setTotalElements(ticketPage.getTotalElements());
+            response.setTotalPages(ticketPage.getTotalPages());
+            response.setNumber(ticketPage.getNumber());
+            response.setSize(ticketPage.getSize());
+
+            if (ticketPage.isEmpty()) {
+                // Si no hay tickets, devolver 200 OK con el cuerpo de paginación vacío
+                // No es necesario devolver 400 Bad Request aquí.
+                return ResponseEntity.ok(response);
+            }
+            return ResponseEntity.ok(response);
+
+        }catch(ExceptionTicketNotFound e){
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+
     }
 
-    @GetMapping("/GetTicketById/{id}")
+    @GetMapping("/client/GetTicketById/{id}")
     public ResponseEntity<TicketDTO> getTicketById(@PathVariable Long id){
         try {
             TicketDTO ticket = acceso.getTicketById(id);
@@ -65,7 +92,7 @@ public class TicketController {
         }
     }
 
-    @PatchMapping("/UpdateTicketStatus/{ticketId}")
+    @PatchMapping("/admin/UpdateTicketStatus/{ticketId}")
     public ResponseEntity<?> updateTicketStatus(@PathVariable Long ticketId, @RequestBody TicketStatusDTO ticketDTO) {
         try {
             TicketDTO updatedTicket = acceso.updateTicketStatus(ticketId, ticketDTO);
@@ -86,27 +113,27 @@ public class TicketController {
     }
 
 
-    @GetMapping("/GetRecentTicketsByUser/{userId}")
+    @GetMapping("/client/GetRecentTicketsByUser/{userId}")
     public ResponseEntity<List<TicketDTO>> getTicketsByUserId(@PathVariable Long userId) {
         List<TicketDTO> tickets = acceso.geTicketByUserId(userId);
         return new ResponseEntity<>(tickets, HttpStatus.OK);
     }
 
-    @GetMapping("/GetAssignedTicketsByTech/{technicianId}")
+    @GetMapping("/tech/GetAssignedTicketsByTech/{technicianId}")
     public ResponseEntity<List<TicketDTO>> getAssignedTicketsByTechnicianId(@PathVariable Long technicianId){
         List<TicketDTO> tickets = acceso.getAssignedTicketsByTechnicianId(technicianId);
         return new ResponseEntity<>(tickets, HttpStatus.OK);
     }
 
 
-    @PutMapping("/accept/{ticketId}/{technicianId}")
+    @PutMapping("/tech/accept/{ticketId}/{technicianId}")
     public ResponseEntity<TicketDTO> acceptTicket(@PathVariable Long ticketId, @PathVariable Long technicianId) {
         TicketDTO acceptedTicket = acceso.acceptTicket(ticketId, technicianId);
         return new ResponseEntity<>(acceptedTicket, HttpStatus.OK);
     }
 
 
-    @PostMapping("/PostTicket")
+    @PostMapping("/client/PostTicket")
     public ResponseEntity<?> postTicket(@Valid @RequestBody TicketDTO ticketDTO) {
         try {
             TicketDTO newTicket = acceso.createTicket(ticketDTO);
@@ -129,7 +156,7 @@ public class TicketController {
     }
 
 
-    @PatchMapping("/UpdateTicket/{ticketId}")
+    @PatchMapping("/client/UpdateTicket/{ticketId}")
     public ResponseEntity<?> updateTicket(@PathVariable Long ticketId, @Valid @RequestBody TicketDTO payload) {
         try {
             TicketDTO updatedTicket = acceso.updateTicket(ticketId, payload);
@@ -150,7 +177,7 @@ public class TicketController {
     }
 
 
-    @DeleteMapping("/DeleteTicket/{id}")
+    @DeleteMapping("/client/DeleteTicket/{id}")
     public ResponseEntity<?> deleteTicket(@PathVariable Long id) {
         try {
             acceso.deleteTicket(id);
