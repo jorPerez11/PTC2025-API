@@ -90,7 +90,6 @@ public class authController {
                             "message", "Credenciales invalidas"
                     ));
         }
-
     }
 
     private void addTokenCookie(String username, HttpServletResponse httpServletResponse) throws Exception{
@@ -137,6 +136,12 @@ public class authController {
 //        System.out.println("Headers añadidos a la respuesta");
     }
 
+    @GetMapping("/check-company-existence")
+    public ResponseEntity<Boolean> checkCompanyExistence() {
+        // Verifica si existe al menos un usuario en la base de datos
+        boolean hasUsers = userRepository.count() > 0;
+        return ResponseEntity.ok(hasUsers);
+    }
 
     @PostMapping("/change-password")
     public ResponseEntity<?> changePassword(@RequestBody ChangePasswordDTO changePasswordDTO){

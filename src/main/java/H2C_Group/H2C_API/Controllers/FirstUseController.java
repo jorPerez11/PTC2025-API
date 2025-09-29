@@ -138,6 +138,44 @@ public class FirstUseController {
         }
     }
 
+    @PostMapping("/activate-pending-technicians")
+    @PermitAll
+    public ResponseEntity<?> activatePendingTechnicians(@RequestBody Map<String, Object> payload) {
+        try {
+            System.out.println("=== ENDPOINT ACTIVATE-PENDING-TECHNICIANS LLAMADO ===");
+
+            Long companyId = null;
+            Object companyIdObj = payload.get("companyId");
+
+            if (companyIdObj instanceof Number) {
+                companyId = ((Number) companyIdObj).longValue();
+            } else {
+                throw new IllegalArgumentException("companyId no es válido o está ausente.");
+            }
+
+            System.out.println("CompanyId recibido: " + companyId);
+
+            List<UserDTO> activatedTechnicians = userService.activatePendingTechnicians(companyId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Técnicos activados exitosamente");
+            response.put("activatedCount", activatedTechnicians.size());
+            response.put("technicians", activatedTechnicians);
+
+            System.out.println("✅ Respuesta del endpoint: " + response);
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+
+        } catch (Exception e) {
+            System.out.println("❌ Error en endpoint activate-pending-technicians: " + e.getMessage());
+            e.printStackTrace();
+
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Error al activar técnicos pendientes: " + e.getMessage());
+            return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     // Nuevo Endpoint para asignar categoría y activar a un técnico
     @PatchMapping("/tecnicos/{id}/asignar-categoria")
     @PermitAll

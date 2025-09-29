@@ -53,6 +53,9 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
             String period
                     );
 
+    @Query("SELECT u FROM UserEntity u WHERE u.company.companyId = :companyId AND u.isActive = :isActive")
+    List<UserEntity> findByCompanyIdAndIsActive(@Param("companyId") Long companyId, @Param("isActive") Integer isActive);
+}
 
     @Query(value = "SELECT TO_CHAR(u.REGISTRATIONDATE, 'YYYY-MM') AS month_key, COUNT(u.USERID) " +
             "FROM TBUSERS u " +
