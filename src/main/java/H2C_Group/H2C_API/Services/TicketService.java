@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -29,6 +30,9 @@ public class TicketService {
 
     @Autowired
     private TicketRepository ticketRepository;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
 
     public Page<TicketDTO> getAllTickets(int page, int size) {
@@ -114,6 +118,12 @@ public class TicketService {
         //Almacenamiento de ticket creado en la DB
         TicketEntity savedTicket = ticketRepository.save(ticketEntity);
 
+        //Notificación para el cliente
+        String notificationMessage = "Tu ticket #" + savedTicket.getTicketId() + " - " + savedTicket.getTitle() + " ha sido creado exitosamente.";
+        String userId = String.valueOf(savedTicket.getUserCreator().getUserId()); //Obtiene el ID del usuario creador del ticket
+
+        messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
+
         //Conversion del ticket almacenado de vuelta a DTO para la respuesta del Frontend
         return  convertToTicketDTO(savedTicket);
     }
@@ -178,12 +188,18 @@ public class TicketService {
 
             // Validar si el rol es ADMINISTRADOR o TECNICO
             if (userRoleId.equals(UserRole.ADMINISTRADOR.getId()) || userRoleId.equals(UserRole.TECNICO.getId())) {
+                //Notificación para el técnico
+                if (existingTicket.getAssignedTechUser() == null || !existingTicket.getAssignedTechUser().getUserId().equals(userTech.getUserId())) {
+                    //Solo se envía la notificación si el técnico es nuevo
+                    String notificationMessage = "Se te ha asignado el ticket #" + existingTicket.getTicketId() + " - " + existingTicket.getTitle();
+                    String techId = String.valueOf(userTech.getUserId());
+                    messagingTemplate.convertAndSendToUser(techId, "/queue/notifications", notificationMessage);
+                }
                 existingTicket.setAssignedTechUser(userTech);
             } else {
                 throw new IllegalArgumentException("El usuario con ID " + userTech.getUserId() + " no tiene un rol válido para ser asignado como técnico (debe ser Administrador o Técnico).");
             }
         }
-
 
         // --- Actualización de ESTADO (TicketStatus) ---
         if (ticketDTO.getStatus() != null) {
@@ -394,6 +410,12 @@ public class TicketService {
         ticket.setTicketStatusId(TicketStatus.EN_PROGRESO.getId());
 
         TicketEntity savedTicket = ticketRepository.save(ticket);
+
+        //Notificación para el técnico
+        String notificationMessage = "Has aceptado el ticket #" + savedTicket.getTicketId() + " - " + savedTicket.getTitle();
+        String techId = String.valueOf(technicianId);
+        messagingTemplate.convertAndSendToUser(techId, "/queue/notifications", notificationMessage);
+
         return convertToTicketDTO(savedTicket);
     }
 }
