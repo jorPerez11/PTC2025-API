@@ -24,4 +24,18 @@ public interface SolutionRepository extends JpaRepository<SolutionEntity,Long> {
     Page<SolutionEntity> searchBySolutionTitleOrKeyWords(@Param("value") String value, Pageable pageable);
 
     boolean existsByCategory_CategoryId(Long categoryId);
+
+    //** QUERY PARA FILTRAR BUSQUEDA Y CATEGORIA EN APP WEB
+    @Query("SELECT s FROM SolutionEntity s WHERE " +
+            // 1. FILTRO DE BÚSQUEDA (si el parámetro 'search' no está vacío)
+            "(:search IS NULL OR :search = '' OR " +
+            "LOWER(s.solutionTitle) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(s.descriptionS) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(s.keyWords) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+            // 2. FILTRO DE CATEGORÍA (si el parámetro 'categoryId' no es nulo)
+            "(:categoryId IS NULL OR s.category.id = :categoryId)")
+    Page<SolutionEntity> findSolutionsBySearchAndCategory(
+            @Param("search") String search,
+            @Param("categoryId") Long categoryId,
+            Pageable pageable);
 }

@@ -48,18 +48,58 @@ public class SecurityConfig{
                         .requestMatchers("/api/firstuse/**").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/users/login", "/api/users/register", "api/users/registerTech").permitAll()
+                        .requestMatchers("/api/client/PostTicket").permitAll()
+                        .requestMatchers("/api/client/UpdateTicket/**").permitAll()
+                        .requestMatchers("/api/client/DeleteTicket").permitAll()
+                        .requestMatchers("/api/searchSolution").permitAll()
+                        .requestMatchers("/api/GetSolutions").permitAll()
+                        .requestMatchers("api/GetSolutionsWeb/**").permitAll() //ENDPOINT PARA APP WEB
+                        .requestMatchers("/api/GetUserByUsername/{username}").authenticated()
 
-                                // Endpoints autenticados
-                                .requestMatchers("/api/users/change-password").authenticated()
+                        // Endpoints autenticados
+                        .requestMatchers("/api/users/change-password").authenticated()
 
-                                // ✅ CORREGIDO: Endpoints para clientes
-                                .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
+                        // ✅ CORREGIDO: Endpoints para clientes
+                        .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
+
+                                //Logout
+                                .requestMatchers("/api/users/logoutWeb").authenticated()
 
                                 // ✅ CORREGIDO: Endpoints para técnicos Y administradores
                                 .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                // ENDPOINTS PARA TICKETS
+                                .requestMatchers("/api/admin/GetTicketCounts").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/admin/GetTickets").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                // ENDPOINTS PARA SOLUCIONES
+                                .requestMatchers("/api/PostSolution").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/UpdateSolution/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/DeleteSolution/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                // ENDPOINTS PARA ACTIVIDADES
+                                .requestMatchers("/api/GetActivities").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/PostActivity").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/UpdateActivity/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/DeleteActivity/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                // ENDPOINTS PARA ANALITICA
+                                .requestMatchers("/api/users/counts-by-month").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
-                                // ✅ CORREGIDO: Endpoints solo para administradores
-                                .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMINISTRADOR")
+
+                        // ✅ CORREGIDO: Endpoints para técnicos Y administradores
+                        .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        // ENDPOINTS PARA TICKETS
+                        .requestMatchers("/api/admin/GetTicketCounts").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        .requestMatchers("/api/admin/GetTickets").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        // ENDPOINTS PARA SOLUCIONES
+                        .requestMatchers("/api/PostSolution").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        .requestMatchers("/api/UpdateSolution/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        .requestMatchers("/api/DeleteSolution/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        // ENDPOINTS PARA ACTIVIDADES
+                        .requestMatchers("/api/GetActivities").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        .requestMatchers("/api/PostActivity").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        .requestMatchers("/api/UpdateActivity/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        .requestMatchers("/api/DeleteActivity/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        // ENDPOINTS PARA ANALITICA
+                        .requestMatchers("/api/users/counts-by-month").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
 
                                 //Endpoints para acceder al listado de tecnicos
                                 .requestMatchers(HttpMethod.GET, "/api/GetTech").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_ADMINISTRADOR")
@@ -72,6 +112,7 @@ public class SecurityConfig{
 
                                 //Endpoint para declinar un ticket
                                 .requestMatchers(HttpMethod.POST, "/api/tech/decline-ticket/**").hasAuthority("ROLE_TECNICO")
+
 
 
 
@@ -109,16 +150,24 @@ public class SecurityConfig{
         CorsConfiguration configuration = new CorsConfiguration();
         //Ip de origen que pueden ACCEDER A LA API AGREGAR TODAS LAS IP DEL EQUIPO (JORGE, DANIELA, FERNANDO, ASTRID, HERBERT)
         configuration.setAllowedOrigins(Arrays.asList(
-                "http://127.0.0.1:5501", //
-                "http://127.0.0.1:5500", //
-                "http://localhost:5501", //
-                "http://127.0.0.1",     //
-                "http://localhost:5500",     //
-                "http://127.0.0.2:5501",
-                "http://179.5.94.204:5501",
-                "http://192.168.1.42:5501",
-                "http://IPDANIELA:5501",
-                "http://IPHERBERT:5501"
+                // Localhost y 127.0.0.1 con puertos comunes de desarrollo
+                "http://localhost:5500",
+                "http://localhost:5501",
+                "http://127.0.0.1:5500",
+                "http://127.0.0.1:5501",
+                "http://localhost:8080",
+
+                // Orígenes sin puerto (si accedes a la página directamente por localhost)
+                "http://localhost",
+                "http://127.0.0.1",
+
+                // Tu IP local con puerto de desarrollo (192.168.0.183)
+                "http://192.168.0.183:5500",
+                "http://192.168.0.183:5501"
+
+                // Agrega aquí las IPs de tus compañeros si son estáticas y necesarias
+                // "http://IPDANIELA:5501",
+                // "http://IPHERBERT:5501"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
