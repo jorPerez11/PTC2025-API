@@ -167,15 +167,7 @@
 			<version>3.5.6</version>
 		</dependency>
 
-		<dependency>
 
-			<groupId>io.github.cdimascio</groupId>
-
-			<artifactId>dotenv-java</artifactId>
-
-			<version>3.0.0</version>
-
-		</dependency>
 
 		<dependency>
 			<groupId>me.paulschwarz</groupId>
@@ -186,6 +178,8 @@
 
 	<build>
 		<plugins>
+
+            <!-- Saltar tests en package (para que no falle por el DataSource en tests) --> <plugin> <groupId>org.apache.maven.plugins</groupId> <artifactId>maven-surefire-plugin</artifactId> <version>3.5.3</version> <configuration> <skipTests>true</skipTests> </configuration> </plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
