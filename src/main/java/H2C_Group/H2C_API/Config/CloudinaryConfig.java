@@ -1,8 +1,6 @@
 package H2C_Group.H2C_API.Config;
 
 import com.cloudinary.Cloudinary;
-import io.github.cdimascio.dotenv.Dotenv;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -20,13 +18,11 @@ public class CloudinaryConfig {
     @Bean
     public Cloudinary cloudinary() {
         //Crear un objeto de tipo Dotenv
-        Dotenv dotenv = Dotenv.load();
-
         //Crear un Map para guardar la clave valor del archivo .env
         Map<String, String> config = new HashMap<>();
-        config.put("cloud_name", dotenv.get("CLOUDINARY_CLOUD_NAME"));
-        config.put("api_key", dotenv.get("CLOUDINARY_API_KEY"));
-        config.put("api_secret", dotenv.get("CLOUDINARY_API_SECRET"));
+        config.put("cloud_name", System.getenv("CLOUDINARY_CLOUD_NAME"));
+        config.put("api_key", System.getenv("CLOUDINARY_API_KEY"));
+        config.put("api_secret", System.getenv("CLOUDINARY_API_SECRET"));
 
         //Retorna una nueva instancia de Cloudinary con la configuración cargada
         return new Cloudinary(config);
