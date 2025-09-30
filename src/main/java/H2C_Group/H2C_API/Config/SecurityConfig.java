@@ -54,6 +54,7 @@ public class SecurityConfig{
                         .requestMatchers("/api/searchSolution").permitAll()
                         .requestMatchers("/api/GetSolutions").permitAll()
                         .requestMatchers("api/GetSolutionsWeb/**").permitAll() //ENDPOINT PARA APP WEB
+                        .requestMatchers("/api/GetUserByUsername/{username}").authenticated()
 
                                 // Endpoints autenticados
                                 .requestMatchers("/api/users/change-password").authenticated()
@@ -61,6 +62,8 @@ public class SecurityConfig{
                                 // ✅ CORREGIDO: Endpoints para clientes
                                 .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
 
+                                //Logout
+                                .requestMatchers("/api/users/logoutWeb").authenticated()
 
                                 // ✅ CORREGIDO: Endpoints para técnicos Y administradores
                                 .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")

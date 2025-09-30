@@ -167,6 +167,27 @@ public class authController {
         return ResponseEntity.ok().body("Sesion cerrada con exito");
     }
 
+    @PostMapping("/logoutWeb")
+    public ResponseEntity<String> logoutWeb(HttpServletResponse httpServletResponse, HttpServletRequest request) {
+        try {
+            Cookie cookie = new Cookie("authToken", "");
+            cookie.setPath("/");
+            cookie.setHttpOnly(true);
+            cookie.setSecure(false);  // ← DEBE COINCIDIR CON EL LOGIN
+            cookie.setMaxAge(0); // Expirar inmediatamente
+            cookie.setAttribute("SameSite", "Lax"); // ← DEBE COINCIDIR CON EL LOGIN
+            httpServletResponse.addCookie(cookie);
+
+            System.out.println("Cookie authToken configurada para eliminación");
+
+            return ResponseEntity.ok().body("Sesión cerrada con éxito");
+
+        } catch (Exception e) {
+            System.err.println("Error en logout: " + e.getMessage());
+            return ResponseEntity.status(500).body("Error al cerrar sesión");
+        }
+    }
+
     @PostMapping("/authme")
     public ResponseEntity<?> getCurrentUser(HttpServletRequest request) {
         try {
