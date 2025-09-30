@@ -1,6 +1,5 @@
 package H2C_Group.H2C_API.Repositories;
 
-
 import H2C_Group.H2C_API.Entities.UserEntity;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -51,5 +50,16 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
             @Param("term") String term,
             @Param("categoryId") Long categoryId,
             String period
-                    );
+    );
+
+
+    @Query(value = "SELECT TO_CHAR(u.REGISTRATIONDATE, 'YYYY-MM') AS month_key, COUNT(u.USERID) " +
+            "FROM TBUSERS u " +
+            "GROUP BY TO_CHAR(u.REGISTRATIONDATE, 'YYYY-MM') " +
+            "ORDER BY month_key",
+            nativeQuery = true)
+    List<Object[]> countUsersByRegistrationMonthNative();
+
+    @Query("SELECT u FROM UserEntity u WHERE u.company.companyId = :companyId AND u.isActive = :isActive")
+    List<UserEntity> findByCompanyIdAndIsActive(@Param("companyId") Long companyId, @Param("isActive") Integer isActive);
 }
