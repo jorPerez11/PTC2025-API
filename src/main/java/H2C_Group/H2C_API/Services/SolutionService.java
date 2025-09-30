@@ -9,6 +9,7 @@ import H2C_Group.H2C_API.Exceptions.ExceptionSolutionBadRequest;
 import H2C_Group.H2C_API.Exceptions.ExceptionSolutionNotFound;
 import H2C_Group.H2C_API.Models.DTO.CategoryDTO;
 import H2C_Group.H2C_API.Models.DTO.SolutionDTO;
+import H2C_Group.H2C_API.Repositories.ActivityRepository;
 import H2C_Group.H2C_API.Repositories.CategoryRepository;
 import H2C_Group.H2C_API.Repositories.SolutionRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
@@ -191,5 +192,10 @@ public class SolutionService {
 
         // Mapea y retorna los DTOs
         return solutions.map(this::convertToSolutionDTO);
+    }
+
+    public Page<SolutionDTO> findSolutionsBySearchAndCategory(String search, Long category, Pageable pageable) {
+        Page<SolutionEntity> activitiesEntity = solutionRepository.findSolutionsBySearchAndCategory(search, category, pageable);
+        return activitiesEntity.map(this::convertToSolutionDTO);
     }
 }

@@ -3,6 +3,7 @@ package H2C_Group.H2C_API.Services;
 
 import H2C_Group.H2C_API.Entities.DeclinedTicketEntity;
 import H2C_Group.H2C_API.Entities.TicketEntity;
+import H2C_Group.H2C_API.Entities.TicketStatusEntity;
 import H2C_Group.H2C_API.Entities.UserEntity;
 import H2C_Group.H2C_API.Enums.*;
 import H2C_Group.H2C_API.Exceptions.ExceptionTicketNotFound;
@@ -10,7 +11,9 @@ import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
 import H2C_Group.H2C_API.Models.DTO.*;
 import H2C_Group.H2C_API.Repositories.DeclinedTicketRepository;
 import H2C_Group.H2C_API.Repositories.TicketRepository;
+import H2C_Group.H2C_API.Repositories.TicketStatusRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -24,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,6 +41,10 @@ public class TicketService {
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+  
+  @Autowired
+    private TicketStatusRepository ticketStatusRepository;
+
 
     @Autowired
     private DeclinedTicketRepository declinedTicketRepository;
@@ -44,9 +52,18 @@ public class TicketService {
 
     public Page<TicketDTO> getAllTickets(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<TicketEntity> tickets = ticketRepository.findAll(pageable);
+        //Page<TicketEntity> tickets = ticketRepository.findAll(pageable);
+        Page<TicketEntity> tickets = ticketRepository.findAllWithUsers(pageable);
         return tickets.map(this::convertToTicketDTO);
     }
+
+//    public List<TicketDTO> getAllTicketsAsList(int page, int size) {
+//        // Reutiliza la lógica de tu servicio para obtener la página
+//        Page<TicketDTO> ticketPage = this.getAllTickets(page, size);
+//
+//        // Devuelve solo el contenido (la lista de DTOs)
+//        return ticketPage.getContent();
+//    }
 
     public List<TicketDTO> geTicketByUserId(Long userId){
         userRepository.findById(userId).orElseThrow(() -> new ExceptionUserNotFound("El id del usuario " + " no existe" ));
@@ -159,8 +176,43 @@ public class TicketService {
         return convertToTicketDTO(savedTicket);
     }
 
+    @Transactional
+    public TicketDTO UpdateTicketStatus(Long ticketId, TicketDTO ticketDTO) {
+        // Usar el repositorio para encontrar el ticket.
+        Optional<TicketEntity> optionalTicket = ticketRepository.findById(ticketId);
 
+        if (optionalTicket.isPresent()) {
+            TicketEntity ticket = optionalTicket.get();
 
+            // Asegúrate de que el DTO contenga un estado válido
+            if (ticketDTO.getStatus() == null || ticketDTO.getStatus().getId() == null) {
+                throw new IllegalArgumentException("El estado del ticket no puede ser nulo.");
+            }
+
+            // Buscar el ID del estado en la tabla de estados
+            TicketStatusEntity status = ticketStatusRepository.findById(Math.toIntExact(ticketDTO.getStatus().getId()))
+                    .orElseThrow(() -> new IllegalArgumentException("ID de estado no válido: " + ticketDTO.getStatus().getId()));
+
+            // Actualizar el estado con el ID encontrado
+            ticket.setTicketStatusId(Long.valueOf(status.getTicketStatusId()));
+
+            // Manejar la fecha de cierre según el estado
+            if (ticket.getTicketStatusId().equals(TicketStatus.COMPLETADO.getId())) {
+                ticket.setCloseDate(java.time.LocalDateTime.now());
+            } else {
+                // Si el estado no es "Completado", la fecha debe ser nula
+                ticket.setCloseDate(null);
+            }
+
+            // Guardar el ticket para persistir el cambio
+            ticketRepository.save(ticket);
+
+            // Retornar el DTO actualizado
+            return convertToTicketDTO(ticket);
+        } else {
+            throw new IllegalArgumentException("Ticket no encontrado con el ID: " + ticketId);
+        }
+    }
 
     public TicketDTO updateTicket(Long id, TicketDTO ticketDTO) {
 
@@ -328,48 +380,63 @@ public class TicketService {
         TicketDTO dto = new TicketDTO();
         dto.setTicketId(ticket.getTicketId());
 
-        Category categoryEnum = Category.fromIdOptional(ticket.getCategoryId()).orElseThrow(() -> new IllegalArgumentException("ID de categoría inválido al convertir a DTO: " + ticket.getCategoryId()));
-        dto.setCategory(new CategoryDTO(categoryEnum.getId(), categoryEnum.getDisplayName())); // <-- Aquí se crea el CategoryDTO dto.setPriority((TicketPriority.fromId(ticket.getPriorityId())).orElseThrow(() -> new IllegalArgumentException("ID de prioridad inválido: " + ticket.getPriorityId())));
+        // --- ENUMS CORREGIDOS ---
 
-        TicketPriority priorityEnum = TicketPriority.fromIdOptional(ticket.getPriorityId()).orElseThrow(() -> new IllegalArgumentException("ID de prioridad invalido al convertir DTO: " + ticket.getPriorityId()));
-        dto.setPriority(new TicketPriorityDTO(priorityEnum.getId(), priorityEnum.getDisplayName()));
-
-        TicketStatus statusEnum = TicketStatus.fromIdOptional(ticket.getTicketStatusId()).orElseThrow(() -> new IllegalArgumentException("ID de estado invalido al convertir DTO:  " + ticket.getTicketStatusId()));
-        dto.setStatus(new TicketStatusDTO(statusEnum.getId(), statusEnum.getDisplayName()));
-
-        if (ticket.getUserCreator() != null) {
-
-            Long userCreatorId = ticket.getUserCreator().getUserId(); //Declaracion de variable para almacenamiento del id de tipo Long
-
-            dto.setUserId(userCreatorId); //Asignacion de ID del usuario creador del ticket
-
-
-            userRepository.findById(userCreatorId).ifPresent(user -> {dto.setUserName(user.getFullName());}); //Asignacion de nombre completo para campo userName en TicketDTO
+        // CATEGORY: Verificar si el Enum existe antes de usarlo.
+        Category categoryEnum = Category.fromIdOptional(ticket.getCategoryId()).orElse(null);
+        if (categoryEnum != null) {
+            dto.setCategory(new CategoryDTO(categoryEnum.getId(), categoryEnum.getDisplayName()));
         } else {
-            throw new IllegalArgumentException("El ID del usuario no puede ser nulo.");
+            // Asignar un valor por defecto o nulo si el ID es inválido/nulo en la DB.
+            dto.setCategory(null);
         }
 
+        // PRIORITY: Verificar si el Enum existe antes de usarlo.
+        TicketPriority priorityEnum = TicketPriority.fromIdOptional(ticket.getPriorityId()).orElse(null);
+        if (priorityEnum != null) {
+            dto.setPriority(new TicketPriorityDTO(priorityEnum.getId(), priorityEnum.getDisplayName()));
+        } else {
+            dto.setPriority(null);
+        }
 
-        dto.setTitle(ticket.getTitle());
-        dto.setDescription(ticket.getDescription());
+        // STATUS: Verificar si el Enum existe antes de usarlo.
+        TicketStatus statusEnum = TicketStatus.fromIdOptional(ticket.getTicketStatusId()).orElse(null);
+        if (statusEnum != null) {
+            dto.setStatus(new TicketStatusDTO(statusEnum.getId(), statusEnum.getDisplayName()));
+        } else {
+            dto.setStatus(null);
+        }
 
+        // --- USUARIO CREADOR (Ya está bien) ---
+        if (ticket.getUserCreator() != null) {
+            UserEntity user = ticket.getUserCreator();
+            dto.setUserId(user.getUserId());
+            dto.setUserName(user.getFullName());
+        } else {
+            dto.setUserId(null);
+            dto.setUserName("Usuario Desconocido");
+        }
+
+        // --- TÉCNICO ASIGNADO (Ya está bien) ---
         if (ticket.getAssignedTechUser() != null) {
+            UserEntity techUser = ticket.getAssignedTechUser();
             UserDTO techDTO = new UserDTO();
-            techDTO.setId(ticket.getAssignedTechUser().getUserId());
-            techDTO.setDisplayName(ticket.getAssignedTechUser().getFullName());
+            techDTO.setId(techUser.getUserId());
+            techDTO.setDisplayName(techUser.getFullName());
             dto.setAssignedTech(techDTO);
         } else {
-            dto.setAssignedTech(null); // Establece el ID del técnico a null en el DTO si no hay técnico asignado
+            dto.setAssignedTech(null);
         }
+
+        // --- Resto de campos (Ya está bien) ---
+        dto.setTitle(ticket.getTitle());
+        dto.setDescription(ticket.getDescription());
         dto.setCreationDate(ticket.getCreationDate());
-
         dto.setCloseDate(ticket.getCloseDate());
-
         dto.setPercentage(ticket.getPercentage());
-
         dto.setImageUrl(ticket.getImageUrl());
-        return dto;
 
+        return dto;
     }
 
     public Map<String, Long> getTicketCountsByStatus() {
