@@ -506,6 +506,22 @@ public class UserService implements UserDetailsService {
         }
     }
 
+
+    public void deleteUser(Long id) {
+
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException("El ID del usuario no puede ser nulo o no válido");
+        }
+
+        boolean exists = userRepository.existsById(id);
+
+        if (!exists) {
+            throw new ExceptionUserNotFound("Usuario con ID " + id + " no encontrado.");
+        }
+
+        userRepository.deleteById(id);
+    }
+
     //METODO DE ACTUALIZACION DE CATEGORIA DE USUARIO (TECNICOS)
     public UserDTO updateUser(Long id, UserDTO dto) {
 
@@ -546,6 +562,9 @@ public class UserService implements UserDetailsService {
         //Segunda operacion: Actualizar campos para cada usuario (NIVEL DE ACCESO: 1 // CONFIGURACION DE USUARIO [CLIENTE/TECNICO/ADMIN] -> [CLIENTE/TECNICO/ADMIN] )
         //Para actualizar los datos, se valida que existan datos en el registro
         //Si no se llega a actualizar todos los campos, se dejaran con el valor existente en su registro
+        if (dto.getName() != null && !dto.getName().isBlank()) {
+            existingUser.setFullName(dto.getName());
+        }
         if (dto.getUsername() != null && !dto.getUsername().isBlank()) {
             //Notificación
             if (!existingUser.getUsername().equals(dto.getUsername())) {
@@ -592,22 +611,33 @@ public class UserService implements UserDetailsService {
         return convertToUserDTO(savedUser);
     }
 
-
-    public void deleteUser(Long id) {
-
+    public UserDTO updateUserProfile(Long id, UserDTO dto) {
         if (id == null || id <= 0) {
-            throw new IllegalArgumentException("El ID del usuario no puede ser nulo o no válido");
+            throw new IllegalArgumentException("El ID del usuario a actualizar no puede ser nulo o no válido.");
         }
 
-        boolean exists = userRepository.existsById(id);
+        UserEntity existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("El usuario con id" + id + " no existe"));
 
-        if (!exists) {
-            throw new ExceptionUserNotFound("Usuario con ID " + id + " no encontrado.");
+        // SOLO actualizar campos del perfil, IGNORAR rol y categoría
+        if (dto.getName() != null && !dto.getName().isBlank()) {
+            existingUser.setFullName(dto.getName());
+        }
+        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
+            existingUser.setEmail(dto.getEmail());
+        }
+        if (dto.getPhone() != null && !dto.getPhone().isBlank()) {
+            existingUser.setPhone(dto.getPhone());
+        }
+        if (dto.getProfilePictureUrl() != null && !dto.getProfilePictureUrl().isBlank()) {
+            existingUser.setProfilePictureUrl(dto.getProfilePictureUrl());
         }
 
-        userRepository.deleteById(id);
+        // NO actualizar: username, password, rol, categoría
+
+        UserEntity savedUser = userRepository.save(existingUser);
+        return convertToUserDTO(savedUser);
     }
-
 
     //Manda datos del usuario. Convierte de UserEntity a DTOUser
     private UserDTO convertToUserDTO(UserEntity usuario) {
@@ -844,6 +874,45 @@ public class UserService implements UserDetailsService {
         return convertToUserDTO(savedAdmin);
     }
 
+    public List<UserDTO> activatePendingTechnicians(Long companyId) {
+        // 1. Buscar todos los técnicos pendientes de la compañía
+        List<UserEntity> pendingTechnicians = userRepository.findByCompanyIdAndIsActive(companyId, 0);
+
+        List<UserDTO> activatedTechnicians = new ArrayList<>();
+
+        for (UserEntity technician : pendingTechnicians) {
+            // 2. Solo procesar técnicos (rolId = 2)
+            if (!technician.getRolId().equals(2L)) {
+                continue;
+            }
+
+            // 3. Generar contraseña temporal
+            String randomPassword = generatedRandomPassword();
+            String hashedPassword = passwordEncoder.encode(randomPassword);
+
+            // 4. Activar el técnico
+            technician.setPasswordHash(hashedPassword);
+            technician.setIsActive(1);
+            technician.setPasswordExpired(true);
+
+            UserEntity savedTechnician = userRepository.save(technician);
+
+            // 5. Enviar correo
+            String subject = "Credenciales de Acceso a Help Desk H2C";
+            String body = "Hola " + savedTechnician.getFullName() +
+                    " tu cuenta de técnico ha sido activada. Tu nombre de usuario es: " +
+                    savedTechnician.getUsername() +
+                    ", tu contraseña temporal es: " + randomPassword +
+                    ". Por favor no compartas esta información. Saludos del equipo de H2C";
+
+            emailService.sendEmail(savedTechnician.getEmail(), subject, body);
+
+            activatedTechnicians.add(convertToUserDTO(savedTechnician));
+        }
+
+        return activatedTechnicians;
+    }
+
     public UserDTO registerInitialAdmin(UserDTO dto) {
         // 1. Limpiar el caché para evitar problemas
         entityManager.clear();
@@ -911,5 +980,55 @@ public class UserService implements UserDetailsService {
 
         // Convierte la entidad a DTO para enviarla al frontend.
         return convertToUserDTO(userEntity);
+    }
+
+    public Map<String, Integer> getNewUsersCountsMap() {
+        // 1. Obtener la lista de resultados de la consulta agregada
+        List<Object[]> results = userRepository.countUsersByRegistrationMonthNative();
+
+        // 2. Inicializar el mapa para mantener el orden de los meses
+        Map<String, Integer> analyticsData = new LinkedHashMap<>();
+
+        // 3. Mapear los resultados de la consulta
+        for (Object[] result : results) {
+            String monthKey = (String) result[0]; // La clave de mes (ej: "2023-09")
+
+            // El resultado del COUNT() de SQL puede ser Long, BigInteger, etc.
+            // Lo convertimos a Integer, que es lo que espera el frontend.
+            Integer count = ((Number) result[1]).intValue();
+
+            analyticsData.put(monthKey, count);
+        }
+
+        return analyticsData;
+    }
+
+    public UserDTO findUserByUsername(String username) throws ExceptionUserNotFound {
+        // 1. Busca la entidad del usuario por su nombre de usuario.
+        System.out.println("Iniciando busqueda de usuario en el servicio: {}" + username);
+        // .orElseThrow() lanzará la excepción si no se encuentra el usuario.
+        UserEntity userEntity = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ExceptionUserNotFound("No se encontró un usuario con el nombre de usuario: " + username));
+        System.out.println("Usuario encontrado, ID: {}" + username + "y" + userEntity);
+        // 2. Llama al método convertToUserDTO para convertir la entidad a un DTO y devolverlo.
+        return this.convertToUserDTO(userEntity);
+    }
+
+    /**
+     * Actualiza solo la URL de la foto de perfil para un usuario específico.
+     * @param userId El ID del usuario.
+     * @param imageUrl La nueva URL de la imagen.
+     * @return El DTO del usuario actualizado.
+     * @throws ExceptionUserNotFound Si el usuario no es encontrado.
+     */
+    public UserDTO updateUserProfilePicture(Long userId, String imageUrl) throws ExceptionUserNotFound {
+        UserEntity existingUser = userRepository.findById(userId)
+                .orElseThrow(() -> new ExceptionUserNotFound("Usuario con ID " + userId + " no encontrado."));
+
+        existingUser.setProfilePictureUrl(imageUrl);
+
+        UserEntity savedUser = userRepository.save(existingUser);
+
+        return convertToUserDTO(savedUser); // Convierte la entidad a DTO y la devuelve
     }
 }

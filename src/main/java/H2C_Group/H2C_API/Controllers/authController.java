@@ -90,7 +90,6 @@ public class authController {
                             "message", "Credenciales invalidas"
                     ));
         }
-
     }
 
     private void addTokenCookie(String username, HttpServletResponse httpServletResponse) throws Exception{
@@ -108,26 +107,41 @@ public class authController {
 
         String jwt = jwtUtil.generateToken(userDetails, expirationTime);
 
+        Cookie cookie = new Cookie("authToken", jwt);
+
+        cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        cookie.setMaxAge((int) (expirationTime / 1000));
+        cookie.setAttribute("SameSite", "Lax");
+        cookie.setSecure(false);
+        httpServletResponse.addCookie(cookie);
+        System.out.println("Cookie 'authToken' creada y agregada con SameSite=Lax.");
 
 
-        //4. Construye la cadena de la cookie y la añade a la respuesta
-        String coockieValue = String.format(
-                "authToken=%s; " +
-                        "Path=/; " +
-                        "HttpOnly; " +
-                        "Secure=false; " +
-                        "SameSite=None; " +
-                        "MaxAge=%d; " ,
-                jwt,
-                expirationTime / 1000
-        );
-
-        System.out.println("Cookie creada"+ coockieValue);
-        httpServletResponse.addHeader("Set-Cookie", coockieValue);
-        httpServletResponse.addHeader("Access-Control-Expose-Headers", "Set-Cookie");
-        System.out.println("Headers añadidos a la respuesta");
+//        //4. Construye la cadena de la cookie y la añade a la respuesta
+//        String coockieValue = String.format(
+//                "authToken=%s; " +
+//                        "Path=/; " +
+//                        "HttpOnly; " +
+//                        "Secure=false; " +
+//                        "SameSite=None; " +
+//                        "MaxAge=%d; " ,
+//                jwt,
+//                expirationTime / 1000
+//        );
+//
+//        System.out.println("Cookie creada"+ coockieValue);
+//        httpServletResponse.addHeader("Set-Cookie", coockieValue);
+//        httpServletResponse.addHeader("Access-Control-Expose-Headers", "Set-Cookie");
+//        System.out.println("Headers añadidos a la respuesta");
     }
 
+    @GetMapping("/check-company-existence")
+    public ResponseEntity<Boolean> checkCompanyExistence() {
+        // Verifica si existe al menos un usuario en la base de datos
+        boolean hasUsers = userRepository.count() > 0;
+        return ResponseEntity.ok(hasUsers);
+    }
 
     @PostMapping("/change-password")
     public ResponseEntity<?> changePassword(@RequestBody ChangePasswordDTO changePasswordDTO){
@@ -151,6 +165,27 @@ public class authController {
         httpServletResponse.addHeader("Access-Control-Expose-Headers", "Set-Cookie");
 
         return ResponseEntity.ok().body("Sesion cerrada con exito");
+    }
+
+    @PostMapping("/logoutWeb")
+    public ResponseEntity<String> logoutWeb(HttpServletResponse httpServletResponse, HttpServletRequest request) {
+        try {
+            Cookie cookie = new Cookie("authToken", "");
+            cookie.setPath("/");
+            cookie.setHttpOnly(true);
+            cookie.setSecure(false);  // ← DEBE COINCIDIR CON EL LOGIN
+            cookie.setMaxAge(0); // Expirar inmediatamente
+            cookie.setAttribute("SameSite", "Lax"); // ← DEBE COINCIDIR CON EL LOGIN
+            httpServletResponse.addCookie(cookie);
+
+            System.out.println("Cookie authToken configurada para eliminación");
+
+            return ResponseEntity.ok().body("Sesión cerrada con éxito");
+
+        } catch (Exception e) {
+            System.err.println("Error en logout: " + e.getMessage());
+            return ResponseEntity.status(500).body("Error al cerrar sesión");
+        }
     }
 
     @PostMapping("/authme")

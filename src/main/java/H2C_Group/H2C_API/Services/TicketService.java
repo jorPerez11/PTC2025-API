@@ -41,6 +41,13 @@ public class TicketService {
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+  
+  @Autowired
+    private TicketStatusRepository ticketStatusRepository;
+
+
+    @Autowired
+    private DeclinedTicketRepository declinedTicketRepository;
 
     @Autowired
     private TicketStatusRepository ticketStatusRepository;
@@ -130,9 +137,11 @@ public class TicketService {
 
         ticketEntity.setTicketStatusId(TicketStatus.EN_ESPERA.getId());
 
-        ticketEntity.setAssignedTechUser(null);
-        ticketEntity.setCreationDate(ticketDTO.getCreationDate());
-        ticketEntity.setCloseDate(null);
+
+            ticketEntity.setAssignedTechUser(null);
+            ticketEntity.setCreationDate(ticketDTO.getCreationDate());
+            ticketEntity.setCloseDate(null);
+
 
 
         // Almacenamiento de ticket creado en la DB
