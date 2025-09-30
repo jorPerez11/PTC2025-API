@@ -49,13 +49,6 @@ public class TicketService {
     @Autowired
     private DeclinedTicketRepository declinedTicketRepository;
 
-    @Autowired
-    private TicketStatusRepository ticketStatusRepository;
-
-
-    @Autowired
-    private DeclinedTicketRepository declinedTicketRepository;
-
 
     public Page<TicketDTO> getAllTickets(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -512,4 +505,9 @@ public class TicketService {
                 .map(this::convertToTicketDTO)
                 .collect(Collectors.toList());
     }
+
+    public Long countByUserId(Long userId) {
+        return ticketRepository.countTicketsByUserId(userId);
+    }
+
 }
