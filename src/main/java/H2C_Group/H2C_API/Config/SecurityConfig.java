@@ -143,6 +143,7 @@ public class SecurityConfig{
                 // Orígenes sin puerto (si accedes a la página directamente por localhost)
                 "http://localhost",
                 "https://localhost",
+                "https://*.herokuapp.com",
                 "http://127.0.0.1",
 
                 // Tu IP local con puerto de desarrollo (192.168.0.183)
