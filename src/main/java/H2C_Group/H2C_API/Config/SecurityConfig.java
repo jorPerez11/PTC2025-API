@@ -85,7 +85,23 @@ public class SecurityConfig{
                                 // ✅ CORREGIDO: Endpoints solo para administradores
                                 .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMINISTRADOR")
 
-                                .anyRequest().authenticated()
+                                //Endpoints para acceder al listado de tecnicos
+                                .requestMatchers(HttpMethod.GET, "/api/GetTech").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+                                //Enpoint para que los tecnicos puedan obtener los tickets en espera
+                                .requestMatchers(HttpMethod.GET, "/api/tech/GetTicketsEnEspera").hasAuthority("ROLE_TECNICO")
+
+                                //Enpoint para poder obtener los tickets disponibles
+                                .requestMatchers(HttpMethod.GET, "/api/tech/available-tickets").hasAuthority("ROLE_TECNICO")
+
+                                //Endpoint para declinar un ticket
+                                .requestMatchers(HttpMethod.POST, "/api/tech/decline-ticket/**").hasAuthority("ROLE_TECNICO")
+
+
+
+
+
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
