@@ -66,10 +66,10 @@ public class SolutionService {
 
         //Notificación para el técnico
         String notificationMessage = "Tu solución '" + savedSolutionEntity.getSolutionTitle() + "' ha sido agregada a la Base de Conocimientos exitosamente.";
-        String userId = String.valueOf(existingUser.getUserId());
+        String username = existingUser.getUsername();
 
         // El mensaje se envía solo al técnico que realizó la acción
-        messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
+        messagingTemplate.convertAndSendToUser(username, "/queue/notifications", notificationMessage);
 
         return convertToSolutionDTO(savedSolutionEntity);
     }
@@ -121,10 +121,10 @@ public class SolutionService {
 
         //Notificación para el técnico
         String notificationMessage = "La solución '" + savedSolutionEntity.getSolutionTitle() + "' ha sido actualizada exitosamente.";
-        String userId = String.valueOf(existingSolution.getUser().getUserId());
+        String username = existingSolution.getUser().getUsername();
 
         // Notificar al usuario que modificó (que ya está asignado a existingSolution.getUser())
-        messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
+        messagingTemplate.convertAndSendToUser(username, "/queue/notifications", notificationMessage);
 
 
         return convertToSolutionDTO(savedSolutionEntity);

@@ -52,6 +52,7 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
 
                         if (jwtUtil.validateToken(token)) {
                             String username = jwtUtil.getUsernameFromToken(token);
+                            System.out.println("🧠 Username extraído del JWT: " + username);
                             attributes.put("username", username);
                             attributes.put("jwt", token);
                             log.info("✅ Token JWT válido. Usuario: {}", username);
