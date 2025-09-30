@@ -46,3 +46,4 @@ public interface TicketRepository extends JpaRepository<TicketEntity,Long> {
             countQuery = "SELECT count(t) FROM TicketEntity t")
     Page<TicketEntity> findAllWithUsers(Pageable pageable);
 }
+

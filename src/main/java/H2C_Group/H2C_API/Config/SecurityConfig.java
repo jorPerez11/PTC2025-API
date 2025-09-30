@@ -56,11 +56,11 @@ public class SecurityConfig{
                         .requestMatchers("api/GetSolutionsWeb/**").permitAll() //ENDPOINT PARA APP WEB
                         .requestMatchers("/api/GetUserByUsername/{username}").authenticated()
 
-                                // Endpoints autenticados
-                                .requestMatchers("/api/users/change-password").authenticated()
+                        // Endpoints autenticados
+                        .requestMatchers("/api/users/change-password").authenticated()
 
-                                // ✅ CORREGIDO: Endpoints para clientes
-                                .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
+                        // ✅ CORREGIDO: Endpoints para clientes
+                        .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
 
                                 //Logout
                                 .requestMatchers("/api/users/logoutWeb").authenticated()
@@ -82,8 +82,24 @@ public class SecurityConfig{
                                 // ENDPOINTS PARA ANALITICA
                                 .requestMatchers("/api/users/counts-by-month").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
-                                // ✅ CORREGIDO: Endpoints solo para administradores
-                                .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMINISTRADOR")
+
+                        // ✅ CORREGIDO: Endpoints para técnicos Y administradores
+                        .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        // ENDPOINTS PARA TICKETS
+                        .requestMatchers("/api/admin/GetTicketCounts").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        .requestMatchers("/api/admin/GetTickets").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        // ENDPOINTS PARA SOLUCIONES
+                        .requestMatchers("/api/PostSolution").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        .requestMatchers("/api/UpdateSolution/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        .requestMatchers("/api/DeleteSolution/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        // ENDPOINTS PARA ACTIVIDADES
+                        .requestMatchers("/api/GetActivities").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        .requestMatchers("/api/PostActivity").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        .requestMatchers("/api/UpdateActivity/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        .requestMatchers("/api/DeleteActivity/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        // ENDPOINTS PARA ANALITICA
+                        .requestMatchers("/api/users/counts-by-month").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
 
                                 //Endpoints para acceder al listado de tecnicos
                                 .requestMatchers(HttpMethod.GET, "/api/GetTech").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_ADMINISTRADOR")
@@ -96,6 +112,7 @@ public class SecurityConfig{
 
                                 //Endpoint para declinar un ticket
                                 .requestMatchers(HttpMethod.POST, "/api/tech/decline-ticket/**").hasAuthority("ROLE_TECNICO")
+
 
 
 

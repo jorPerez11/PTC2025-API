@@ -49,6 +49,13 @@ public class TicketService {
     @Autowired
     private DeclinedTicketRepository declinedTicketRepository;
 
+    @Autowired
+    private TicketStatusRepository ticketStatusRepository;
+
+
+    @Autowired
+    private DeclinedTicketRepository declinedTicketRepository;
+
 
     public Page<TicketDTO> getAllTickets(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -130,9 +137,11 @@ public class TicketService {
 
         ticketEntity.setTicketStatusId(TicketStatus.EN_ESPERA.getId());
 
+
             ticketEntity.setAssignedTechUser(null);
             ticketEntity.setCreationDate(ticketDTO.getCreationDate());
             ticketEntity.setCloseDate(null);
+
 
 
         // Almacenamiento de ticket creado en la DB

@@ -145,8 +145,8 @@ public class UserService implements UserDetailsService {
 
         //Notificación para cliente y técnico
         String notificationMessage = "Tu contraseña fue cambiada con éxito";
-        String userId = String.valueOf(userEntity.getUserId());
-        messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
+        String user = userEntity.getUsername();
+        messagingTemplate.convertAndSendToUser(user, "/queue/notifications", notificationMessage);
 
         return convertToUserDTO(userEntity);
     }
@@ -245,8 +245,8 @@ public class UserService implements UserDetailsService {
 
         //Notificación para el cliente
         String notificationMessage = "Tu cuenta ha sido creada exitosamente. Tu nombre de usuario es " + savedUser.getUsername() + ".";
-        String userId = String.valueOf(savedUser.getUserId());
-        messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
+        String username = savedUser.getUsername();
+        messagingTemplate.convertAndSendToUser(username, "/queue/notifications", notificationMessage);
 
         //Envia la contraseña temporal por correo electronico
         String subject = "Credenciales de Acceso a Help Desk H2C";
@@ -336,8 +336,8 @@ public class UserService implements UserDetailsService {
 
         //Notificación para el técnico
         String notificationMessage = "Tu cuenta ha sido creada exitosamente. Tu nombre de usuario es " + savedUser.getUsername() + ".";
-        String userId = String.valueOf(savedUser.getUserId());
-        messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
+        String username = savedUser.getUsername();
+        messagingTemplate.convertAndSendToUser(username, "/queue/notifications", notificationMessage);
 
         //Envia la contraseña temporal por correo electronico
         String subject = "Credenciales de Acceso a Help Desk H2C";
@@ -569,8 +569,8 @@ public class UserService implements UserDetailsService {
             //Notificación
             if (!existingUser.getUsername().equals(dto.getUsername())) {
                 String notificationMessage = "Tu nombre de usuario ha sido cambiado de '" + existingUser.getUsername() + "' a '" + dto.getUsername() + "'.";
-                String userId = String.valueOf(existingUser.getUserId());
-                messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
+                String username = existingUser.getUsername();
+                messagingTemplate.convertAndSendToUser(username, "/queue/notifications", notificationMessage);
             }
             existingUser.setUsername(dto.getUsername());
         }
@@ -841,8 +841,8 @@ public class UserService implements UserDetailsService {
 
         //Notificación para el técnico
         String notificationMessage = "Tu cuenta de técnico ha sido activada y se te ha asignado la categoría " + updatedUser.getCategory().getCategoryName() + ".";
-        String techId = String.valueOf(updatedUser.getUserId());
-        messagingTemplate.convertAndSendToUser(techId, "/queue/notifications", notificationMessage);
+        String username = updatedUser.getUsername();
+        messagingTemplate.convertAndSendToUser(username, "/queue/notifications", notificationMessage);
 
         return convertToUserDTO(updatedUser);
     }
