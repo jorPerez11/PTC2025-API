@@ -144,6 +144,7 @@ public class SecurityConfig{
                 "http://localhost",
                 "https://localhost",
                 "https://*.herokuapp.com",
+                "https://*.vercel.app",
                 "http://127.0.0.1",
 
                 // Tu IP local con puerto de desarrollo (192.168.0.183)
