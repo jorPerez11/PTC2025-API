@@ -54,13 +54,16 @@ public class SecurityConfig{
                         .requestMatchers("/api/searchSolution").permitAll()
                         .requestMatchers("/api/GetSolutions").permitAll()
                         .requestMatchers("api/GetSolutionsWeb/**").permitAll() //ENDPOINT PARA APP WEB
+                        .requestMatchers("/api/GetUserByUsername/{username}").authenticated()
 
-                                // Endpoints autenticados
-                                .requestMatchers("/api/users/change-password").authenticated()
+                        // Endpoints autenticados
+                        .requestMatchers("/api/users/change-password").authenticated()
 
-                                // ✅ CORREGIDO: Endpoints para clientes
-                                .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
+                        // ✅ CORREGIDO: Endpoints para clientes
+                        .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
 
+                                //Logout
+                                .requestMatchers("/api/users/logoutWeb").authenticated()
 
                                 // ✅ CORREGIDO: Endpoints para técnicos Y administradores
                                 .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
@@ -79,10 +82,25 @@ public class SecurityConfig{
                                 // ENDPOINTS PARA ANALITICA
                                 .requestMatchers("/api/users/counts-by-month").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
-                                // ✅ CORREGIDO: Endpoints solo para administradores
-                                .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMINISTRADOR")
 
-                                .anyRequest().authenticated()
+                                //Endpoints para acceder al listado de tecnicos
+                                .requestMatchers(HttpMethod.GET, "/api/GetTech").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+                                //Enpoint para que los tecnicos puedan obtener los tickets en espera
+                                .requestMatchers(HttpMethod.GET, "/api/tech/GetTicketsEnEspera").hasAuthority("ROLE_TECNICO")
+
+                                //Enpoint para poder obtener los tickets disponibles
+                                .requestMatchers(HttpMethod.GET, "/api/tech/available-tickets").hasAuthority("ROLE_TECNICO")
+
+                                //Endpoint para declinar un ticket
+                                .requestMatchers(HttpMethod.POST, "/api/tech/decline-ticket/**").hasAuthority("ROLE_TECNICO")
+
+
+
+
+
+
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
@@ -120,9 +138,12 @@ public class SecurityConfig{
                 "http://127.0.0.1:5500",
                 "http://127.0.0.1:5501",
                 "http://localhost:8080",
+                "http://127.0.0.2:5501",
 
                 // Orígenes sin puerto (si accedes a la página directamente por localhost)
                 "http://localhost",
+                "https://localhost",
+                "https://*.herokuapp.com",
                 "http://127.0.0.1",
 
                 // Tu IP local con puerto de desarrollo (192.168.0.183)

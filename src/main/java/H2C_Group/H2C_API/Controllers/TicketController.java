@@ -92,6 +92,23 @@ public class TicketController {
         }
     }
 
+    @GetMapping("/tech/GetTicketsEnEspera")
+    public ResponseEntity<?> getTicketsEnEspera(){
+        try {
+            List<TicketDTO> tickets = acceso.getTicketsEnespera();
+            if (tickets.isEmpty()){
+                return ResponseEntity.noContent().build();
+            }
+            return new ResponseEntity<>(tickets, HttpStatus.OK);
+        }catch (Exception e){
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "error", "Error al obtener la lista de tickets en espera"
+                    ));
+        }
+    }
+
+
     @PatchMapping("/admin/UpdateTicketStatus/{ticketId}")
     public ResponseEntity<?> updateTicketStatus(@PathVariable Long ticketId, @RequestBody TicketStatusDTO ticketDTO) {
         try {
@@ -197,4 +214,34 @@ public class TicketController {
         }
     }
 
+    @GetMapping("/tech/available-tickets")
+    public ResponseEntity<?> getAvailableTicketsForTechnician(@RequestParam("technicianId") Long technicianId) {
+        try {
+            List<TicketDTO> tickets = acceso.getAvailableTicketsForTechnician(technicianId);
+            return new ResponseEntity<>(tickets, HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error al obtener los tickets disponibles."));
+        }
+    }
+
+    @PostMapping("/tech/decline-ticket/{ticketId}/{technicianId}")
+    public ResponseEntity<?> declineTicket(@PathVariable Long ticketId, @PathVariable Long technicianId) {
+        try {
+            acceso.declineTicket(ticketId, technicianId);
+            return ResponseEntity.ok(Map.of("message", "Ticket declinado exitosamente."));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error al declinar el ticket."));
+        }
+    }
+
+    @GetMapping("/client/count/by-user/{userId}")
+    public ResponseEntity<Long> getTicketCountByUser(@PathVariable Long userId) {
+        Long count = acceso.countByUserId(userId);
+        return ResponseEntity.ok(count);
+    }
+
+
 }
+

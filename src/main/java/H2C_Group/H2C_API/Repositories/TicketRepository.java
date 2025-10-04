@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -34,10 +35,20 @@ public interface TicketRepository extends JpaRepository<TicketEntity,Long> {
     @Query("SELECT t FROM TicketEntity t WHERE t.id = ?1")
     TicketEntity findTicketById(Integer id);
 
+    List<TicketEntity> findByTicketStatusIdAndAssignedTechUserIsNull(Long enEsperaId);
+
+    //Busca todos los tickets que tienen un id de estado de ticket en espera
+    List<TicketEntity> findByTicketStatusId(Long enEsperaId);
+
     // 🚨 Nueva consulta para evitar el problema N+1 y LazyInitializationException
     @Query(value = "SELECT t FROM TicketEntity t " +
             "JOIN FETCH t.userCreator u " + // Creador del ticket
             "LEFT JOIN FETCH t.assignedTechUser a ", // Técnico asignado
             countQuery = "SELECT count(t) FROM TicketEntity t")
     Page<TicketEntity> findAllWithUsers(Pageable pageable);
+
+    @Query("SELECT COUNT(t) FROM TicketEntity t WHERE t.userCreator.id = :userId")
+    Long countTicketsByUserId(@Param("userId") Long userId);
+
 }
+
