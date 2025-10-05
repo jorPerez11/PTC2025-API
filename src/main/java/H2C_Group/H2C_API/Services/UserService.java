@@ -234,7 +234,7 @@ public class UserService implements UserDetailsService {
         userEntity.setPhone(dto.getPhone());
         String hashedPassword = passwordEncoder.encode(randomPassword); //IMPORTANTE: REQUERIDO HASHEAR ANTES DE INSERTAR A LA DB
         userEntity.setPasswordHash(hashedPassword);
-        userEntity.setIsActive(dto.getIsActive());
+//        userEntity.setIsActive(dto.getIsActive());
         userEntity.setProfilePictureUrl(dto.getProfilePictureUrl());
 
         //Marca la contraseña como expirada para forzar el cambio en el primer inicio de sesion
@@ -325,7 +325,7 @@ public class UserService implements UserDetailsService {
         userEntity.setPhone(dto.getPhone());
         String hashedPassword = passwordEncoder.encode(randomPassword); //IMPORTANTE: REQUERIDO HASHEAR ANTES DE INSERTAR A LA DB
         userEntity.setPasswordHash(hashedPassword);
-        userEntity.setIsActive(dto.getIsActive());
+//        userEntity.setIsActive(dto.getIsActive());
         userEntity.setProfilePictureUrl(dto.getProfilePictureUrl());
 
         //Marca la contraseña como expirada para forzar el cambio en el primer inicio de sesion
@@ -662,7 +662,7 @@ public class UserService implements UserDetailsService {
         dto.setUsername(usuario.getUsername());
         dto.setEmail(usuario.getEmail());
         dto.setPhone(usuario.getPhone());
-        dto.setIsActive(usuario.getIsActive());
+//        dto.setIsActive(usuario.getIsActive());
         dto.setProfilePictureUrl(usuario.getProfilePictureUrl());
         dto.setRegistrationDate(usuario.getRegistrationDate());
         return dto;
