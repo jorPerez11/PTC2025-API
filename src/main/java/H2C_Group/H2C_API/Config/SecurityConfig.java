@@ -81,9 +81,14 @@ public class SecurityConfig{
                                 .requestMatchers("/api/DeleteActivity/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
                                 // ENDPOINTS PARA ANALITICA
                                 .requestMatchers("/api/users/counts-by-month").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                //ENDPOINTS PARA TECNICO VISTA ADMIN
+                                .requestMatchers("/api/UpdateUser/**").hasAnyAuthority( "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/DeleteUser/**").hasAnyAuthority( "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/PostUser").hasAnyAuthority( "ROLE_ADMINISTRADOR")
 
 
-                                //Endpoints para acceder al listado de tecnicos
+
+                        //Endpoints para acceder al listado de tecnicos
                                 .requestMatchers(HttpMethod.GET, "/api/GetTech").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
                                 //Enpoint para que los tecnicos puedan obtener los tickets en espera
