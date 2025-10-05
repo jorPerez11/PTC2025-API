@@ -82,9 +82,9 @@ public class SecurityConfig{
                                 // ENDPOINTS PARA ANALITICA
                                 .requestMatchers("/api/users/counts-by-month").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
                                 //ENDPOINTS PARA TECNICO VISTA ADMIN
-                                .requestMatchers("/api/UpdateUser/**").hasAnyAuthority( "ROLE_ADMINISTRADOR")
-                                .requestMatchers("/api/DeleteUser/**").hasAnyAuthority( "ROLE_ADMINISTRADOR")
-                                .requestMatchers("/api/PostUser").hasAnyAuthority( "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/UpdateUser/**").hasAuthority( "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/DeleteUser/**").hasAuthority( "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/PostUser").hasAuthority( "ROLE_ADMINISTRADOR")
 
 
 
