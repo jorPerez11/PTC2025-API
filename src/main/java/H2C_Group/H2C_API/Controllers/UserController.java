@@ -306,7 +306,7 @@ public class UserController {
         }
     }
 
-    @DeleteMapping("/users/{id}")
+    @DeleteMapping("/DeleteUser/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         try {
             acceso.deleteUser(id);
