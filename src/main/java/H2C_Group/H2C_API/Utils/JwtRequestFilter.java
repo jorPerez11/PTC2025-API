@@ -91,6 +91,10 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                    log.debug("Usuario autenticado:{} con los roles:{} " , userName, authorities);
                 }
 
+            if (SecurityContextHolder.getContext().getAuthentication() != null) {
+                log.error("DEBUG ROLES: " + SecurityContextHolder.getContext().getAuthentication().getAuthorities());
+            }
+
             chain.doFilter(request, response);
 
         }catch (ExpiredJwtException e) {
