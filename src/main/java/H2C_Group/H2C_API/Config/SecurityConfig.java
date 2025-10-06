@@ -145,6 +145,7 @@ public class SecurityConfig{
                 "http://localhost:8080",
                 "http://127.0.0.2:5501",
 
+
                 // Orígenes sin puerto (si accedes a la página directamente por localhost)
                 "http://localhost",
                 "https://localhost",
@@ -160,6 +161,7 @@ public class SecurityConfig{
                 // Agrega aquí las IPs de tus compañeros si son estáticas y necesarias
                 // "http://IPDANIELA:5501",
                 // "http://IPHERBERT:5501"
+
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
