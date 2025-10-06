@@ -81,27 +81,14 @@ public class SecurityConfig{
                                 .requestMatchers("/api/DeleteActivity/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
                                 // ENDPOINTS PARA ANALITICA
                                 .requestMatchers("/api/users/counts-by-month").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                //ENDPOINTS PARA TECNICO VISTA ADMIN
+                                .requestMatchers("/api/UpdateUser/**").hasAuthority("ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/DeleteUser/**").hasAuthority("ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/PostUser").hasAuthority("ROLE_ADMINISTRADOR")
 
 
-                        // ✅ CORREGIDO: Endpoints para técnicos Y administradores
-                        .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
-                        // ENDPOINTS PARA TICKETS
-                        .requestMatchers("/api/admin/GetTicketCounts").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
-                        .requestMatchers("/api/admin/GetTickets").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
-                        // ENDPOINTS PARA SOLUCIONES
-                        .requestMatchers("/api/PostSolution").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
-                        .requestMatchers("/api/UpdateSolution/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
-                        .requestMatchers("/api/DeleteSolution/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
-                        // ENDPOINTS PARA ACTIVIDADES
-                        .requestMatchers("/api/GetActivities").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
-                        .requestMatchers("/api/PostActivity").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
-                        .requestMatchers("/api/UpdateActivity/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
-                        .requestMatchers("/api/DeleteActivity/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
-                        // ENDPOINTS PARA ANALITICA
-                        .requestMatchers("/api/users/counts-by-month").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
-
-                                //Endpoints para acceder al listado de tecnicos
+                        //Endpoints para acceder al listado de tecnicos
                                 .requestMatchers(HttpMethod.GET, "/api/GetTech").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
                                 //Enpoint para que los tecnicos puedan obtener los tickets en espera
@@ -156,9 +143,14 @@ public class SecurityConfig{
                 "http://127.0.0.1:5500",
                 "http://127.0.0.1:5501",
                 "http://localhost:8080",
+                "http://127.0.0.2:5501",
 
                 // Orígenes sin puerto (si accedes a la página directamente por localhost)
                 "http://localhost",
+                "https://localhost",
+                "https://*.herokuapp.com",
+                "https://*.vercel.app",
+                "https://ptc-2025-app-web.vercel.app",
                 "http://127.0.0.1",
 
                 // Tu IP local con puerto de desarrollo (192.168.0.183)

@@ -107,33 +107,23 @@ public class authController {
 
         String jwt = jwtUtil.generateToken(userDetails, expirationTime);
 
-        Cookie cookie = new Cookie("authToken", jwt);
 
-        cookie.setPath("/");
-        cookie.setHttpOnly(true);
-        cookie.setMaxAge((int) (expirationTime / 1000));
-        cookie.setAttribute("SameSite", "Lax");
-        cookie.setSecure(false);
-        httpServletResponse.addCookie(cookie);
-        System.out.println("Cookie 'authToken' creada y agregada con SameSite=Lax.");
+        //4. Construye la cadena de la cookie y la añade a la respuesta
+        String coockieValue = String.format(
+                "authToken=%s; " +
+                        "Path=/; " +
+                        "HttpOnly; " +
+                        "Secure=false; " +
+                        "SameSite=None; " +
+                        "MaxAge=%d; " ,
+                jwt,
+                expirationTime / 1000
+        );
 
-
-//        //4. Construye la cadena de la cookie y la añade a la respuesta
-//        String coockieValue = String.format(
-//                "authToken=%s; " +
-//                        "Path=/; " +
-//                        "HttpOnly; " +
-//                        "Secure=false; " +
-//                        "SameSite=None; " +
-//                        "MaxAge=%d; " ,
-//                jwt,
-//                expirationTime / 1000
-//        );
-//
-//        System.out.println("Cookie creada"+ coockieValue);
-//        httpServletResponse.addHeader("Set-Cookie", coockieValue);
-//        httpServletResponse.addHeader("Access-Control-Expose-Headers", "Set-Cookie");
-//        System.out.println("Headers añadidos a la respuesta");
+        System.out.println("Cookie creada"+ coockieValue);
+        httpServletResponse.addHeader("Set-Cookie", coockieValue);
+        httpServletResponse.addHeader("Access-Control-Expose-Headers", "Set-Cookie");
+        System.out.println("Headers añadidos a la respuesta");
     }
 
     @GetMapping("/check-company-existence")
