@@ -158,9 +158,6 @@ public class SecurityConfig{
                 "http://192.168.0.183:5500",
                 "http://192.168.0.183:5501"
 
-                // Agrega aquí las IPs de tus compañeros si son estáticas y necesarias
-                // "http://IPDANIELA:5501",
-                // "http://IPHERBERT:5501"
 
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
