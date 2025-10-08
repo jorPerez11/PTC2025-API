@@ -55,6 +55,7 @@ public class SecurityConfig{
                         .requestMatchers("/api/GetSolutions").permitAll()
                         .requestMatchers("api/GetSolutionsWeb/**").permitAll() //ENDPOINT PARA APP WEB
                         .requestMatchers("/api/GetUserByUsername/{username}").authenticated()
+                        .requestMatchers("/api/image/upload-to-folder").authenticated()
 
                         // Endpoints autenticados
                         .requestMatchers("/api/users/change-password").authenticated()
