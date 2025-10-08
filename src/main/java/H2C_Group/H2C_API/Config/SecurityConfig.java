@@ -146,6 +146,7 @@ public class SecurityConfig{
                 "http://localhost:8080",
                 "http://127.0.0.2:5501",
 
+
                 // Orígenes sin puerto (si accedes a la página directamente por localhost)
                 "http://localhost",
                 "https://localhost",
@@ -157,6 +158,7 @@ public class SecurityConfig{
                 // Tu IP local con puerto de desarrollo (192.168.0.183)
                 "http://192.168.0.183:5500",
                 "http://192.168.0.183:5501"
+
 
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
