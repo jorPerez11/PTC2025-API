@@ -9,6 +9,7 @@ import H2C_Group.H2C_API.Exceptions.ExceptionSolutionBadRequest;
 import H2C_Group.H2C_API.Exceptions.ExceptionSolutionNotFound;
 import H2C_Group.H2C_API.Models.DTO.CategoryDTO;
 import H2C_Group.H2C_API.Models.DTO.SolutionDTO;
+import H2C_Group.H2C_API.Repositories.ActivityRepository;
 import H2C_Group.H2C_API.Repositories.CategoryRepository;
 import H2C_Group.H2C_API.Repositories.SolutionRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
@@ -66,10 +67,10 @@ public class SolutionService {
 
         //Notificación para el técnico
         String notificationMessage = "Tu solución '" + savedSolutionEntity.getSolutionTitle() + "' ha sido agregada a la Base de Conocimientos exitosamente.";
-        String userId = String.valueOf(existingUser.getUserId());
+        String username = existingUser.getUsername();
 
         // El mensaje se envía solo al técnico que realizó la acción
-        messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
+        messagingTemplate.convertAndSendToUser(username, "/queue/notifications", notificationMessage);
 
         return convertToSolutionDTO(savedSolutionEntity);
     }
@@ -121,10 +122,10 @@ public class SolutionService {
 
         //Notificación para el técnico
         String notificationMessage = "La solución '" + savedSolutionEntity.getSolutionTitle() + "' ha sido actualizada exitosamente.";
-        String userId = String.valueOf(existingSolution.getUser().getUserId());
+        String username = existingSolution.getUser().getUsername();
 
         // Notificar al usuario que modificó (que ya está asignado a existingSolution.getUser())
-        messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
+        messagingTemplate.convertAndSendToUser(username, "/queue/notifications", notificationMessage);
 
 
         return convertToSolutionDTO(savedSolutionEntity);
@@ -191,5 +192,10 @@ public class SolutionService {
 
         // Mapea y retorna los DTOs
         return solutions.map(this::convertToSolutionDTO);
+    }
+
+    public Page<SolutionDTO> findSolutionsBySearchAndCategory(String search, Long category, Pageable pageable) {
+        Page<SolutionEntity> activitiesEntity = solutionRepository.findSolutionsBySearchAndCategory(search, category, pageable);
+        return activitiesEntity.map(this::convertToSolutionDTO);
     }
 }
