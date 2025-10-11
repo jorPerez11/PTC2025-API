@@ -130,6 +130,7 @@ public class authController {
     public ResponseEntity<Boolean> checkCompanyExistence() {
         // Verifica si existe al menos un usuario en la base de datos
         boolean hasUsers = userRepository.count() > 0;
+        System.out.println("Respuesta de checkCompany:" + hasUsers);
         return ResponseEntity.ok(hasUsers);
     }
 
