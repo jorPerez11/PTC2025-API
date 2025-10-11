@@ -130,9 +130,11 @@ public class TicketService {
 
         ticketEntity.setTicketStatusId(TicketStatus.EN_ESPERA.getId());
 
+
             ticketEntity.setAssignedTechUser(null);
             ticketEntity.setCreationDate(ticketDTO.getCreationDate());
             ticketEntity.setCloseDate(null);
+
 
 
         // Almacenamiento de ticket creado en la DB
@@ -140,9 +142,9 @@ public class TicketService {
 
         // Notificación para el cliente
         String notificationMessage = "Tu ticket #" + savedTicket.getTicketId() + " - " + savedTicket.getTitle() + " ha sido creado exitosamente.";
-        String userId = String.valueOf(savedTicket.getUserCreator().getUserId());
-
-        messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
+        String username = savedTicket.getUserCreator().getUsername();
+        System.out.println("📤 Enviando notificación a: " + username); // Log para confirmar
+        messagingTemplate.convertAndSendToUser(username, "/queue/notifications", notificationMessage);
 
         // Conversión del ticket almacenado de vuelta a DTO para la respuesta del Frontend
         return  convertToTicketDTO(savedTicket);
@@ -247,8 +249,9 @@ public class TicketService {
                 if (existingTicket.getAssignedTechUser() == null || !existingTicket.getAssignedTechUser().getUserId().equals(userTech.getUserId())) {
                     //Solo se envía la notificación si el técnico es nuevo
                     String notificationMessage = "Se te ha asignado el ticket #" + existingTicket.getTicketId() + " - " + existingTicket.getTitle();
-                    String techId = String.valueOf(userTech.getUserId());
-                    messagingTemplate.convertAndSendToUser(techId, "/queue/notifications", notificationMessage);
+                    String techUsername = userTech.getUsername();
+                    System.out.println("📤 Notificación enviada al técnico: " + techUsername);
+                    messagingTemplate.convertAndSendToUser(techUsername, "/queue/notifications", notificationMessage);
                 }
                 existingTicket.setAssignedTechUser(userTech);
             } else {
@@ -277,6 +280,12 @@ public class TicketService {
             // Validacion: Si el estado cambia a "Completado", establecer closeDate automáticamente
             if (statusEnum.equals(TicketStatus.COMPLETADO)) {
                 existingTicket.setCloseDate(LocalDateTime.now());
+
+                // 🔔 Notificación para el cliente
+                String clientUsername = existingTicket.getUserCreator().getUsername();
+                String clientMessage = "Tu ticket #" + existingTicket.getTicketId() + " ha sido marcado como completado.";
+                System.out.println("📤 Notificación enviada al cliente: " + clientUsername);
+                messagingTemplate.convertAndSendToUser(clientUsername, "/queue/notifications", clientMessage);
             } else if (existingTicket.getCloseDate() != null) {
                 // Si el estado cambia de "Cerrado" a otro, eliminar closeDate
                 existingTicket.setCloseDate(null);
@@ -487,8 +496,15 @@ public class TicketService {
 
         //Notificación para el técnico
         String notificationMessage = "Has aceptado el ticket #" + savedTicket.getTicketId() + " - " + savedTicket.getTitle();
-        String techId = String.valueOf(technicianId);
-        messagingTemplate.convertAndSendToUser(techId, "/queue/notifications", notificationMessage);
+        String techUsername = ticket.getAssignedTechUser().getUsername();
+        System.out.println("📤 Notificación enviada al técnico: " + techUsername);
+        messagingTemplate.convertAndSendToUser(techUsername, "/queue/notifications", notificationMessage);
+
+        String clientUsername = ticket.getUserCreator().getUsername();
+        String clientMessage = "Tu ticket #" + ticket.getTicketId() + " ha sido aceptado por un técnico y está en progreso.";
+        System.out.println("📤 Notificación enviada al cliente: " + clientUsername);
+        messagingTemplate.convertAndSendToUser(clientUsername, "/queue/notifications", clientMessage);
+
 
         return convertToTicketDTO(savedTicket);
     }
@@ -503,4 +519,9 @@ public class TicketService {
                 .map(this::convertToTicketDTO)
                 .collect(Collectors.toList());
     }
+
+    public Long countByUserId(Long userId) {
+        return ticketRepository.countTicketsByUserId(userId);
+    }
+
 }

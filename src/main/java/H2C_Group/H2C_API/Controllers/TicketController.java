@@ -236,4 +236,12 @@ public class TicketController {
         }
     }
 
+    @GetMapping("/client/count/by-user/{userId}")
+    public ResponseEntity<Long> getTicketCountByUser(@PathVariable Long userId) {
+        Long count = acceso.countByUserId(userId);
+        return ResponseEntity.ok(count);
+    }
+
+
 }
+
