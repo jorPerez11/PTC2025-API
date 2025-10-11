@@ -46,6 +46,7 @@ public class SecurityConfig{
                         .requestMatchers(HttpMethod.PATCH, "/api/companies/**").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/users/**").permitAll()
                         .requestMatchers("/api/firstuse/**").permitAll()
+                        .requestMatchers("/api/check-company-existence").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/users/login", "/api/users/register", "api/users/registerTech").permitAll()
                         .requestMatchers("/api/client/PostTicket").permitAll()

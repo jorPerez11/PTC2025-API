@@ -45,6 +45,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             "/api/client/PostTicket", // Endpoint específico para permitir
             "/api/client/UpdateTicket/", // Asumiendo que necesita el /
             "/api/client/DeleteTicket",
+            "/api/check-company-existence",
             "/api/searchSolution",
             "/api/GetSolutions",
             "/api/GetSolutionsWeb/"
@@ -55,6 +56,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             "/api/users/register",
             "/api/users/registerTech",
             "/api/PostCompany",
+            "/api/check-company-existence",
             "/api/companies"
     );
 
