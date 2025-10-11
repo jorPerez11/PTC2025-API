@@ -806,7 +806,11 @@ public class UserService implements UserDetailsService {
         return convertToUserDTO(updatedUser);
     }
 
-    public UserDTO assignCategoryAndActivateTechnician(Long userId, Long categoryId) {
+    /**
+     * Asigna una categoría a un técnico pendiente y le establece una contraseña temporal.
+     * NO realiza la activación final (is_active = true) ni el envío de correos.
+     */
+    public UserDTO assignCategoryToTechnician(Long userId, Long categoryId) {
         UserEntity userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> new ExceptionUserNotFound("El usuario con ID " + userId + " no existe."));
 
@@ -816,6 +820,7 @@ public class UserService implements UserDetailsService {
         }
 
         if (userEntity.getCategory() != null) {
+            // Esta validación ya nos ayudó a confirmar que el guardado inicial funcionó
             throw new IllegalArgumentException("El técnico con ID " + userId + " ya tiene una categoría asignada.");
         }
 
@@ -823,27 +828,17 @@ public class UserService implements UserDetailsService {
         CategoryEntity categoryEntity = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ExceptionCategoryNotFound("La categoría con ID " + categoryId + " no existe."));
 
-        // 3. Asignar la categoría y activar al técnico
+        // 3. Asignar la categoría (ACCIÓN PRINCIPAL)
         userEntity.setCategory(categoryEntity);
 
-        // 4. Generar y guardar la contraseña
+        // 4. Generar y guardar la contraseña (NECESARIO para que el técnico pueda activarse/loguearse después)
         String randomPassword = generatedRandomPassword();
         String hashedPassword = passwordEncoder.encode(randomPassword);
         userEntity.setPasswordHash(hashedPassword);
         userEntity.setPasswordExpired(false); // La contraseña temporal ya es la inicial
 
+        // 5. Guardar la entidad actualizada
         UserEntity updatedUser = userRepository.save(userEntity);
-
-        // 5. Enviar correo electrónico
-        String subject = "Credenciales de Acceso a Help Desk H2C";
-        String body = "Hola " + updatedUser.getFullName() + " tu cuenta de técnico ha sido activada. Tu nombre de usuario es: " + updatedUser.getUsername() + " , tu contraseña temporal es: " + randomPassword + " Por favor no compartas con nadie esta información, Saludos del equipo de H2C";
-        emailService.sendEmail(updatedUser.getEmail(), subject, body);
-
-        //Notificación para el técnico
-        String notificationMessage = "Tu cuenta de técnico ha sido activada y se te ha asignado la categoría " + updatedUser.getCategory().getCategoryName() + ".";
-        String username = updatedUser.getUsername();
-        messagingTemplate.convertAndSendToUser(username, "/queue/notifications", notificationMessage);
-
         return convertToUserDTO(updatedUser);
     }
 

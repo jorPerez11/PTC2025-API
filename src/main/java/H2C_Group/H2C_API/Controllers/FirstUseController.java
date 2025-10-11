@@ -202,7 +202,7 @@ public class FirstUseController {
             // Long categoryId = Long.valueOf(String.valueOf(payload.get("categoryId")));
 
 
-            UserDTO updatedUser = userService.assignCategoryAndActivateTechnician(id, categoryId);
+            UserDTO updatedUser = userService.assignCategoryToTechnician(id, categoryId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("id", updatedUser.getId());
@@ -210,7 +210,7 @@ public class FirstUseController {
             response.put("Nombre", updatedUser.getName());
             response.put("Correo Electrónico", updatedUser.getEmail());
             response.put("Categoría Asignada", updatedUser.getCategory().getDisplayName());
-            response.put("Mensaje", "Técnico activado y credenciales enviadas por correo electrónico.");
+            response.put("Mensaje", "Categoría asignada y datos guardados exitosamente.");
 
             return new ResponseEntity<>(response, HttpStatus.OK);
 
