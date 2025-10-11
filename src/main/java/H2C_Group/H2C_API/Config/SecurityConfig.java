@@ -55,6 +55,7 @@ public class SecurityConfig{
                         .requestMatchers("/api/GetSolutions").permitAll()
                         .requestMatchers("api/GetSolutionsWeb/**").permitAll() //ENDPOINT PARA APP WEB
                         .requestMatchers("/api/GetUserByUsername/{username}").authenticated()
+                        .requestMatchers("/api/image/upload-to-folder").authenticated()
 
                         // Endpoints autenticados
                         .requestMatchers("/api/users/change-password").authenticated()
@@ -145,6 +146,7 @@ public class SecurityConfig{
                 "http://localhost:8080",
                 "http://127.0.0.2:5501",
 
+
                 // Orígenes sin puerto (si accedes a la página directamente por localhost)
                 "http://localhost",
                 "https://localhost",
@@ -157,9 +159,7 @@ public class SecurityConfig{
                 "http://192.168.0.183:5500",
                 "http://192.168.0.183:5501"
 
-                // Agrega aquí las IPs de tus compañeros si son estáticas y necesarias
-                // "http://IPDANIELA:5501",
-                // "http://IPHERBERT:5501"
+
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
