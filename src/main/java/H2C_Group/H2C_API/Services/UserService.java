@@ -424,7 +424,7 @@ public class UserService implements UserDetailsService {
         // La contraseña generada previamente: randomPassword
 
         // 2. Definir el Asunto
-        String subject = "¡Bienvenido, Técnico! - Credenciales de Acceso a Help Desk H2C";
+        String subject = "¡Bienvenido! - Credenciales de Help Desk H2C";
 
         // 3. Construir el cuerpo HTML con las variables dinámicas (Mismo diseño, texto adaptado)
         String bodyHTML = "<!DOCTYPE html>"
@@ -456,7 +456,7 @@ public class UserService implements UserDetailsService {
                 + "                            <h1 style='color: #9e0918; font-size: 24px; margin-top: 0; margin-bottom: 20px;'>¡Tu cuenta de Técnico está lista!</h1>"
                 + "                            "
                 + "                            <p>Estimado(a) <strong>" + nombre + "</strong>,</p>" // REEMPLAZO 1
-                + "                            <p>Tu cuenta con el rol de **Técnico** en la plataforma Help Desk H2C ha sido creada. Prepárate para empezar a gestionar incidencias. Accede inmediatamente con las siguientes credenciales:</p>"
+                + "                            <p>Tu cuenta con el rol de Técnico en la plataforma Help Desk H2C ha sido creada. Prepárate para empezar a gestionar incidencias. Accede inmediatamente con las siguientes credenciales:</p>"
                 + "                            "
                 + "                            <div style='background-color: #fffaf0; /* Amarillo muy claro */ padding: 20px; border-left: 5px solid #f48c06; border-radius: 5px; margin: 30px 0;'>"
                 + "                                <p style='margin: 5px 0; font-size: 17px;'>"
@@ -469,7 +469,7 @@ public class UserService implements UserDetailsService {
                 + "                                </p>"
                 + "                            </div>"
                 + "                            "
-                + "                            <p><strong>IMPORTANTE:</strong> Por favor, no compartas estas credenciales. Por seguridad, se te solicitará **cambiar tu contraseña** al iniciar sesión por primera vez.</p>"
+                + "                            <p><strong>IMPORTANTE:</strong> Por favor, no compartas estas credenciales. Por seguridad, se te solicitará cambiar tu contraseña al iniciar sesión por primera vez.</p>"
                 + "                            "
                 + "                        </td>"
                 + "                    </tr>"
@@ -1019,7 +1019,7 @@ public class UserService implements UserDetailsService {
         // La contraseña generada previamente: randomPassword
 
         // 2. Definir el Asunto
-        String subject = "¡Acceso de Administrador Creado! - Credenciales Help Desk H2C";
+        String subject = "¡Cuenta Creada! - Credenciales Help Desk H2C";
 
         // 3. Construir el cuerpo HTML con las variables dinámicas (Mismo diseño, texto adaptado)
         String bodyHTML = "<!DOCTYPE html>"
@@ -1051,7 +1051,7 @@ public class UserService implements UserDetailsService {
                 + "                            <h1 style='color: #9e0918; font-size: 24px; margin-top: 0; margin-bottom: 20px;'>¡Tu Cuenta de Administrador está lista!</h1>"
                 + "                            "
                 + "                            <p>Hola <strong>" + nombre + "</strong>,</p>" // REEMPLAZO 1
-                + "                            <p>Tu cuenta de **Administrador** para la plataforma Help Desk H2C ha sido configurada. Ahora tienes el control total para gestionar usuarios, compañías y configuraciones.</p>"
+                + "                            <p>Tu cuenta de Administrador para la plataforma Help Desk H2C ha sido configurada. Ahora tienes el control total.</p>"
                 + "                            <p>Utiliza las siguientes credenciales temporales para iniciar sesión:</p>"
                 + "                            "
                 + "                            <div style='background-color: #fef0f0; /* Rojo muy claro */ padding: 20px; border-left: 5px solid #9e0918; border-radius: 5px; margin: 30px 0;'>"
@@ -1122,7 +1122,7 @@ public class UserService implements UserDetailsService {
             // La contraseña generada previamente: randomPassword
 
             // 2. Definir el Asunto
-            String subject = "¡Cuenta de Técnico Activada! - Credenciales Help Desk H2C";
+            String subject = "¡Cuenta Activada! - Credenciales Help Desk H2C";
 
             // 3. Construir el cuerpo HTML con las variables dinámicas (Mismo diseño de Técnico)
             String bodyHTML = "<!DOCTYPE html>"
@@ -1154,7 +1154,7 @@ public class UserService implements UserDetailsService {
                     + "                            <h1 style='color: #9e0918; font-size: 24px; margin-top: 0; margin-bottom: 20px;'>¡Tu Cuenta de Técnico está lista! </h1>"
                     + "                            "
                     + "                            <p>Estimado(a) <strong>" + nombre + "</strong>,</p>" // REEMPLAZO 1
-                    + "                            <p>Te confirmamos que tu cuenta con el rol de **Técnico** en Help Desk H2C ha sido activada y ya puedes acceder a la plataforma para empezar a gestionar tickets.</p>"
+                    + "                            <p>Te confirmamos que tu cuenta con el rol de Técnico en Help Desk H2C ha sido activada y ya puedes acceder a la plataforma para empezar a gestionar tickets.</p>"
                     + "                            <p>Utiliza las siguientes credenciales para tu primer inicio de sesión:</p>"
                     + "                            "
                     + "                            <div style='background-color: #fffaf0; /* Amarillo muy claro */ padding: 20px; border-left: 5px solid #f48c06; border-radius: 5px; margin: 30px 0;'>"
@@ -1168,7 +1168,7 @@ public class UserService implements UserDetailsService {
                     + "                                </p>"
                     + "                            </div>"
                     + "                            "
-                    + "                            <p><strong>RECUERDA:</strong> Por motivos de seguridad, deberás **cambiar tu contraseña** la primera vez que inicies sesión.</p>"
+                    + "                            <p><strong>RECUERDA:</strong> Por motivos de seguridad, deberás cambiar tu contraseña la primera vez que inicies sesión.</p>"
                     + "                            "
                     + "                        </td>"
                     + "                    </tr>"
