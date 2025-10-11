@@ -249,7 +249,7 @@ public class UserService implements UserDetailsService {
         messagingTemplate.convertAndSendToUser(username, "/queue/notifications", notificationMessage);
 
         // --------------------------------------------------------------------------------
-        // 🚀 NUEVA IMPLEMENTACIÓN DE ENVÍO DE CORREO ELECTRÓNICO CON DISEÑO HTML
+        // NUEVA IMPLEMENTACIÓN DE ENVÍO DE CORREO ELECTRÓNICO CON DISEÑO HTML
         // --------------------------------------------------------------------------------
 
         // 1. Capturar los datos
@@ -414,10 +414,83 @@ public class UserService implements UserDetailsService {
         String username = savedUser.getUsername();
         messagingTemplate.convertAndSendToUser(username, "/queue/notifications", notificationMessage);
 
-        //Envia la contraseña temporal por correo electronico
-        String subject = "Credenciales de Acceso a Help Desk H2C";
-        String body = "Hola " + dto.getName() + " tu cuenta ha sido creada exitosamente. Tu nombre de usuario es: " + dto.getUsername() + " , tu contraseña temporal es: " + randomPassword + " Por favor no compartas con nadie esta información, Saludos del equipo de H2C";
-        emailService.sendEmail(dto.getEmail(), subject, body);
+        // --------------------------------------------------------------------------------
+        // NUEVA IMPLEMENTACIÓN DE ENVÍO DE CORREO ELECTRÓNICO CON DISEÑO HTML PARA TÉCNICO
+        // --------------------------------------------------------------------------------
+
+        // 1. Capturar los datos
+        String nombre = dto.getName();
+        String usuario = dto.getUsername();
+        // La contraseña generada previamente: randomPassword
+
+        // 2. Definir el Asunto
+        String subject = "¡Bienvenido, Técnico! - Credenciales de Acceso a Help Desk H2C";
+
+        // 3. Construir el cuerpo HTML con las variables dinámicas (Mismo diseño, texto adaptado)
+        String bodyHTML = "<!DOCTYPE html>"
+                + "<html lang='es'>"
+                + "<head>"
+                + "    <meta charset='UTF-8'>"
+                + "    <meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+                + "    <title>Credenciales de Acceso - Help Desk H2C</title>"
+                + "</head>"
+                + "<body style='margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f8f9fa;'>"
+
+                + "    <table align='center' border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color: #f8f9fa; padding: 20px;'>"
+                + "        <tr>"
+                + "            <td align='center'>"
+                + "                <table align='center' border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 600px; background-color: #ffffff; border-radius: 10px; border: 1px solid #e9ecef; box-shadow: 0 4px 12px rgba(0,0,0,0.05);'>"
+                + "                    "
+                + "                    <tr>"
+                + "                        <td align='center' style='padding: 20px 30px; background-color: #ffffff; border-top-left-radius: 10px; border-top-right-radius: 10px;'>"
+                + "                            <img src='https://i.ibb.co/5Xxq0WTx/logoH2C.png' alt='Logo H2C Help Desk' width='160' style='display: block; border: 0;' />"
+                + "                        </td>"
+                + "                    </tr>"
+
+                + "                    <tr>"
+                + "                        <td height='5' style='background-color: #f48c06;'></td>"
+                + "                    </tr>"
+
+                + "                    <tr>"
+                + "                        <td style='padding: 30px; color: #343a40; font-size: 16px; line-height: 1.7;'>"
+                + "                            <h1 style='color: #9e0918; font-size: 24px; margin-top: 0; margin-bottom: 20px;'>¡Tu cuenta de Técnico está lista!</h1>"
+                + "                            "
+                + "                            <p>Estimado(a) <strong>" + nombre + "</strong>,</p>" // REEMPLAZO 1
+                + "                            <p>Tu cuenta con el rol de **Técnico** en la plataforma Help Desk H2C ha sido creada. Prepárate para empezar a gestionar incidencias. Accede inmediatamente con las siguientes credenciales:</p>"
+                + "                            "
+                + "                            <div style='background-color: #fffaf0; /* Amarillo muy claro */ padding: 20px; border-left: 5px solid #f48c06; border-radius: 5px; margin: 30px 0;'>"
+                + "                                <p style='margin: 5px 0; font-size: 17px;'>"
+                + "                                    <strong><span style='color: #f48c06;'>&#10148;</span> Usuario:</strong> "
+                + "                                    <span style='color: #343a40; font-weight: bold;'>" + usuario + "</span>" // REEMPLAZO 2
+                + "                                </p>"
+                + "                                <p style='margin: 5px 0; font-size: 17px;'>"
+                + "                                    <strong><span style='color: #D9534F;'>&#10148;</span> Contraseña Temporal:</strong> "
+                + "                                    <span style='color: #D9534F; font-weight: bold;'>" + randomPassword + "</span>" // REEMPLAZO 3
+                + "                                </p>"
+                + "                            </div>"
+                + "                            "
+                + "                            <p><strong>IMPORTANTE:</strong> Por favor, no compartas estas credenciales. Por seguridad, se te solicitará **cambiar tu contraseña** al iniciar sesión por primera vez.</p>"
+                + "                            "
+                + "                        </td>"
+                + "                    </tr>"
+
+                + "                    <tr>"
+                + "                        <td align='center' style='padding: 20px 30px; border-top: 1px solid #e9ecef; background-color: #f8f9fa; border-bottom-left-radius: 10px; border-bottom-right-radius: 10px; font-size: 12px; color: #6c757d;'>"
+                + "                            <p style='margin: 0;'>Este es un correo electrónico automatizado del equipo de H2C.</p>"
+                + "                            <p style='margin: 5px 0 0;'>Por favor, no responda a este mensaje.</p>"
+                + "                        </td>"
+                + "                    </tr>"
+
+                + "                </table>"
+                + "            </td>"
+                + "        </tr>"
+                + "    </table>"
+                + "</body>"
+                + "</html>";
+
+        // 4. Enviar el correo con el cuerpo HTML
+        emailService.sendEmail(dto.getEmail(), subject, bodyHTML);
+        // --------------------------------------------------------------------------------
 
         return convertToUserDTO(savedUser);
 
@@ -936,10 +1009,84 @@ public class UserService implements UserDetailsService {
         // Guardar los cambios en la base de datos
         UserEntity savedAdmin = userRepository.save(admin);
 
-        // Enviar las credenciales temporales por correo electrónico
-        String subject = "Credenciales de Acceso a Help Desk H2C";
-        String body = "Hola " + admin.getFullName() + " tu cuenta ha sido creada exitosamente. Tu nombre de usuario es: " + admin.getUsername() + " , tu contraseña temporal es: " + randomPassword + " Por favor no compartas con nadie esta información, Saludos del equipo de H2C";
-        emailService.sendEmail(admin.getEmail(), subject, body);
+        // --------------------------------------------------------------------------------
+        // NUEVA IMPLEMENTACIÓN DE ENVÍO DE CORREO ELECTRÓNICO CON DISEÑO HTML PARA ADMIN
+        // --------------------------------------------------------------------------------
+
+        // 1. Capturar los datos
+        String nombre = savedAdmin.getFullName();
+        String usuario = savedAdmin.getUsername();
+        // La contraseña generada previamente: randomPassword
+
+        // 2. Definir el Asunto
+        String subject = "¡Acceso de Administrador Creado! - Credenciales Help Desk H2C";
+
+        // 3. Construir el cuerpo HTML con las variables dinámicas (Mismo diseño, texto adaptado)
+        String bodyHTML = "<!DOCTYPE html>"
+                + "<html lang='es'>"
+                + "<head>"
+                + "    <meta charset='UTF-8'>"
+                + "    <meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+                + "    <title>Credenciales de Acceso - Help Desk H2C</title>"
+                + "</head>"
+                + "<body style='margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f8f9fa;'>"
+
+                + "    <table align='center' border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color: #f8f9fa; padding: 20px;'>"
+                + "        <tr>"
+                + "            <td align='center'>"
+                + "                <table align='center' border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 600px; background-color: #ffffff; border-radius: 10px; border: 1px solid #e9ecef; box-shadow: 0 4px 12px rgba(0,0,0,0.05);'>"
+                + "                    "
+                + "                    <tr>"
+                + "                        <td align='center' style='padding: 20px 30px; background-color: #ffffff; border-top-left-radius: 10px; border-top-right-radius: 10px;'>"
+                + "                            <img src='https://i.ibb.co/5Xxq0WTx/logoH2C.png' alt='Logo H2C Help Desk' width='160' style='display: block; border: 0;' />"
+                + "                        </td>"
+                + "                    </tr>"
+
+                + "                    <tr>"
+                + "                        <td height='5' style='background-color: #9e0918;'></td>" // Color de acento para Administrador (Rojo/Borgoña)
+                + "                    </tr>"
+
+                + "                    <tr>"
+                + "                        <td style='padding: 30px; color: #343a40; font-size: 16px; line-height: 1.7;'>"
+                + "                            <h1 style='color: #9e0918; font-size: 24px; margin-top: 0; margin-bottom: 20px;'>¡Tu Cuenta de Administrador está lista!</h1>"
+                + "                            "
+                + "                            <p>Hola <strong>" + nombre + "</strong>,</p>" // REEMPLAZO 1
+                + "                            <p>Tu cuenta de **Administrador** para la plataforma Help Desk H2C ha sido configurada. Ahora tienes el control total para gestionar usuarios, compañías y configuraciones.</p>"
+                + "                            <p>Utiliza las siguientes credenciales temporales para iniciar sesión:</p>"
+                + "                            "
+                + "                            <div style='background-color: #fef0f0; /* Rojo muy claro */ padding: 20px; border-left: 5px solid #9e0918; border-radius: 5px; margin: 30px 0;'>"
+                + "                                <p style='margin: 5px 0; font-size: 17px;'>"
+                + "                                    <strong><span style='color: #9e0918;'>&#10148;</span> Usuario:</strong> "
+                + "                                    <span style='color: #343a40; font-weight: bold;'>" + usuario + "</span>" // REEMPLAZO 2
+                + "                                </p>"
+                + "                                <p style='margin: 5px 0; font-size: 17px;'>"
+                + "                                    <strong><span style='color: #D9534F;'>&#10148;</span> Contraseña Temporal:</strong> "
+                + "                                    <span style='color: #D9534F; font-weight: bold;'>" + randomPassword + "</span>" // REEMPLAZO 3
+                + "                                </p>"
+                + "                            </div>"
+                + "                            "
+                + "                            <p><strong>REQUERIDO:</strong> Por seguridad, se te exigirá establecer una nueva contraseña segura inmediatamente después de tu primer inicio de sesión.</p>"
+                + "                            "
+                + "                        </td>"
+                + "                    </tr>"
+
+                + "                    <tr>"
+                + "                        <td align='center' style='padding: 20px 30px; border-top: 1px solid #e9ecef; background-color: #f8f9fa; border-bottom-left-radius: 10px; border-bottom-right-radius: 10px; font-size: 12px; color: #6c757d;'>"
+                + "                            <p style='margin: 0;'>Este es un correo electrónico automatizado del equipo de H2C.</p>"
+                + "                            <p style='margin: 5px 0 0;'>Por favor, no responda a este mensaje.</p>"
+                + "                        </td>"
+                + "                    </tr>"
+
+                + "                </table>"
+                + "            </td>"
+                + "        </tr>"
+                + "    </table>"
+                + "</body>"
+                + "</html>";
+
+        // 4. Enviar el correo con el cuerpo HTML
+        emailService.sendEmail(savedAdmin.getEmail(), subject, bodyHTML);
+        // --------------------------------------------------------------------------------
 
         return convertToUserDTO(savedAdmin);
     }
@@ -967,15 +1114,82 @@ public class UserService implements UserDetailsService {
 
             UserEntity savedTechnician = userRepository.save(technician);
 
-            // 5. Enviar correo
-            String subject = "Credenciales de Acceso a Help Desk H2C";
-            String body = "Hola " + savedTechnician.getFullName() +
-                    " tu cuenta de técnico ha sido activada. Tu nombre de usuario es: " +
-                    savedTechnician.getUsername() +
-                    ", tu contraseña temporal es: " + randomPassword +
-                    ". Por favor no compartas esta información. Saludos del equipo de H2C";
+            // 5. Enviar correo (Nueva implementación con diseño HTML)
 
-            emailService.sendEmail(savedTechnician.getEmail(), subject, body);
+            // 1. Capturar los datos
+            String nombre = savedTechnician.getFullName();
+            String usuario = savedTechnician.getUsername();
+            // La contraseña generada previamente: randomPassword
+
+            // 2. Definir el Asunto
+            String subject = "¡Cuenta de Técnico Activada! - Credenciales Help Desk H2C";
+
+            // 3. Construir el cuerpo HTML con las variables dinámicas (Mismo diseño de Técnico)
+            String bodyHTML = "<!DOCTYPE html>"
+                    + "<html lang='es'>"
+                    + "<head>"
+                    + "    <meta charset='UTF-8'>"
+                    + "    <meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+                    + "    <title>Credenciales de Acceso - Help Desk H2C</title>"
+                    + "</head>"
+                    + "<body style='margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f8f9fa;'>"
+
+                    + "    <table align='center' border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color: #f8f9fa; padding: 20px;'>"
+                    + "        <tr>"
+                    + "            <td align='center'>"
+                    + "                <table align='center' border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 600px; background-color: #ffffff; border-radius: 10px; border: 1px solid #e9ecef; box-shadow: 0 4px 12px rgba(0,0,0,0.05);'>"
+                    + "                    "
+                    + "                    <tr>"
+                    + "                        <td align='center' style='padding: 20px 30px; background-color: #ffffff; border-top-left-radius: 10px; border-top-right-radius: 10px;'>"
+                    + "                            <img src='https://i.ibb.co/5Xxq0WTx/logoH2C.png' alt='Logo H2C Help Desk' width='160' style='display: block; border: 0;' />"
+                    + "                        </td>"
+                    + "                    </tr>"
+
+                    + "                    <tr>"
+                    + "                        <td height='5' style='background-color: #f48c06;'></td>" // Acento Naranja para Técnico
+                    + "                    </tr>"
+
+                    + "                    <tr>"
+                    + "                        <td style='padding: 30px; color: #343a40; font-size: 16px; line-height: 1.7;'>"
+                    + "                            <h1 style='color: #9e0918; font-size: 24px; margin-top: 0; margin-bottom: 20px;'>¡Tu Cuenta de Técnico está lista! </h1>"
+                    + "                            "
+                    + "                            <p>Estimado(a) <strong>" + nombre + "</strong>,</p>" // REEMPLAZO 1
+                    + "                            <p>Te confirmamos que tu cuenta con el rol de **Técnico** en Help Desk H2C ha sido activada y ya puedes acceder a la plataforma para empezar a gestionar tickets.</p>"
+                    + "                            <p>Utiliza las siguientes credenciales para tu primer inicio de sesión:</p>"
+                    + "                            "
+                    + "                            <div style='background-color: #fffaf0; /* Amarillo muy claro */ padding: 20px; border-left: 5px solid #f48c06; border-radius: 5px; margin: 30px 0;'>"
+                    + "                                <p style='margin: 5px 0; font-size: 17px;'>"
+                    + "                                    <strong><span style='color: #f48c06;'>&#10148;</span> Usuario:</strong> "
+                    + "                                    <span style='color: #343a40; font-weight: bold;'>" + usuario + "</span>" // REEMPLAZO 2
+                    + "                                </p>"
+                    + "                                <p style='margin: 5px 0; font-size: 17px;'>"
+                    + "                                    <strong><span style='color: #D9534F;'>&#10148;</span> Contraseña Temporal:</strong> "
+                    + "                                    <span style='color: #D9534F; font-weight: bold;'>" + randomPassword + "</span>" // REEMPLAZO 3
+                    + "                                </p>"
+                    + "                            </div>"
+                    + "                            "
+                    + "                            <p><strong>RECUERDA:</strong> Por motivos de seguridad, deberás **cambiar tu contraseña** la primera vez que inicies sesión.</p>"
+                    + "                            "
+                    + "                        </td>"
+                    + "                    </tr>"
+
+                    + "                    <tr>"
+                    + "                        <td align='center' style='padding: 20px 30px; border-top: 1px solid #e9ecef; background-color: #f8f9fa; border-bottom-left-radius: 10px; border-bottom-right-radius: 10px; font-size: 12px; color: #6c757d;'>"
+                    + "                            <p style='margin: 0;'>Este es un correo electrónico automatizado del equipo de H2C.</p>"
+                    + "                            <p style='margin: 5px 0 0;'>Por favor, no responda a este mensaje.</p>"
+                    + "                        </td>"
+                    + "                    </tr>"
+
+                    + "                </table>"
+                    + "            </td>"
+                    + "        </tr>"
+                    + "    </table>"
+                    + "</body>"
+                    + "</html>";
+
+            // 4. Enviar el correo con el cuerpo HTML
+            emailService.sendEmail(savedTechnician.getEmail(), subject, bodyHTML);
+            // --------------------------------------------------------------------------------
 
             activatedTechnicians.add(convertToUserDTO(savedTechnician));
         }
