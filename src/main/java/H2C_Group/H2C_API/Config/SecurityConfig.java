@@ -147,7 +147,7 @@ public class SecurityConfig{
                 "http://127.0.0.2:5501",
 
 
-                // Orígenes sin puerto (si accedes a la página directamente por localhost)
+                // Orígenes sin puerto (vercel y localhost)
                 "http://localhost",
                 "https://localhost",
                 "https://*.herokuapp.com",
