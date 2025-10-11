@@ -255,22 +255,26 @@ public class UserService implements UserDetailsService {
         // 1. Capturar los datos
         String nombre = dto.getName();
         String usuario = dto.getUsername();
-        // La contraseña generada previamente
+        String passwordTemp = randomPassword; // La contraseña generada previamente
 
         // 2. Definir el Asunto
         String subject = "Credenciales de Acceso a Help Desk H2C";
 
         // 3. Construir el cuerpo HTML con las variables dinámicas
-        // NOTA: Es importante que el EmailService sepa que este cuerpo es HTML (usualmente
-        // configurando la propiedad `html` a true en el objeto de mensaje MimeMessage)
         String bodyHTML = "<!DOCTYPE html>"
                 + "<html lang='es'>"
                 + "<head>"
                 + "    <meta charset='UTF-8'>"
                 + "    <meta name='viewport' content='width=device-width, initial-scale=1.0'>"
                 + "    <title>Credenciales de Acceso - Help Desk H2C</title>"
+                // 💡 INCLUSIÓN DE MONTSERRAT USANDO @import en el HEAD
+                //    (Nota: La compatibilidad puede variar en clientes de email)
+                + "    <style>"
+                + "        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');"
+                + "    </style>"
                 + "</head>"
-                + "<body style='margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f8f9fa;'>"
+                // 💡 APLICACIÓN DE MONTSERRAT EN EL BODY
+                + "<body style='margin: 0; padding: 0; font-family: 'Montserrat', Arial, sans-serif; background-color: #f8f9fa;'>"
 
                 + "    <table align='center' border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color: #f8f9fa; padding: 20px;'>"
                 + "        <tr>"
@@ -288,20 +292,20 @@ public class UserService implements UserDetailsService {
                 + "                    </tr>"
 
                 + "                    <tr>"
-                + "                        <td style='padding: 30px; color: #343a40; font-size: 16px; line-height: 1.7;'>"
+                + "                        <td style='padding: 30px; color: #343a40; font-size: 16px; line-height: 1.7; font-family: 'Montserrat', Arial, sans-serif;'>" // 💡 RE-APLICACIÓN DE MONTSERRAT
                 + "                            <h1 style='color: #9e0918; font-size: 24px; margin-top: 0; margin-bottom: 20px;'>¡Tu Cuenta Está Lista!</h1>"
                 + "                            "
-                + "                            <p>Hola <strong>" + nombre + "</strong>,</p>" // REEMPLAZO 1
+                + "                            <p>Hola <strong>" + nombre + "</strong>,</p>"
                 + "                            <p>Tu cuenta en la plataforma Help Desk H2C ha sido creada exitosamente. Puedes acceder inmediatamente con las siguientes credenciales:</p>"
                 + "                            "
-                + "                            <div style='background-color: #f0f8ff; /* Azul muy claro */ padding: 20px; border-left: 5px solid #f48c06; border-radius: 5px; margin: 30px 0;'>"
+                + "                            <div style='background-color: #f0f8ff; padding: 20px; border-left: 5px solid #f48c06; border-radius: 5px; margin: 30px 0;'>"
                 + "                                <p style='margin: 5px 0; font-size: 17px;'>"
                 + "                                    <strong><span style='color: #f48c06;'>&#10148;</span> Usuario:</strong> "
-                + "                                    <span style='color: #343a40; font-weight: bold;'>" + usuario + "</span>" // REEMPLAZO 2
+                + "                                    <span style='color: #343a40; font-weight: bold;'>" + usuario + "</span>"
                 + "                                </p>"
                 + "                                <p style='margin: 5px 0; font-size: 17px;'>"
                 + "                                    <strong><span style='color: #D9534F;'>&#10148;</span> Contraseña Temporal:</strong> "
-                + "                                    <span style='color: #D9534F; font-weight: bold;'>" + randomPassword + "</span>" // REEMPLAZO 3
+                + "                                    <span style='color: #D9534F; font-weight: bold;'>" + passwordTemp + "</span>"
                 + "                                </p>"
                 + "                            </div>"
                 + "                            "
@@ -329,7 +333,6 @@ public class UserService implements UserDetailsService {
         // --------------------------------------------------------------------------------
 
         return convertToUserDTO(savedUser);
-
     }
 
     //METODO PARA REGISTRAR TECNICOS
