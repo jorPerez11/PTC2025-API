@@ -181,54 +181,45 @@ public class FirstUseController {
     @PermitAll
     public ResponseEntity<?> assignCategoryToTechnician(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
         try {
-            // 💡 CAMBIO CRUCIAL: Verificación y conversión segura del valor del payload.
+            // 💡 Verificación y conversión segura del valor del payload.
             Object categoryObj = payload.get("categoryId");
             if (categoryObj == null) {
                 // Lanza una excepción si la categoría no está presente en el cuerpo
                 throw new IllegalArgumentException("El ID de la categoría (categoryId) es requerido en el cuerpo de la solicitud.");
             }
 
-            // Conversión segura, asumiendo que Spring deserializa números como Integer o Double
+            // Conversión segura de Integer/Number a Long
             Long categoryId = Long.valueOf(String.valueOf(categoryObj));
 
-            // En caso de que se deserialice como Number y no como String (más limpio, pero requiere el cast):
-            // Long categoryId = ((Number) categoryObj).longValue();
 
-            // Si el cast a Number falla (lo cual significa que el JSON no tiene el tipo de dato esperado),
-            // saltará a la excepción genérica, que es lo que queremos.
-
-
-            // Si la excepción 500 persiste, usa esta línea más simple y menos propensa a errores de cast:
-            // Long categoryId = Long.valueOf(String.valueOf(payload.get("categoryId")));
-
-
+            // El servicio SÓLO asigna la categoría y guarda el hash temporal
             UserDTO updatedUser = userService.assignCategoryToTechnician(id, categoryId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("id", updatedUser.getId());
-            // ... (El resto del código del response es el mismo)
             response.put("Nombre", updatedUser.getName());
             response.put("Correo Electrónico", updatedUser.getEmail());
-            response.put("Categoría Asignada", updatedUser.getCategory().getDisplayName());
+
+            // Mensaje actualizado para reflejar sólo la asignación de categoría
             response.put("Mensaje", "Categoría asignada y datos guardados exitosamente.");
 
             return new ResponseEntity<>(response, HttpStatus.OK);
 
         } catch (IllegalArgumentException e) {
-            // Ahora captura el error de campo faltante aquí
+            // Manejo de errores de negocio (Ej: Técnico ya tiene categoría / ID faltante)
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
         } catch (ExceptionUserNotFound | ExceptionCategoryNotFound e) {
-            // ... (Manejo de excepciones de negocio)
+            // Manejo de recursos no encontrados
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
         } catch (Exception e) {
-            // Si el error 500 sigue ocurriendo, ahora la traza del stack trace en la consola del servidor
-            // será más clara sobre qué falla *dentro* del userService.
+            // Manejo de cualquier otro error no esperado
             e.printStackTrace();
             Map<String, String> error = new HashMap<>();
+            // El frontend atrapa este mensaje para mostrar la alerta de error
             error.put("error", "Error interno al asignar categoría y activar técnico");
             return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
         }
