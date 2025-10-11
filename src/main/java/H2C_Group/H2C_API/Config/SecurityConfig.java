@@ -153,6 +153,7 @@ public class SecurityConfig{
                 "https://*.herokuapp.com",
                 "https://*.vercel.app",
                 "https://ptc-2025-app-web.vercel.app",
+                "https://h2c-helpdesk-web.vercel.app/",
                 "http://127.0.0.1",
 
                 // Tu IP local con puerto de desarrollo (192.168.0.183)
