@@ -255,7 +255,7 @@ public class UserService implements UserDetailsService {
         // 1. Capturar los datos
         String nombre = dto.getName();
         String usuario = dto.getUsername();
-        String passwordTemp = randomPassword; // La contraseña generada previamente
+        // La contraseña generada previamente
 
         // 2. Definir el Asunto
         String subject = "Credenciales de Acceso a Help Desk H2C";
@@ -301,7 +301,7 @@ public class UserService implements UserDetailsService {
                 + "                                </p>"
                 + "                                <p style='margin: 5px 0; font-size: 17px;'>"
                 + "                                    <strong><span style='color: #D9534F;'>&#10148;</span> Contraseña Temporal:</strong> "
-                + "                                    <span style='color: #D9534F; font-weight: bold;'>" + passwordTemp + "</span>" // REEMPLAZO 3
+                + "                                    <span style='color: #D9534F; font-weight: bold;'>" + randomPassword + "</span>" // REEMPLAZO 3
                 + "                                </p>"
                 + "                            </div>"
                 + "                            "
