@@ -181,26 +181,52 @@ public class FirstUseController {
     @PermitAll
     public ResponseEntity<?> assignCategoryToTechnician(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
         try {
-            Long categoryId = ((Number) payload.get("categoryId")).longValue();
+            // 💡 CAMBIO CRUCIAL: Verificación y conversión segura del valor del payload.
+            Object categoryObj = payload.get("categoryId");
+            if (categoryObj == null) {
+                // Lanza una excepción si la categoría no está presente en el cuerpo
+                throw new IllegalArgumentException("El ID de la categoría (categoryId) es requerido en el cuerpo de la solicitud.");
+            }
+
+            // Conversión segura, asumiendo que Spring deserializa números como Integer o Double
+            Long categoryId = Long.valueOf(String.valueOf(categoryObj));
+
+            // En caso de que se deserialice como Number y no como String (más limpio, pero requiere el cast):
+            // Long categoryId = ((Number) categoryObj).longValue();
+
+            // Si el cast a Number falla (lo cual significa que el JSON no tiene el tipo de dato esperado),
+            // saltará a la excepción genérica, que es lo que queremos.
+
+
+            // Si la excepción 500 persiste, usa esta línea más simple y menos propensa a errores de cast:
+            // Long categoryId = Long.valueOf(String.valueOf(payload.get("categoryId")));
+
+
             UserDTO updatedUser = userService.assignCategoryAndActivateTechnician(id, categoryId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("id", updatedUser.getId());
+            // ... (El resto del código del response es el mismo)
             response.put("Nombre", updatedUser.getName());
             response.put("Correo Electrónico", updatedUser.getEmail());
             response.put("Categoría Asignada", updatedUser.getCategory().getDisplayName());
             response.put("Mensaje", "Técnico activado y credenciales enviadas por correo electrónico.");
 
             return new ResponseEntity<>(response, HttpStatus.OK);
+
         } catch (IllegalArgumentException e) {
+            // Ahora captura el error de campo faltante aquí
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
         } catch (ExceptionUserNotFound | ExceptionCategoryNotFound e) {
+            // ... (Manejo de excepciones de negocio)
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
         } catch (Exception e) {
+            // Si el error 500 sigue ocurriendo, ahora la traza del stack trace en la consola del servidor
+            // será más clara sobre qué falla *dentro* del userService.
             e.printStackTrace();
             Map<String, String> error = new HashMap<>();
             error.put("error", "Error interno al asignar categoría y activar técnico");
