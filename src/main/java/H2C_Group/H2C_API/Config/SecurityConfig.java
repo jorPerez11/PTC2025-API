@@ -60,7 +60,7 @@ public class SecurityConfig{
                         .requestMatchers("/api/users/change-password").authenticated()
 
                         // ✅ CORREGIDO: Endpoints para clientes
-                        .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
+                        .requestMatchers("/api/client/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
                                 //Logout
                                 .requestMatchers("/api/users/logoutWeb").authenticated()
@@ -96,6 +96,9 @@ public class SecurityConfig{
                                 .requestMatchers(HttpMethod.POST, "/api/tech/decline-ticket/**").hasAuthority("ROLE_TECNICO")
 
 
+                                //  NUEVOS ENDPOINTS PARA MANEJAR PROGRESO Y FINALIZACIÓN
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/UpdateTicketProgress/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/FinalizeTicket/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
 
 
