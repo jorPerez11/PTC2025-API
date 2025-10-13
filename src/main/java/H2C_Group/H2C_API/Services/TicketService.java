@@ -34,6 +34,9 @@ import java.util.stream.Collectors;
 public class TicketService {
 
     @Autowired
+    private NotificationService notificationService;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -522,6 +525,39 @@ public class TicketService {
 
     public Long countByUserId(Long userId) {
         return ticketRepository.countTicketsByUserId(userId);
+    }
+
+    public TicketEntity assignTechnician(Long ticketId, Long technicianId) {
+        TicketEntity ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new RuntimeException("Ticket no encontrado"));
+
+        // 1. OBTENER EL USUARIO (UserEntity) A ASIGNAR
+        UserEntity newTech = userRepository.findById(technicianId) // Asumiendo que tienes un UserRepository inyectado
+                .orElseThrow(() -> new RuntimeException("Técnico no encontrado: " + technicianId));
+
+        // 2. Comprobar si la asignación ha cambiado (usando la entidad completa)
+        Long currentAssignedId = ticket.getAssignedTechUser() != null ? ticket.getAssignedTechUser().getUserId() : null;
+
+        if (currentAssignedId == null || !currentAssignedId.equals(technicianId)) {
+
+            // Asignar la entidad UserEntity
+            ticket.setAssignedTechUser(newTech);
+            TicketEntity savedTicket = ticketRepository.save(ticket);
+
+            // 3. Disparar la Notificación, usando el ID de la nueva entidad
+            String message = "🎟️ Se te ha asignado el ticket #" + savedTicket.getTicketId() + ": " + savedTicket.getTitle();
+
+            notificationService.sendNotification(
+                    newTech.getUserId(), // <-- Usamos el ID de la UserEntity
+                    savedTicket,
+                    message,
+                    "ASSIGNMENT"
+            );
+
+            return savedTicket;
+        }
+
+        return ticket;
     }
 
 }

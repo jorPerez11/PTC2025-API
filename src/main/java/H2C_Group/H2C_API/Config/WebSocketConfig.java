@@ -47,7 +47,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                         "http://localhost:*",
                         "http://127.0.0.1:*",
                         "http://192.168.1.42:*",
-                        "http://179.5.94.204:*"
+                        "http://179.5.94.204:*",
+                        "https://h2c-helpdesk-web.vercel.app/"
                 )
                 .withSockJS();
     }
