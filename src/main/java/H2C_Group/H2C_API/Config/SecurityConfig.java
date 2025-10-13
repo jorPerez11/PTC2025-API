@@ -59,13 +59,13 @@ public class SecurityConfig{
                         // Endpoints autenticados
                         .requestMatchers("/api/users/change-password").authenticated()
 
-                        // ✅ CORREGIDO: Endpoints para clientes
+                        // Endpoints para clientes
                         .requestMatchers("/api/client/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
                                 //Logout
                                 .requestMatchers("/api/users/logoutWeb").authenticated()
 
-                                // ✅ CORREGIDO: Endpoints para técnicos Y administradores
+                                // Endpoints para técnicos Y administradores
                                 .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
                                 // ENDPOINTS PARA TICKETS
                                 .requestMatchers("/api/admin/GetTicketCounts").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
@@ -99,6 +99,11 @@ public class SecurityConfig{
                                 //  NUEVOS ENDPOINTS PARA MANEJAR PROGRESO Y FINALIZACIÓN
                                 .requestMatchers(HttpMethod.PATCH, "/api/tech/UpdateTicketProgress/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
                                 .requestMatchers(HttpMethod.PATCH, "/api/tech/FinalizeTicket/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+                                //  NUEVOS ENDPOINTS PARA MANEJAR PROGRESO Y FINALIZACIÓN
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/UpdateTicketProgress/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/FinalizeTicket/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
 
 
 
