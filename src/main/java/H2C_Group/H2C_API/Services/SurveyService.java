@@ -53,6 +53,11 @@ public class SurveyService {
 
     }
 
+    public boolean existsByTicketId(Long ticketId) {
+        // Usamos una función de consulta JPA Repository
+        return surveyRepository.existsByTicket_TicketId(ticketId);
+    }
+
 
     private SurveyDTO convertToSurveyDTO(SurveyEntity surveyEntity) {
         SurveyDTO surveyDTO = new SurveyDTO();
