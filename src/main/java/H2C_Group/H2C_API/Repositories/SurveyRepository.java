@@ -8,4 +8,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface SurveyRepository extends JpaRepository<SurveyEntity,Long> {
 
+    boolean existsByTicket_TicketId(Long ticketId);
 }

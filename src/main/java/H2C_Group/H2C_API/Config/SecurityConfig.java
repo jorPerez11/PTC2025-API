@@ -60,6 +60,9 @@ public class SecurityConfig{
 
                         // Endpoints autenticados
                         .requestMatchers("/api/users/change-password").authenticated()
+
+                        // Endpoints para clientes
+                        .requestMatchers("/api/client/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_ADMINISTRADOR")
                         .requestMatchers("/api/notifications/**").authenticated()
                         // ✅ CORREGIDO: Endpoints para clientes
                         .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
@@ -102,6 +105,17 @@ public class SecurityConfig{
                                 //Endpoint para declinar un ticket
                                 .requestMatchers(HttpMethod.POST, "/api/tech/decline-ticket/**").hasAuthority("ROLE_TECNICO")
 
+                                //ENDPOINT OBTENER TICKETS ASIGNADOS (TECNICO)
+                                .requestMatchers("/api/GetAssignedTicketsByTech/**").hasAuthority("ROLE_TECNICO")
+                                .requestMatchers("/api/tech/getAssignedTicketsByTechnicianIdPage/**").hasAuthority("ROLE_TECNICO")
+
+                                //  NUEVOS ENDPOINTS PARA MANEJAR PROGRESO Y FINALIZACIÓN
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/UpdateTicketProgress/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/FinalizeTicket/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+                                //  NUEVOS ENDPOINTS PARA MANEJAR PROGRESO Y FINALIZACIÓN
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/UpdateTicketProgress/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/FinalizeTicket/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
 
 
@@ -150,7 +164,7 @@ public class SecurityConfig{
 
                 // Orígenes sin puerto (vercel y localhost)
                 "http://localhost",
-                "https://localhost",
+                "https://localhost/",
                 "https://*.herokuapp.com",
                 "https://*.vercel.app",
                 "https://ptc-2025-app-web.vercel.app",
