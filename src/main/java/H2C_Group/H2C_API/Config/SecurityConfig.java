@@ -46,6 +46,7 @@ public class SecurityConfig{
                         .requestMatchers(HttpMethod.PATCH, "/api/companies/**").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/users/**").permitAll()
                         .requestMatchers("/api/firstuse/**").permitAll()
+                        .requestMatchers("/api/check-company-existence").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/users/login", "/api/users/register", "api/users/registerTech").permitAll()
                         .requestMatchers("/api/client/PostTicket").permitAll()
@@ -55,6 +56,7 @@ public class SecurityConfig{
                         .requestMatchers("/api/GetSolutions").permitAll()
                         .requestMatchers("api/GetSolutionsWeb/**").permitAll() //ENDPOINT PARA APP WEB
                         .requestMatchers("/api/GetUserByUsername/{username}").authenticated()
+                        .requestMatchers("/api/image/upload-to-folder").authenticated()
 
                         // Endpoints autenticados
                         .requestMatchers("/api/users/change-password").authenticated()
@@ -81,9 +83,14 @@ public class SecurityConfig{
                                 .requestMatchers("/api/DeleteActivity/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
                                 // ENDPOINTS PARA ANALITICA
                                 .requestMatchers("/api/users/counts-by-month").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                //ENDPOINTS PARA TECNICO VISTA ADMIN
+                                .requestMatchers("/api/UpdateUser/**").hasAuthority("ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/DeleteUser/**").hasAuthority("ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/PostUser").hasAuthority("ROLE_ADMINISTRADOR")
 
 
-                                //Endpoints para acceder al listado de tecnicos
+
+                        //Endpoints para acceder al listado de tecnicos
                                 .requestMatchers(HttpMethod.GET, "/api/GetTech").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
                                 //Enpoint para que los tecnicos puedan obtener los tickets en espera
@@ -148,17 +155,21 @@ public class SecurityConfig{
                 "http://localhost:8080",
                 "http://127.0.0.2:5501",
 
-                // Orígenes sin puerto (si accedes a la página directamente por localhost)
+
+                // Orígenes sin puerto (vercel y localhost)
                 "http://localhost",
+                "https://localhost",
+                "https://*.herokuapp.com",
+                "https://*.vercel.app",
+                "https://ptc-2025-app-web.vercel.app",
+                "https://h2c-helpdesk-web.vercel.app/",
                 "http://127.0.0.1",
 
                 // Tu IP local con puerto de desarrollo (192.168.0.183)
                 "http://192.168.0.183:5500",
                 "http://192.168.0.183:5501"
 
-                // Agrega aquí las IPs de tus compañeros si son estáticas y necesarias
-                // "http://IPDANIELA:5501",
-                // "http://IPHERBERT:5501"
+
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));

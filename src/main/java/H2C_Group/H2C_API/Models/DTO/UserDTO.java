@@ -40,10 +40,10 @@ public class UserDTO {
         @Pattern(regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=])(?=\\S+$).{8,}$", message = "La contraseña debe contener al menos una mayúscula, una minúscula, un número y un carácter especial.")
         private String password;
 
-        @NotNull(message = "El estado es obligatorio.")
-        @Min(value = 0, message = "El estado 'isActive' debe ser 0 (inactivo) o 1 (activo).")
-        @Max(value = 1, message = "El estado 'isActive' debe ser 0 (inactivo) o 1 (activo).")
-        private Integer isActive;
+//        @NotNull(message = "El estado es obligatorio.")
+//        @Min(value = 0, message = "El estado 'isActive' debe ser 0 (inactivo) o 1 (activo).")
+//        @Max(value = 1, message = "El estado 'isActive' debe ser 0 (inactivo) o 1 (activo).")
+//        private Integer isActive;
 
         //Variable de tipo UserRole - Obtiene el numero (rolId) de Enum UserRole.
         //Se usa por seguridad (datos constantes), legibilidad (de codigo) y serializacion

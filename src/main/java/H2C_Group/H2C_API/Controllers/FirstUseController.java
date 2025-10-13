@@ -181,28 +181,45 @@ public class FirstUseController {
     @PermitAll
     public ResponseEntity<?> assignCategoryToTechnician(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
         try {
-            Long categoryId = ((Number) payload.get("categoryId")).longValue();
-            UserDTO updatedUser = userService.assignCategoryAndActivateTechnician(id, categoryId);
+            // 💡 Verificación y conversión segura del valor del payload.
+            Object categoryObj = payload.get("categoryId");
+            if (categoryObj == null) {
+                // Lanza una excepción si la categoría no está presente en el cuerpo
+                throw new IllegalArgumentException("El ID de la categoría (categoryId) es requerido en el cuerpo de la solicitud.");
+            }
+
+            // Conversión segura de Integer/Number a Long
+            Long categoryId = Long.valueOf(String.valueOf(categoryObj));
+
+
+            // El servicio SÓLO asigna la categoría y guarda el hash temporal
+            UserDTO updatedUser = userService.assignCategoryToTechnician(id, categoryId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("id", updatedUser.getId());
             response.put("Nombre", updatedUser.getName());
             response.put("Correo Electrónico", updatedUser.getEmail());
-            response.put("Categoría Asignada", updatedUser.getCategory().getDisplayName());
-            response.put("Mensaje", "Técnico activado y credenciales enviadas por correo electrónico.");
+
+            // Mensaje actualizado para reflejar sólo la asignación de categoría
+            response.put("Mensaje", "Categoría asignada y datos guardados exitosamente.");
 
             return new ResponseEntity<>(response, HttpStatus.OK);
+
         } catch (IllegalArgumentException e) {
+            // Manejo de errores de negocio (Ej: Técnico ya tiene categoría / ID faltante)
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
         } catch (ExceptionUserNotFound | ExceptionCategoryNotFound e) {
+            // Manejo de recursos no encontrados
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
         } catch (Exception e) {
+            // Manejo de cualquier otro error no esperado
             e.printStackTrace();
             Map<String, String> error = new HashMap<>();
+            // El frontend atrapa este mensaje para mostrar la alerta de error
             error.put("error", "Error interno al asignar categoría y activar técnico");
             return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
         }
