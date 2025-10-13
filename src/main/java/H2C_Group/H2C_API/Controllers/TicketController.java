@@ -142,6 +142,16 @@ public class TicketController {
         return new ResponseEntity<>(tickets, HttpStatus.OK);
     }
 
+    @GetMapping("/tech/getAssignedTicketsByTechnicianIdPage/{technicianId}")
+    public ResponseEntity<Page<TicketDTO>> getAssignedTicketsByTechnicianIdPage(
+            @PathVariable Long technicianId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size){
+        Page<TicketDTO>  ticketPage;
+        ticketPage = acceso.getAssignedTicketsByTechnicianIdPage(technicianId, page, size);
+        return new  ResponseEntity<>(ticketPage, HttpStatus.OK);
+    }
+
 
     @PutMapping("/tech/accept/{ticketId}/{technicianId}")
     public ResponseEntity<TicketDTO> acceptTicket(@PathVariable Long ticketId, @PathVariable Long technicianId) {

@@ -104,6 +104,7 @@ public class SecurityConfig{
 
                                 //ENDPOINT OBTENER TICKETS ASIGNADOS (TECNICO)
                                 .requestMatchers("/api/GetAssignedTicketsByTech/**").hasAuthority("ROLE_TECNICO")
+                                .requestMatchers("/api/tech/getAssignedTicketsByTechnicianIdPage/**").hasAuthority("ROLE_TECNICO")
 
                                 //  NUEVOS ENDPOINTS PARA MANEJAR PROGRESO Y FINALIZACIÓN
                                 .requestMatchers(HttpMethod.PATCH, "/api/tech/UpdateTicketProgress/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
