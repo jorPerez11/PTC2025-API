@@ -6,6 +6,7 @@ import H2C_Group.H2C_API.Models.DTO.PagedResponseDTO;
 import H2C_Group.H2C_API.Models.DTO.TicketDTO;
 import H2C_Group.H2C_API.Models.DTO.TicketStatusDTO;
 import H2C_Group.H2C_API.Services.TicketService;
+import H2C_Group.H2C_API.Services.UserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -13,6 +14,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
@@ -26,6 +29,9 @@ import java.util.Map;
 public class TicketController {
     @Autowired
     private TicketService acceso;
+
+    @Autowired
+    private UserService userService;
 
     // Nuevo endpoint para obtener el conteo de tickets por estado
     @GetMapping("/admin/GetTicketCounts")
@@ -146,10 +152,25 @@ public class TicketController {
     public ResponseEntity<Page<TicketDTO>> getAssignedTicketsByTechnicianIdPage(
             @PathVariable Long technicianId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "5") int size){
-        Page<TicketDTO>  ticketPage;
-        ticketPage = acceso.getAssignedTicketsByTechnicianIdPage(technicianId, page, size);
-        return new  ResponseEntity<>(ticketPage, HttpStatus.OK);
+            @RequestParam(defaultValue = "5") int size) {
+
+        // 1. OBTENER INFORMACIÓN DEL USUARIO LOGUEADO
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Obtener el ID y el rol
+        Long idUsuarioLogueado = userService.getUserIdByUsername(authentication.getName());
+        boolean esAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRADOR"));
+
+        // 2. VERIFICACIÓN DE SEGURIDAD: 403 FORBIDDEN si no es Administrador Y no es su propio ID
+        if (!esAdmin && !technicianId.equals(idUsuarioLogueado)) {
+            // El usuario logueado está intentando acceder a los tickets de OTRO técnico.
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+
+        // 3. SI LA VERIFICACIÓN PASA, CONTINUAR CON LA LÓGICA DE NEGOCIO
+        Page<TicketDTO> ticketPage = acceso.getAssignedTicketsByTechnicianIdPage(technicianId, page, size);
+        return new ResponseEntity<>(ticketPage, HttpStatus.OK);
     }
 
 
