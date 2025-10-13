@@ -55,70 +55,73 @@ public class SecurityConfig{
                         .requestMatchers("/api/searchSolution").permitAll()
                         .requestMatchers("/api/GetSolutions").permitAll()
                         .requestMatchers("api/GetSolutionsWeb/**").permitAll() //ENDPOINT PARA APP WEB
-
-                        // Endpoints que requieren cualquier autenticación, pero antes de las reglas específicas de rol
                         .requestMatchers("/api/GetUserByUsername/{username}").authenticated()
                         .requestMatchers("/api/image/upload-to-folder").authenticated()
+
+                        // 1. REGLA ESPECÍFICA (La dejamos aquí para que tenga prioridad)
+                        .requestMatchers("/api/tech/getAssignedTicketsByTechnicianIdPage/**").permitAll() // Usamos permitAll temporalmente
+
+                        // 2. REGLA GENERAL PARA TODOS LOS ENDPOINTS DE /api/tech/ RESTANTES
+                        .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+                        //ENDPOINT OBTENER TICKETS ASIGNADOS (TECNICO)
+                        .requestMatchers("/api/GetAssignedTicketsByTech/**").hasAuthority("ROLE_TECNICO")
+                        .requestMatchers("/api/tech/getAssignedTicketsByTechnicianIdPage/**").permitAll()
+                        //.requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        .requestMatchers("/api/GetAssignedTicketsByTech/**").hasAuthority("ROLE_TECNICO")
+
+                        // Endpoints autenticados
                         .requestMatchers("/api/users/change-password").authenticated()
-                        .requestMatchers("/api/users/logoutWeb").authenticated()
+
+                        // ✅ CORREGIDO: Endpoints para clientes
+                        .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
+
+                                //Logout
+                                .requestMatchers("/api/users/logoutWeb").authenticated()
+
+                                // ✅ CORREGIDO: Endpoints para técnicos Y administradores
+                                .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                // ENDPOINTS PARA TICKETS
+                                .requestMatchers("/api/admin/GetTicketCounts").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/admin/GetTickets").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                // ENDPOINTS PARA SOLUCIONES
+                                .requestMatchers("/api/PostSolution").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/UpdateSolution/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/DeleteSolution/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                // ENDPOINTS PARA ACTIVIDADES
+                                .requestMatchers("/api/GetActivities").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/PostActivity").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/UpdateActivity/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/DeleteActivity/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                // ENDPOINTS PARA ANALITICA
+                                .requestMatchers("/api/users/counts-by-month").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                //ENDPOINTS PARA TECNICO VISTA ADMIN
+                                .requestMatchers("/api/UpdateUser/**").hasAuthority("ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/DeleteUser/**").hasAuthority("ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/PostUser").hasAuthority("ROLE_ADMINISTRADOR")
 
 
-                        // =========================================================================
-                        // ✅ COMIENZO DE REGLAS DE ACCESO POR ROL (Ordenadas de más específico a general)
-                        // =========================================================================
 
-                        // 1. REGLA ESPECÍFICA (Corregida a hasRole() y movida al principio)
-                        // Este endpoint es el que fallaba, lo dejamos con hasRole.
-                        .requestMatchers("/api/tech/getAssignedTicketsByTechnicianIdPage/**").hasRole("TECNICO")
+                        //Endpoints para acceder al listado de tecnicos
+                                .requestMatchers(HttpMethod.GET, "/api/GetTech").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
-                        // 2. OTRAS REGLAS DE TÉCNICOS
-                        .requestMatchers("/api/GetAssignedTicketsByTech/**").hasRole("TECNICO") // Usando hasRole
-                        .requestMatchers(HttpMethod.GET, "/api/tech/GetTicketsEnEspera").hasRole("TECNICO") // Usando hasRole
-                        .requestMatchers(HttpMethod.GET, "/api/tech/available-tickets").hasRole("TECNICO") // Usando hasRole
-                        .requestMatchers(HttpMethod.POST, "/api/tech/decline-ticket/**").hasRole("TECNICO") // Usando hasRole
+                                //Enpoint para que los tecnicos puedan obtener los tickets en espera
+                                .requestMatchers(HttpMethod.GET, "/api/tech/GetTicketsEnEspera").hasAuthority("ROLE_TECNICO")
+
+                                //Enpoint para poder obtener los tickets disponibles
+                                .requestMatchers(HttpMethod.GET, "/api/tech/available-tickets").hasAuthority("ROLE_TECNICO")
+
+                                //Endpoint para declinar un ticket
+                                .requestMatchers(HttpMethod.POST, "/api/tech/decline-ticket/**").hasAuthority("ROLE_TECNICO")
 
 
-                        // 3. REGLAS GENERALES QUE INVOLUCRAN /api/tech o /api/admin
 
-                        // Endpoint para acceder al listado de tecnicos
-                        .requestMatchers(HttpMethod.GET, "/api/GetTech").hasAnyRole("CLIENTE", "TECNICO", "ADMINISTRADOR") // Usando hasAnyRole
 
-                        // Endpoints para clientes (usando hasRole)
-                        .requestMatchers("/api/client/**").hasRole("CLIENTE")
 
-                        // Endpoints para técnicos Y administradores (usando hasAnyRole)
-                        // Todos los endpoints restantes de /api/tech que no se definieron arriba
-                        .requestMatchers("/api/tech/**").hasAnyRole("TECNICO", "ADMINISTRADOR")
 
-                        // ENDPOINTS PARA TICKETS (usando hasAnyRole)
-                        .requestMatchers("/api/admin/GetTicketCounts").hasAnyRole("TECNICO", "ADMINISTRADOR")
-                        .requestMatchers("/api/admin/GetTickets").hasAnyRole("TECNICO", "ADMINISTRADOR")
-                        // ENDPOINTS PARA SOLUCIONES (usando hasAnyRole)
-                        .requestMatchers("/api/PostSolution").hasAnyRole("TECNICO", "ADMINISTRADOR")
-                        .requestMatchers("/api/UpdateSolution/**").hasAnyRole("TECNICO", "ADMINISTRADOR")
-                        .requestMatchers("/api/DeleteSolution/**").hasAnyRole("TECNICO", "ADMINISTRADOR")
-                        // ENDPOINTS PARA ACTIVIDADES (usando hasAnyRole)
-                        .requestMatchers("/api/GetActivities").hasAnyRole("TECNICO", "ADMINISTRADOR")
-                        .requestMatchers("/api/PostActivity").hasAnyRole("TECNICO", "ADMINISTRADOR")
-                        .requestMatchers("/api/UpdateActivity/**").hasAnyRole("TECNICO", "ADMINISTRADOR")
-                        .requestMatchers("/api/DeleteActivity/**").hasAnyRole("TECNICO", "ADMINISTRADOR")
-                        // ENDPOINTS PARA ANALITICA (usando hasAnyRole)
-                        .requestMatchers("/api/users/counts-by-month").hasAnyRole("TECNICO", "ADMINISTRADOR")
-
-                        // ENDPOINTS PARA ADMINISTRADOR (usando hasRole)
-                        .requestMatchers("/api/UpdateUser/**").hasRole("ADMINISTRADOR")
-                        .requestMatchers("/api/DeleteUser/**").hasRole("ADMINISTRADOR")
-                        .requestMatchers("/api/PostUser").hasRole("ADMINISTRADOR")
-
-                        // =========================================================================
-                        // ✅ FIN DE REGLAS DE ACCESO POR ROL
-                        // =========================================================================
-
-                        // Cualquier otra petición debe estar autenticada
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-
         http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
