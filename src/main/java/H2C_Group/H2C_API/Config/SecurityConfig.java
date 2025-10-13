@@ -58,9 +58,17 @@ public class SecurityConfig{
                         .requestMatchers("/api/GetUserByUsername/{username}").authenticated()
                         .requestMatchers("/api/image/upload-to-folder").authenticated()
 
+                        // 1. REGLA ESPECÍFICA (La dejamos aquí para que tenga prioridad)
+                        .requestMatchers("/api/tech/getAssignedTicketsByTechnicianIdPage/**").permitAll() // Usamos permitAll temporalmente
+
+                        // 2. REGLA GENERAL PARA TODOS LOS ENDPOINTS DE /api/tech/ RESTANTES
+                        .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
                         //ENDPOINT OBTENER TICKETS ASIGNADOS (TECNICO)
                         .requestMatchers("/api/GetAssignedTicketsByTech/**").hasAuthority("ROLE_TECNICO")
-                        .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        .requestMatchers("/api/tech/getAssignedTicketsByTechnicianIdPage/**").permitAll()
+                        //.requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        .requestMatchers("/api/GetAssignedTicketsByTech/**").hasAuthority("ROLE_TECNICO")
 
                         // Endpoints autenticados
                         .requestMatchers("/api/users/change-password").authenticated()
