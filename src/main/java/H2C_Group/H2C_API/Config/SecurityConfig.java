@@ -60,6 +60,7 @@ public class SecurityConfig{
 
                         // Endpoints autenticados
                         .requestMatchers("/api/users/change-password").authenticated()
+                        .requestMatchers("/api/notifications/history").authenticated()
 
                         // ✅ CORREGIDO: Endpoints para clientes
                         .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
