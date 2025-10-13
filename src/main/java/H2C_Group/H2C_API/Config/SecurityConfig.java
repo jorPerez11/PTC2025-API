@@ -58,6 +58,10 @@ public class SecurityConfig{
                         .requestMatchers("/api/GetUserByUsername/{username}").authenticated()
                         .requestMatchers("/api/image/upload-to-folder").authenticated()
 
+                        //ENDPOINT OBTENER TICKETS ASIGNADOS (TECNICO)
+                        .requestMatchers("/api/GetAssignedTicketsByTech/**").hasAuthority("ROLE_TECNICO")
+                        .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
                         // Endpoints autenticados
                         .requestMatchers("/api/users/change-password").authenticated()
 
