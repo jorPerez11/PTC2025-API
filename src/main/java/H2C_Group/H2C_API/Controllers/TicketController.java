@@ -242,6 +242,50 @@ public class TicketController {
         return ResponseEntity.ok(count);
     }
 
+    @PatchMapping("/tech/UpdateTicketProgress/{ticketId}")
+    public ResponseEntity<?> updateTicketProgress(@PathVariable Long ticketId, @RequestBody TicketDTO payload) {
+        try {
+            TicketDTO updatedTicket = acceso.updateTicket(ticketId, payload);
+            return ResponseEntity.ok(updatedTicket);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+        } catch (ExceptionTicketNotFound e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", "Ocurrió un error interno del servidor al actualizar el progreso del ticket.");
+            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PatchMapping("/tech/FinalizeTicket/{ticketId}")
+    public ResponseEntity<?> finalizeTicket(@PathVariable Long ticketId, @RequestBody TicketDTO payload) {
+        try {
+            // Asigna el estado "Completado" y el 100% de progreso
+            payload.setPercentage(100);
+            payload.setStatus(new TicketStatusDTO(3L, "Completado"));
+
+            TicketDTO updatedTicket = acceso.updateTicket(ticketId, payload);
+            return ResponseEntity.ok(updatedTicket);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+        } catch (ExceptionTicketNotFound e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", e.getMessage());
+            return new ResponseEntity<>(errors, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", "Ocurrió un error interno del servidor al finalizar el ticket.");
+            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
 }
 
