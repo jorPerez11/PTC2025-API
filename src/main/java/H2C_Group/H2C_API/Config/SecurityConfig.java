@@ -63,6 +63,9 @@ public class SecurityConfig{
 
                         // Endpoints para clientes
                         .requestMatchers("/api/client/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        .requestMatchers("/api/notifications/**").authenticated()
+                        // ✅ CORREGIDO: Endpoints para clientes
+                        .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
 
                                 //Logout
                                 .requestMatchers("/api/users/logoutWeb").authenticated()

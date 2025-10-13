@@ -52,5 +52,15 @@ public interface TicketRepository extends JpaRepository<TicketEntity,Long> {
     @Query("SELECT COUNT(t) FROM TicketEntity t WHERE t.userCreator.id = :userId")
     Long countTicketsByUserId(@Param("userId") Long userId);
 
+    /**
+     * Busca tickets en estado "En espera" (ticketStatusId=1) que estén asignados
+     * y cuya fecha de creación sea hace más de 2 días (48 horas).
+     */
+    @Query("SELECT t FROM TicketEntity t " +
+            "WHERE t.ticketStatusId = 1 " + // Estado "En espera"
+            "AND t.assignedTechUser IS NOT NULL " + // <-- Usamos el nombre de la propiedad (assignedTechUser)
+            "AND t.creationDate <= (CURRENT_TIMESTAMP - INTERVAL '2' DAY)")
+    List<TicketEntity> findStalePendingTickets();
+
 }
 
