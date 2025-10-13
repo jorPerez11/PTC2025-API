@@ -67,7 +67,7 @@ public class SecurityConfig{
                                 //Logout
                                 .requestMatchers("/api/users/logoutWeb").authenticated()
 
-                                // Endpoints para técnicos Y administradores
+                                // ✅ CORREGIDO: Endpoints para técnicos Y administradores
                                 .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
                                 // ENDPOINTS PARA TICKETS
                                 .requestMatchers("/api/admin/GetTicketCounts").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
@@ -102,6 +102,8 @@ public class SecurityConfig{
                                 //Endpoint para declinar un ticket
                                 .requestMatchers(HttpMethod.POST, "/api/tech/decline-ticket/**").hasAuthority("ROLE_TECNICO")
 
+                                //ENDPOINT OBTENER TICKETS ASIGNADOS (TECNICO)
+                                .requestMatchers("/api/GetAssignedTicketsByTech/**").hasAuthority("ROLE_TECNICO")
 
                                 //  NUEVOS ENDPOINTS PARA MANEJAR PROGRESO Y FINALIZACIÓN
                                 .requestMatchers(HttpMethod.PATCH, "/api/tech/UpdateTicketProgress/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
