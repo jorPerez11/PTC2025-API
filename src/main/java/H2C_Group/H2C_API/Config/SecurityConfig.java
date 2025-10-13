@@ -61,6 +61,7 @@ public class SecurityConfig{
                         //ENDPOINT OBTENER TICKETS ASIGNADOS (TECNICO)
                         .requestMatchers("/api/GetAssignedTicketsByTech/**").hasAuthority("ROLE_TECNICO")
                         .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                        .requestMatchers("/api/tech/getAssignedTicketByTechnicianIdPage/**").permitAll()
 
                         // Endpoints autenticados
                         .requestMatchers("/api/users/change-password").authenticated()
