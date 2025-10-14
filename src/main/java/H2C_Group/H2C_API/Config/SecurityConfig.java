@@ -58,6 +58,15 @@ public class SecurityConfig{
                         .requestMatchers("/api/GetUserByUsername/{username}").authenticated()
                         .requestMatchers("/api/image/upload-to-folder").authenticated()
 
+                        // ENDPOINTS DE NOTIFICACIONES (accesibles por CUALQUIER rol autenticado)
+                        // GET /api/notifications/pending/{userId}
+                        .requestMatchers(HttpMethod.GET, "/api/notifications/pending/**").authenticated()
+                        // PUT /api/notifications/mark-as-seen/{notificationId}
+                        .requestMatchers(HttpMethod.PUT, "/api/notifications/mark-as-seen/**").authenticated()
+
+                        // REGLA PARA EL HANDSHAKE DE WEBSOCKETS (Necesita autenticación)
+                        .requestMatchers("/ws/**").authenticated() // Asegura que solo usuarios autenticados puedan conectarse
+
                         // 1. REGLA ESPECÍFICA (La dejamos aquí para que tenga prioridad)
                                 .requestMatchers("/api/tech/getAssignedTicketsByTechnicianIdPage/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
