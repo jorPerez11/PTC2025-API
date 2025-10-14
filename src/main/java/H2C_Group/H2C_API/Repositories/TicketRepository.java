@@ -27,7 +27,7 @@ public interface TicketRepository extends JpaRepository<TicketEntity,Long> {
 
     List<TicketEntity> findByAssignedTechUser_UserId(Long assignedTechUserId);
 
-    Page<TicketEntity> findByAssignedTechUser_UserIdPage(Long assignedTechUserId, Pageable pageable);
+    Page<TicketEntity> findByAssignedTechUser_UserId(Long assignedTechUserId, Pageable pageable);
 
     long countByAssignedTechUser_UserIdAndTicketStatusIdIn(Long userId, List<Long> statusIds);
 
