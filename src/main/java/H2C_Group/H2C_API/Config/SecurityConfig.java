@@ -62,7 +62,7 @@ public class SecurityConfig{
                         // GET /api/notifications/pending/{userId}
                         //.requestMatchers(HttpMethod.GET, "/api/notifications/pending/**").authenticated()
                         // PUT /api/notifications/mark-as-seen/{notificationId}
-                        .requestMatchers(HttpMethod.GET, "/api/notifications/pending/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_Técnico", "ROLE_ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.GET, "/api/notifications/pending/{userId}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_Técnico", "ROLE_ADMINISTRADOR")
                         .requestMatchers(HttpMethod.PUT, "/api/notifications/mark-as-seen/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_Técnico", "ROLE_ADMINISTRADOR")
 
                         // REGLA PARA EL HANDSHAKE DE WEBSOCKETS (Necesita autenticación)
