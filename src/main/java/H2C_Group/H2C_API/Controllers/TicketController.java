@@ -154,21 +154,26 @@ public class TicketController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "5") int size) {
 
-        // 1. OBTENER INFORMACIÓN DEL USUARIO LOGUEADO
+        // 1. Obtener la identidad del usuario que está logueado (desde el JWT/sesión)
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        // Obtener el ID y el rol
+        // Obtener el ID del usuario logueado usando el username del token.
+        // Esto requiere el metodo en el UserService (ver Sección 3).
         Long idUsuarioLogueado = userService.getUserIdByUsername(authentication.getName());
+
+        // 2. Verificar si el usuario logueado es Administrador
         boolean esAdmin = authentication.getAuthorities().stream()
+                // Usa el string de rol sin el acento para asegurar la coincidencia
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRADOR"));
 
-        // 2. VERIFICACIÓN DE SEGURIDAD: 403 FORBIDDEN si no es Administrador Y no es su propio ID
+        // 3. 🛑 VALIDACIÓN DE PROPIEDAD Y ROL
+        // Denegar el acceso si NO es Admin Y el ID solicitado NO es el ID propio.
         if (!esAdmin && !technicianId.equals(idUsuarioLogueado)) {
-            // El usuario logueado está intentando acceder a los tickets de OTRO técnico.
+            // Lanza 403 Forbidden si el usuario está intentando ver datos de otro técnico.
             return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
 
-        // 3. SI LA VERIFICACIÓN PASA, CONTINUAR CON LA LÓGICA DE NEGOCIO
+        // 4. Si la validación pasa, ejecuta la lógica de negocio.
         Page<TicketDTO> ticketPage = acceso.getAssignedTicketsByTechnicianIdPage(technicianId, page, size);
         return new ResponseEntity<>(ticketPage, HttpStatus.OK);
     }
