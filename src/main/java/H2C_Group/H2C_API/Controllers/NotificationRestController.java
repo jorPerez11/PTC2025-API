@@ -29,7 +29,7 @@ public class NotificationRestController {
      * El cliente debe llamar a esto al iniciar sesión.
      */
     @GetMapping("/pending/{userId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("permitAll()")
     public List<NotificationEntity> getPendingNotifications(@PathVariable Long userId) {
         System.out.println("✅ INICIO DE RUTA NOTIFICACIONES. USER ID: " + userId);
 
