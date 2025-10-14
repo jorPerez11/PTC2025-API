@@ -31,10 +31,7 @@ public class NotificationRestController {
     @GetMapping("/pending/{userId}")
     @PreAuthorize("isAuthenticated()")
     public List<NotificationEntity> getPendingNotifications(@PathVariable Long userId) {
-        // Validación básica de usuario
-        /*if (!userRepository.existsById(userId)) {
-            throw new ExceptionUserNotFound("El ID de usuario " + userId + " no existe.");
-        }*/
+        System.out.println("✅ INICIO DE RUTA NOTIFICACIONES. USER ID: " + userId);
 
         // Usamos el método que definiste en el NotificationRepository (seen = 0)
         return notificationRepository.findByUser_UserIdAndSeenOrderByNotificationDateDesc(userId, 0);
