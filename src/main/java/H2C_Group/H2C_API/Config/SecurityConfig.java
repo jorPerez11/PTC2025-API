@@ -45,6 +45,7 @@ public class SecurityConfig{
                         .requestMatchers(HttpMethod.POST, "/api/companies").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/companies/**").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/users/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/notifications/pending/{userId}").permitAll()
                         .requestMatchers("/api/firstuse/**").permitAll()
                         .requestMatchers("/api/check-company-existence").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -62,7 +63,7 @@ public class SecurityConfig{
                         // GET /api/notifications/pending/{userId}
                         //.requestMatchers(HttpMethod.GET, "/api/notifications/pending/**").authenticated()
                         // PUT /api/notifications/mark-as-seen/{notificationId}
-                        .requestMatchers(HttpMethod.GET, "/api/notifications/pending/{userId}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_Técnico", "ROLE_ADMINISTRADOR")
+                        //.requestMatchers(HttpMethod.GET, "/api/notifications/pending/{userId}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_Técnico", "ROLE_ADMINISTRADOR")
                         .requestMatchers(HttpMethod.PUT, "/api/notifications/mark-as-seen/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_Técnico", "ROLE_ADMINISTRADOR")
 
                         // REGLA PARA EL HANDSHAKE DE WEBSOCKETS (Necesita autenticación)
