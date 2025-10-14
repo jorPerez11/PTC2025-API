@@ -7,6 +7,7 @@ import H2C_Group.H2C_API.Repositories.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,11 +29,12 @@ public class NotificationRestController {
      * El cliente debe llamar a esto al iniciar sesión.
      */
     @GetMapping("/pending/{userId}")
+    @PreAuthorize("isAuthenticated()")
     public List<NotificationEntity> getPendingNotifications(@PathVariable Long userId) {
         // Validación básica de usuario
-        if (!userRepository.existsById(userId)) {
+        /*if (!userRepository.existsById(userId)) {
             throw new ExceptionUserNotFound("El ID de usuario " + userId + " no existe.");
-        }
+        }*/
 
         // Usamos el método que definiste en el NotificationRepository (seen = 0)
         return notificationRepository.findByUser_UserIdAndSeenOrderByNotificationDateDesc(userId, 0);
