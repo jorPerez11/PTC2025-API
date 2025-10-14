@@ -39,15 +39,18 @@ public class TicketService {
     @Autowired
     private TicketRepository ticketRepository;
 
-    @Autowired
-    private SimpMessagingTemplate messagingTemplate;
-  
-  @Autowired
-    private TicketStatusRepository ticketStatusRepository;
+    // ELIMINAMOS @Autowired private SimpMessagingTemplate messagingTemplate; de aquí
+    // El NotificationService se encargará del envío por WebSocket y la persistencia.
 
+    @Autowired
+    private TicketStatusRepository ticketStatusRepository;
 
     @Autowired
     private DeclinedTicketRepository declinedTicketRepository;
+
+    // 🔑 INYECCIÓN DEL SERVICIO DE NOTIFICACIONES 🔑
+    @Autowired
+    private NotificationService notificationService;
 
 
     public Page<TicketDTO> getAllTickets(int page, int size) {
@@ -131,20 +134,18 @@ public class TicketService {
         ticketEntity.setTicketStatusId(TicketStatus.EN_ESPERA.getId());
 
 
-            ticketEntity.setAssignedTechUser(null);
-            ticketEntity.setCreationDate(ticketDTO.getCreationDate());
-            ticketEntity.setCloseDate(null);
+        ticketEntity.setAssignedTechUser(null);
+        ticketEntity.setCreationDate(ticketDTO.getCreationDate());
+        ticketEntity.setCloseDate(null);
 
 
 
         // Almacenamiento de ticket creado en la DB
         TicketEntity savedTicket = ticketRepository.save(ticketEntity);
 
-        // Notificación para el cliente
+        // 🔔 Notificación para el cliente: USANDO EL NUEVO SERVICE 🔔
         String notificationMessage = "Tu ticket #" + savedTicket.getTicketId() + " - " + savedTicket.getTitle() + " ha sido creado exitosamente.";
-        String username = savedTicket.getUserCreator().getUsername();
-        System.out.println("📤 Enviando notificación a: " + username); // Log para confirmar
-        messagingTemplate.convertAndSendToUser(username, "/queue/notifications", notificationMessage);
+        notificationService.createAndSendNotification(savedTicket.getUserCreator(), savedTicket, notificationMessage);
 
         // Conversión del ticket almacenado de vuelta a DTO para la respuesta del Frontend
         return  convertToTicketDTO(savedTicket);
@@ -168,6 +169,11 @@ public class TicketService {
 
             if (statusEnum.equals(TicketStatus.COMPLETADO)) {
                 existingTicket.setCloseDate(LocalDateTime.now());
+
+                // 🔔 Notificación para el cliente: USANDO EL NUEVO SERVICE 🔔
+                String clientMessage = "Tu ticket #" + existingTicket.getTicketId() + " ha sido marcado como completado.";
+                notificationService.createAndSendNotification(existingTicket.getUserCreator(), existingTicket, clientMessage);
+
             } else if (existingTicket.getCloseDate() != null) {
                 existingTicket.setCloseDate(null);
             }
@@ -201,6 +207,11 @@ public class TicketService {
             // Manejar la fecha de cierre según el estado
             if (ticket.getTicketStatusId().equals(TicketStatus.COMPLETADO.getId())) {
                 ticket.setCloseDate(java.time.LocalDateTime.now());
+
+                // 🔔 Notificación para el cliente: USANDO EL NUEVO SERVICE 🔔
+                String clientMessage = "Tu ticket #" + ticket.getTicketId() + " ha sido marcado como completado.";
+                notificationService.createAndSendNotification(ticket.getUserCreator(), ticket, clientMessage);
+
             } else {
                 // Si el estado no es "Completado", la fecha debe ser nula
                 ticket.setCloseDate(null);
@@ -249,9 +260,9 @@ public class TicketService {
                 if (existingTicket.getAssignedTechUser() == null || !existingTicket.getAssignedTechUser().getUserId().equals(userTech.getUserId())) {
                     //Solo se envía la notificación si el técnico es nuevo
                     String notificationMessage = "Se te ha asignado el ticket #" + existingTicket.getTicketId() + " - " + existingTicket.getTitle();
-                    String techUsername = userTech.getUsername();
-                    System.out.println("📤 Notificación enviada al técnico: " + techUsername);
-                    messagingTemplate.convertAndSendToUser(techUsername, "/queue/notifications", notificationMessage);
+
+                    // 🔔 USANDO EL NUEVO SERVICE 🔔
+                    notificationService.createAndSendNotification(userTech, existingTicket, notificationMessage);
                 }
                 existingTicket.setAssignedTechUser(userTech);
             } else {
@@ -281,11 +292,10 @@ public class TicketService {
             if (statusEnum.equals(TicketStatus.COMPLETADO)) {
                 existingTicket.setCloseDate(LocalDateTime.now());
 
-                // 🔔 Notificación para el cliente
-                String clientUsername = existingTicket.getUserCreator().getUsername();
+                // 🔔 Notificación para el cliente: USANDO EL NUEVO SERVICE 🔔
                 String clientMessage = "Tu ticket #" + existingTicket.getTicketId() + " ha sido marcado como completado.";
-                System.out.println("📤 Notificación enviada al cliente: " + clientUsername);
-                messagingTemplate.convertAndSendToUser(clientUsername, "/queue/notifications", clientMessage);
+                notificationService.createAndSendNotification(existingTicket.getUserCreator(), existingTicket, clientMessage);
+
             } else if (existingTicket.getCloseDate() != null) {
                 // Si el estado cambia de "Cerrado" a otro, eliminar closeDate
                 existingTicket.setCloseDate(null);
@@ -479,6 +489,11 @@ public class TicketService {
             UserEntity techinicia = userRepository.findById(technicianId)
                     .orElseThrow(() -> new UsernameNotFoundException("El tecnico con el id" + technicianId + "no existe"));
             ticket.setAssignedTechUser(techinicia);
+
+            // 🔔 Notificación de asignación al técnico (ya que se autoasignó al aceptar)
+            String techAssignMessage = "¡Se te ha asignado el ticket #" + ticket.getTicketId() + " - " + ticket.getTitle() + " al aceptarlo!";
+            notificationService.createAndSendNotification(ticket.getAssignedTechUser(), ticket, techAssignMessage);
+
         } else if(!ticket.getAssignedTechUser().getUserId().equals(technicianId)){
             //Si el ticket ya esta asignado a otro tecnico, deniega el acceso
             throw new IllegalArgumentException("El usuario no tiene permiso para aceptar el ticket");
@@ -494,17 +509,13 @@ public class TicketService {
 
         TicketEntity savedTicket = ticketRepository.save(ticket);
 
-        //Notificación para el técnico
+        // Notificación para el técnico (de que fue aceptado/pasó a progreso)
         String notificationMessage = "Has aceptado el ticket #" + savedTicket.getTicketId() + " - " + savedTicket.getTitle();
-        String techUsername = ticket.getAssignedTechUser().getUsername();
-        System.out.println("📤 Notificación enviada al técnico: " + techUsername);
-        messagingTemplate.convertAndSendToUser(techUsername, "/queue/notifications", notificationMessage);
+        notificationService.createAndSendNotification(savedTicket.getAssignedTechUser(), savedTicket, notificationMessage);
 
-        String clientUsername = ticket.getUserCreator().getUsername();
+        // Notificación para el cliente
         String clientMessage = "Tu ticket #" + ticket.getTicketId() + " ha sido aceptado por un técnico y está en progreso.";
-        System.out.println("📤 Notificación enviada al cliente: " + clientUsername);
-        messagingTemplate.convertAndSendToUser(clientUsername, "/queue/notifications", clientMessage);
-
+        notificationService.createAndSendNotification(savedTicket.getUserCreator(), savedTicket, clientMessage);
 
         return convertToTicketDTO(savedTicket);
     }
