@@ -60,9 +60,10 @@ public class SecurityConfig{
 
                         // ENDPOINTS DE NOTIFICACIONES (accesibles por CUALQUIER rol autenticado)
                         // GET /api/notifications/pending/{userId}
-                        .requestMatchers(HttpMethod.GET, "/api/notifications/pending/**").authenticated()
+                        //.requestMatchers(HttpMethod.GET, "/api/notifications/pending/**").authenticated()
                         // PUT /api/notifications/mark-as-seen/{notificationId}
                         .requestMatchers(HttpMethod.PUT, "/api/notifications/mark-as-seen/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/notifications/pending/**").hasAnyRole("CLIENTE", "TECNICO", "ADMINISTRADOR")
 
                         // REGLA PARA EL HANDSHAKE DE WEBSOCKETS (Necesita autenticación)
                         .requestMatchers("/ws/**").authenticated() // Asegura que solo usuarios autenticados puedan conectarse
