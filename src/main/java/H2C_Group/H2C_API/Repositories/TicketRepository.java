@@ -27,6 +27,8 @@ public interface TicketRepository extends JpaRepository<TicketEntity,Long> {
 
     List<TicketEntity> findByAssignedTechUser_UserId(Long assignedTechUserId);
 
+    Page<TicketEntity> findByAssignedTechUser_UserIdPage(Long assignedTechUserId, Pageable pageable);
+
     long countByAssignedTechUser_UserIdAndTicketStatusIdIn(Long userId, List<Long> statusIds);
 
     @Query(value = "SELECT TS.STATUS, COUNT(T.TICKETID) FROM TBTICKETS T JOIN TBTICKETSTATUS TS ON T.TICKETSTATUSID = TS.TICKETSTATUSID GROUP BY TS.STATUS", nativeQuery = true)
