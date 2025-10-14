@@ -55,12 +55,12 @@ public interface TicketRepository extends JpaRepository<TicketEntity,Long> {
     // MÉTODO PARA ENCONTRAR TICKETS ESTANCADOS
     // Busca tickets en el estado :statusId (e.g., "En Progreso") cuya fecha de creación
     // sea anterior a HACE DOS DÍAS. La sintaxis "t.creationDate - 2" es compatible con Oracle para restar días a una fecha.
+    // función SQL estándar que reste días de un TIMESTAMP:
     @Query("SELECT t FROM TicketEntity t " +
             "WHERE t.ticketStatusId = :statusId " +
-            "AND t.assignedTechUser IS NOT NULL " + // Debe tener un técnico asignado
-            "AND t.creationDate < (CURRENT_TIMESTAMP - 2) " + // Creación hace más de 48 horas (2 días)
+            "AND t.assignedTechUser IS NOT NULL " +
+            "AND t.creationDate < (FUNCTION('sysdate') - 2) " + // o FUNCTION('CURRENT_DATE') - 2
             "ORDER BY t.creationDate ASC")
     List<TicketEntity> findStaleTicketsForTechnicians(@Param("statusId") Long statusId);
-
 }
 
