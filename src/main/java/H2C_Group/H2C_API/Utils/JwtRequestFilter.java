@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -46,6 +47,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             "/api/client/UpdateTicket/", // Asumiendo que necesita el /
             "/api/client/DeleteTicket",
             "/api/check-company-existence",
+            "/api/notifications/pending/", //Faltaba agregarla aqui
             "/api/searchSolution",
             "/api/GetSolutions",
             "/api/GetSolutionsWeb/"
