@@ -59,22 +59,25 @@ public class SecurityConfig{
                         .requestMatchers("/api/image/upload-to-folder").authenticated()
 
                         // 1. REGLA ESPECÍFICA (La dejamos aquí para que tenga prioridad)
-                        .requestMatchers("/api/tech/getAssignedTicketsByTechnicianIdPage/**").permitAll() // Usamos permitAll temporalmente
+                                .requestMatchers("/api/tech/getAssignedTicketsByTechnicianIdPage/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
-                        // 2. REGLA GENERAL PARA TODOS LOS ENDPOINTS DE /api/tech/ RESTANTES
+                        // 2. REGLA GENERAL PARA EL RESTO DE ENDPOINTS /api/tech/
+                                .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+
+                                // 2. REGLA GENERAL PARA TODOS LOS ENDPOINTS DE /api/tech/ RESTANTES
                         .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
                         //ENDPOINT OBTENER TICKETS ASIGNADOS (TECNICO)
                         .requestMatchers("/api/GetAssignedTicketsByTech/**").hasAuthority("ROLE_TECNICO")
-                        .requestMatchers("/api/tech/getAssignedTicketsByTechnicianIdPage/**").permitAll()
                         //.requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
-                        .requestMatchers("/api/GetAssignedTicketsByTech/**").hasAuthority("ROLE_TECNICO")
+
 
                         // Endpoints autenticados
                         .requestMatchers("/api/users/change-password").authenticated()
 
-                        // ✅ CORREGIDO: Endpoints para clientes
-                        .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
+                        // Endpoints para clientes
+                        .requestMatchers("/api/client/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
                                 //Logout
                                 .requestMatchers("/api/users/logoutWeb").authenticated()
@@ -114,6 +117,17 @@ public class SecurityConfig{
                                 //Endpoint para declinar un ticket
                                 .requestMatchers(HttpMethod.POST, "/api/tech/decline-ticket/**").hasAuthority("ROLE_TECNICO")
 
+                                //ENDPOINT OBTENER TICKETS ASIGNADOS (TECNICO)
+                                .requestMatchers("/api/GetAssignedTicketsByTech/**").hasAuthority("ROLE_TECNICO")
+                                .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+                                //  NUEVOS ENDPOINTS PARA MANEJAR PROGRESO Y FINALIZACIÓN
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/UpdateTicketProgress/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/FinalizeTicket/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+                                //  NUEVOS ENDPOINTS PARA MANEJAR PROGRESO Y FINALIZACIÓN
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/UpdateTicketProgress/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/FinalizeTicket/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
 
 
@@ -162,7 +176,7 @@ public class SecurityConfig{
 
                 // Orígenes sin puerto (vercel y localhost)
                 "http://localhost",
-                "https://localhost",
+                "https://localhost/",
                 "https://*.herokuapp.com",
                 "https://*.vercel.app",
                 "https://ptc-2025-app-web.vercel.app",
