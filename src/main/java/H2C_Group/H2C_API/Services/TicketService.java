@@ -472,7 +472,7 @@ public class TicketService {
 
     public Page<TicketDTO> getAssignedTicketsByTechnicianIdPage(Long technicianId, int page, int size) {
         Pageable pageable  = PageRequest.of(page, size);
-        Page<TicketEntity> tickets = ticketRepository.findByAssignedTechUser_UserIdPage(technicianId, pageable);
+        Page<TicketEntity> tickets = ticketRepository.findByAssignedTechUser_UserId(technicianId, pageable);
         userRepository.findById(technicianId).orElseThrow(() -> new ExceptionUserNotFound("El id del tecnico " + technicianId + " no existe"));
 
         return tickets.map(this::convertToTicketDTO);
