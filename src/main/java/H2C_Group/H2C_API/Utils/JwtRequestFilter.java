@@ -47,7 +47,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             "/api/client/UpdateTicket/", // Asumiendo que necesita el /
             "/api/client/DeleteTicket",
             "/api/check-company-existence",
-            "/api/notifications/pending/", //Faltaba agregarla aqui
+            //"/api/notifications/pending/", //Faltaba agregarla aqui
             "/api/searchSolution",
             "/api/GetSolutions",
             "/api/GetSolutionsWeb/"
