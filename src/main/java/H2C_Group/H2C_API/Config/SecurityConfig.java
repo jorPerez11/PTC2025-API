@@ -14,6 +14,7 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -31,6 +32,13 @@ import java.util.Arrays;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig{
+
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) -> web.ignoring()
+                // Usamos el patrón wildcard para asegurar que coincida con cualquier ID: /api/notifications/pending/72
+                .requestMatchers(HttpMethod.GET, "/api/notifications/pending/**");
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtRequestFilter jwtRequestFilter) throws Exception {
@@ -57,6 +65,17 @@ public class SecurityConfig{
                         .requestMatchers("api/GetSolutionsWeb/**").permitAll() //ENDPOINT PARA APP WEB
                         .requestMatchers("/api/GetUserByUsername/{username}").authenticated()
                         .requestMatchers("/api/image/upload-to-folder").authenticated()
+
+                        // ENDPOINTS DE NOTIFICACIONES (accesibles por CUALQUIER rol autenticado)
+                        // GET /api/notifications/pending/{userId}
+                        //.requestMatchers(HttpMethod.GET, "/api/notifications/pending/**").authenticated()
+                        // PUT /api/notifications/mark-as-seen/{notificationId}
+                        //.requestMatchers(HttpMethod.GET, "/api/notifications/pending/{userId}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_Técnico", "ROLE_ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.GET, "/api/notifications/pending/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/notifications/mark-as-seen/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_Técnico", "ROLE_ADMINISTRADOR")
+
+                        // REGLA PARA EL HANDSHAKE DE WEBSOCKETS (Necesita autenticación)
+                        .requestMatchers("/ws/**").authenticated() // Asegura que solo usuarios autenticados puedan conectarse
 
                         // 1. REGLA ESPECÍFICA (La dejamos aquí para que tenga prioridad)
                                 .requestMatchers("/api/tech/getAssignedTicketsByTechnicianIdPage/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
@@ -177,10 +196,13 @@ public class SecurityConfig{
                 // Orígenes sin puerto (vercel y localhost)
                 "http://localhost",
                 "https://localhost/",
-                "https://*.herokuapp.com",
-                "https://*.vercel.app",
+                //"https://*.herokuapp.com",
+                //"https://*.vercel.app",
                 "https://ptc-2025-app-web.vercel.app",
                 "https://h2c-helpdesk-web.vercel.app/",
+                "https://h2c-helpdesk-web.vercel.app",
+                // Origen de Heroku (Aunque es la misma API, por si acaso)
+                "https://ptchelpdesk-a73934db2774.herokuapp.com",
                 "http://127.0.0.1",
 
                 // Tu IP local con puerto de desarrollo (192.168.0.183)

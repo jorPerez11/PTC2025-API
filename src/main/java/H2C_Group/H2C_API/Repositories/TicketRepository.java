@@ -52,5 +52,16 @@ public interface TicketRepository extends JpaRepository<TicketEntity,Long> {
     @Query("SELECT COUNT(t) FROM TicketEntity t WHERE t.userCreator.id = :userId")
     Long countTicketsByUserId(@Param("userId") Long userId);
 
+    /**
+     * MÉTODO NATIVO: Busca tickets en estado :statusId (En Progreso) que no han sido actualizados en 2 días.
+     * Usa sintaxis nativa de Oracle (SYSDATE - 2) para evitar errores de interpretación de HQL/JPQL.
+     */
+    @Query(value = "SELECT * FROM TBTICKETS t " +
+            "WHERE t.TICKETSTATUSID = :statusId " +
+            "AND t.ASSIGNEDTECH IS NOT NULL " +
+            "AND t.CREATIONDATE < (SYSDATE - 2) " +
+            "ORDER BY t.CREATIONDATE ASC",
+            nativeQuery = true) // ⬅️ CRÍTICO: Indica que es SQL nativo
+    List<TicketEntity> findStaleTicketsForTechnicians(@Param("statusId") Long statusId);
 }
 

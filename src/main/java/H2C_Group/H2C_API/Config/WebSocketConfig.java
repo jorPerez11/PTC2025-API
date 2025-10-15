@@ -43,6 +43,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     }
                 })
                 .setAllowedOriginPatterns(
+                        "https://h2c-helpdesk-web.vercel.app",
                         "http://localhost",
                         "http://localhost:*",
                         "http://127.0.0.1:*",
