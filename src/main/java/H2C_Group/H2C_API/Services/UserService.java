@@ -1315,4 +1315,110 @@ public class UserService implements UserDetailsService {
 
         return convertToUserDTO(savedUser); // Convierte la entidad a DTO y la devuelve
     }
+
+    /**
+     * Procesa la solicitud de restablecimiento de contraseña.
+     * 1. Busca el usuario por email.
+     * 2. Si existe: genera y guarda una nueva contraseña temporal (hash),
+     * marca la cuenta como `isPasswordExpired = 1`, guarda el nombre completo para el correo
+     * y notifica al usuario por email.
+     * 3. Si no existe, lanza ExceptionUserNotFound (el Controller la captura de forma segura).
+     *
+     * @param email Correo electrónico del usuario.
+     * @throws ExceptionUserNotFound Si no se encuentra el usuario.
+     * @throws Exception Si falla al generar la contraseña o al enviar el correo.
+     */
+    @Transactional
+    public void requestPasswordReset(String email) throws ExceptionUserNotFound, Exception {
+        // 1. Buscar el usuario por email
+        UserEntity user = userRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new ExceptionUserNotFound("Usuario no encontrado con el correo: " + email));
+
+        // 2. Generar contraseña temporal segura
+        String tempPassword = generatedRandomPassword();
+
+        // 3. Hashear la contraseña temporal
+        String hashedPassword = passwordEncoder.encode(tempPassword);
+
+        // 4. Actualizar el usuario en la DB
+        user.setPasswordHash(hashedPassword);
+        // isPasswordExpired = true (1): Indica que debe restablecer la contraseña en el primer login
+        user.setPasswordExpired(true);
+        userRepository.save(user);
+
+        // 5. Enviar el correo electrónico con la contraseña temporal
+
+        String nombre = user.getFullName();
+        String usuario = user.getUsername();
+
+        // Definir el Asunto
+        String subject = "Restablecimiento de Contraseña - Help Desk H2C";
+
+        // Construir el cuerpo HTML (similar a tu lógica de registro, adaptado para restablecimiento)
+        String bodyHTML = "<!DOCTYPE html>"
+                + "<html lang='es'>"
+                + "<head>"
+                + "    <meta charset='UTF-8'>"
+                + "    <meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+                + "    <title>Restablecimiento de Contraseña</title>"
+                + "</head>"
+                + "<body style='margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f8f9fa;'>"
+
+                + "    <table align='center' border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color: #f8f9fa; padding: 20px;'>"
+                + "        <tr>"
+                + "            <td align='center'>"
+                + "                <table align='center' border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 600px; background-color: #ffffff; border-radius: 10px; border: 1px solid #e9ecef; box-shadow: 0 4px 12px rgba(0,0,0,0.05);'>"
+                + "                    "
+                + "                    <tr>"
+                + "                        <td align='center' style='padding: 20px 30px; background-color: #ffffff; border-top-left-radius: 10px; border-top-right-radius: 10px;'>"
+                + "                            <img src='https://i.ibb.co/5Xxq0WTx/logoH2C.png' alt='Logo H2C Help Desk' width='160' style='display: block; border: 0;' />"
+                + "                        </td>"
+                + "                    </tr>"
+
+                + "                    <tr>"
+                + "                        <td height='5' style='background-color: #9e0918;'></td>" // Usamos el color de la marca para el restablecimiento
+                + "                    </tr>"
+
+                + "                    <tr>"
+                + "                        <td style='padding: 30px; color: #343a40; font-size: 16px; line-height: 1.7;'>"
+                + "                            <h1 style='color: #9e0918; font-size: 24px; margin-top: 0; margin-bottom: 20px;'>Contraseña Restablecida</h1>"
+                + "                            "
+                + "                            <p>Hola <strong>" + nombre + "</strong>,</p>"
+                + "                            <p>Hemos recibido una solicitud para restablecer la contraseña de tu cuenta. Tu nueva contraseña temporal es la siguiente:</p>"
+                + "                            "
+                + "                            <div style='background-color: #fff0f5; /* Rosa muy claro */ padding: 20px; border-left: 5px solid #9e0918; border-radius: 5px; margin: 30px 0;'>"
+                + "                                <p style='margin: 5px 0; font-size: 17px;'>"
+                + "                                    <strong><span style='color: #9e0918;'>&#10148;</span> Usuario:</strong> "
+                + "                                    <span style='color: #343a40; font-weight: bold;'>" + usuario + "</span>"
+                + "                                </p>"
+                + "                                <p style='margin: 5px 0; font-size: 17px;'>"
+                + "                                    <strong><span style='color: #D9534F;'>&#10148;</span> Nueva Contraseña Temporal:</strong> "
+                + "                                    <span style='color: #D9534F; font-weight: bold;'>" + tempPassword + "</span>"
+                + "                                </p>"
+                + "                            </div>"
+                + "                            "
+                + "                            <p><strong>ACCIONES REQUERIDAS:</strong> Utiliza esta contraseña para iniciar sesión. Inmediatamente después de iniciar sesión, se te solicitará crear una nueva contraseña permanente.</p>"
+                + "                            "
+                + "                        </td>"
+                + "                    </tr>"
+
+                + "                    <tr>"
+                + "                        <td align='center' style='padding: 20px 30px; border-top: 1px solid #e9ecef; background-color: #f8f9fa; border-bottom-left-radius: 10px; border-bottom-right-radius: 10px; font-size: 12px; color: #6c757d;'>"
+                + "                            <p style='margin: 0;'>Este es un correo electrónico automatizado de H2C.</p>"
+                + "                        </td>"
+                + "                    </tr>"
+
+                + "                </table>"
+                + "            </td>"
+                + "        </tr>"
+                + "    </table>"
+                + "</body>"
+                + "</html>";
+
+        // Enviar el correo con el cuerpo HTML
+        emailService.sendEmail(email, subject, bodyHTML);
+
+        // Opcional: Loguear en el servidor que se restableció la contraseña
+        System.out.println("Contraseña temporal establecida y enviada por correo para: " + email);
+    }
 }
