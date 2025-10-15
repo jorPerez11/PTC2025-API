@@ -196,8 +196,8 @@ public class SecurityConfig{
                 // Orígenes sin puerto (vercel y localhost)
                 "http://localhost",
                 "https://localhost/",
-                "https://*.herokuapp.com",
-                "https://*.vercel.app",
+                //"https://*.herokuapp.com",
+                //"https://*.vercel.app",
                 "https://ptc-2025-app-web.vercel.app",
                 "https://h2c-helpdesk-web.vercel.app/",
                 "https://h2c-helpdesk-web.vercel.app",
