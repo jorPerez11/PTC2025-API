@@ -1397,7 +1397,7 @@ public class UserService implements UserDetailsService {
                 + "                                </p>"
                 + "                            </div>"
                 + "                            "
-                + "                            <p><strong>ACCIONES REQUERIDAS:</strong> Utiliza esta contraseña para iniciar sesión. **Inmediatamente después de iniciar sesión**, se te solicitará crear una nueva contraseña permanente.</p>"
+                + "                            <p><strong>ACCIONES REQUERIDAS:</strong> Utiliza esta contraseña para iniciar sesión. Inmediatamente después de iniciar sesión, se te solicitará crear una nueva contraseña permanente.</p>"
                 + "                            "
                 + "                        </td>"
                 + "                    </tr>"
