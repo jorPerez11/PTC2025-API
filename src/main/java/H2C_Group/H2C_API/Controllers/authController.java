@@ -251,4 +251,51 @@ public class authController {
         }
 
     }
+
+
+    /**
+     * Endpoint para solicitar el restablecimiento de contraseña mediante correo electrónico.
+     * Genera una contraseña temporal, la marca como expirada (isPasswordExpired = 1)
+     * y notifica al usuario por email.
+     *
+     * @param requestBody Un mapa que debe contener la clave "email".
+     * @return Una respuesta con éxito genérico (200) para evitar la enumeración de usuarios.
+     */
+    @PostMapping("/request-password-reset")
+    public ResponseEntity<?> requestPasswordReset(@RequestBody Map<String, String> requestBody) {
+        String email = requestBody.get("email");
+
+        if (email == null || email.trim().isEmpty()) {
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", "El correo electrónico es obligatorio.");
+            return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+        }
+
+        try {
+            // Llama al servicio. El servicio manejará la búsqueda, generación de contraseña,
+            // guardado con isPasswordExpired=1 y el envío del correo.
+            userService.requestPasswordReset(email);
+
+            // Mensaje de éxito genérico (200 OK) SIEMPRE, incluso si el correo no existe,
+            // para evitar que el atacante sepa qué correos están registrados (enumeración de usuarios).
+            Map<String, String> success = new HashMap<>();
+            success.put("message", "Si el correo está registrado, recibirás un mensaje con la contraseña temporal.");
+            return new ResponseEntity<>(success, HttpStatus.OK);
+
+        } catch (ExceptionUserNotFound e) {
+            // Capturamos la excepción pero retornamos éxito genérico por seguridad.
+            log.warn("Intento de restablecimiento de contraseña con correo no encontrado: {}", email);
+
+            Map<String, String> success = new HashMap<>();
+            success.put("message", "Si el correo está registrado, recibirás un mensaje con la contraseña temporal.");
+            return new ResponseEntity<>(success, HttpStatus.OK);
+
+        } catch (Exception e) {
+            // Manejo de otros errores (ej. fallo en DB, fallo en envío de email)
+            log.error("Error al solicitar restablecimiento para {}: {}", email, e.getMessage());
+            Map<String, String> errors = new HashMap<>();
+            errors.put("error", "Error interno del servidor al procesar la solicitud.");
+            return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }
