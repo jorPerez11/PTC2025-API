@@ -53,6 +53,7 @@ public class SecurityConfig{
                         .requestMatchers(HttpMethod.POST, "/api/companies").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/companies/**").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/users/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/users/request-password-reset").permitAll()
                         .requestMatchers("/api/firstuse/**").permitAll()
                         .requestMatchers("/api/check-company-existence").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

@@ -47,7 +47,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             "/api/client/UpdateTicket/", // Asumiendo que necesita el /
             "/api/client/DeleteTicket",
             "/api/check-company-existence",
-            //"/api/notifications/pending/", //Faltaba agregarla aqui
+            "/api/users/request-password-reset",
             "/api/searchSolution",
             "/api/GetSolutions",
             "/api/GetSolutionsWeb/"
@@ -58,6 +58,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             "/api/users/register",
             "/api/users/registerTech",
             "/api/PostCompany",
+            "/api/users/request-password-reset",
             "/api/check-company-existence",
             "/api/companies"
     );
