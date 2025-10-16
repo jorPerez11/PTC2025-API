@@ -134,11 +134,15 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         return (path.equals("/api/users/login") && "POST".equals(method)) ||
                 (path.equals("/api/users/register") && "POST".equals(method)) ||
                 (path.equals("/api/users/registerTech") && "POST".equals(method)) ||
+                (path.equals("/api/request") && "POST".equals(method)) ||
+                (path.equals("/api/verify") && "POST".equals(method)) ||
+                (path.equals("/api/confirm") && "POST".equals(method)) ||
                 (path.startsWith("/api/firstuse/")) ||
                 (path.startsWith("/api/PostCompany/")) ||
                 (path.equals("/api/companies") && "POST".equals(method)) ||
                 (method.equals("OPTIONS"));
     }
+
 
     private void sendError(HttpServletResponse response, String message, int status) throws IOException {
         response.setContentType("application/json");

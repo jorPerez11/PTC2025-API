@@ -53,12 +53,17 @@ public class SecurityConfig{
                         .requestMatchers("/api/client/DeleteTicket").permitAll()
                         .requestMatchers("/api/searchSolution").permitAll()
                         .requestMatchers("/api/GetSolutions").permitAll()
+                        .requestMatchers("/api/request").permitAll()
+                        .requestMatchers("/api/verify").permitAll()
+                        .requestMatchers("/api/confirm").permitAll()
                         .requestMatchers("api/GetSolutionsWeb/**").permitAll() //ENDPOINT PARA APP WEB
                         .requestMatchers("/api/GetUserByUsername/{username}").authenticated()
                         .requestMatchers("/api/image/upload-to-folder").authenticated()
 
                         // Endpoints autenticados
                         .requestMatchers("/api/users/change-password").authenticated()
+
+                        .requestMatchers("/api/client/GetRecentTicketsByUser/*").authenticated()
 
                         // ✅ CORREGIDO: Endpoints para clientes
                         .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
@@ -71,10 +76,6 @@ public class SecurityConfig{
                                 // ENDPOINTS PARA TICKETS
                                 .requestMatchers("/api/admin/GetTicketCounts").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
                                 .requestMatchers("/api/admin/GetTickets").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
-                                // ENDPOINTS PARA SOLUCIONES
-                                .requestMatchers("/api/PostSolution").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
-                                .requestMatchers("/api/UpdateSolution/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
-                                .requestMatchers("/api/DeleteSolution/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
                                 // ENDPOINTS PARA ACTIVIDADES
                                 .requestMatchers("/api/GetActivities").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
                                 .requestMatchers("/api/PostActivity").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
@@ -86,6 +87,9 @@ public class SecurityConfig{
                                 .requestMatchers("/api/UpdateUser/**").hasAuthority("ROLE_ADMINISTRADOR")
                                 .requestMatchers("/api/DeleteUser/**").hasAuthority("ROLE_ADMINISTRADOR")
                                 .requestMatchers("/api/PostUser").hasAuthority("ROLE_ADMINISTRADOR")
+
+                        // Endpoints para técnicos
+                        .requestMatchers(HttpMethod.GET, "/api/tech/count/completed-by-tech/*").permitAll()
 
 
 

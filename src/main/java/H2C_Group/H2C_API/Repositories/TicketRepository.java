@@ -2,6 +2,7 @@ package H2C_Group.H2C_API.Repositories;
 
 
 import H2C_Group.H2C_API.Entities.TicketEntity;
+import H2C_Group.H2C_API.Enums.TicketStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -50,5 +51,7 @@ public interface TicketRepository extends JpaRepository<TicketEntity,Long> {
     @Query("SELECT COUNT(t) FROM TicketEntity t WHERE t.userCreator.id = :userId")
     Long countTicketsByUserId(@Param("userId") Long userId);
 
+    @Query("SELECT COUNT(t) FROM TicketEntity t WHERE t.assignedTechUser.id = :techId AND t.ticketStatusId = :statusId")
+    Long countCompletedTicketsByTechId(@Param("techId") Long techId, @Param("statusId") Long statusId);
 }
 
