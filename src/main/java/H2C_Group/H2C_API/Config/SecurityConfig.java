@@ -106,7 +106,13 @@ public class SecurityConfig{
                                 //Logout
                                 .requestMatchers("/api/users/logoutWeb").authenticated()
 
-                                // ✅ CORREGIDO: Endpoints para técnicos Y administradores
+                        .requestMatchers("/api/client/GetRecentTicketsByUser/*").authenticated()
+
+                        // ✅ CORREGIDO: Endpoints para clientes
+                        .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
+
+
+                        // ✅ CORREGIDO: Endpoints para técnicos Y administradores
                                 .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
                                 // ENDPOINTS PARA TICKETS
                                 .requestMatchers("/api/admin/GetTicketCounts").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
