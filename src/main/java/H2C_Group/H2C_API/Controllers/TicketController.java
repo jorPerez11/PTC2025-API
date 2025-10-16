@@ -322,6 +322,11 @@ public class TicketController {
         }
     }
 
+    @GetMapping("/tech/count/completed-by-tech/{techId}")
+    public ResponseEntity<Long> getCompletedTicketCountByTech(@PathVariable Long techId) {
+        Long count = acceso.countCompletedByTechId(techId);
+        return ResponseEntity.ok(count);
+    }
 
 }
 
