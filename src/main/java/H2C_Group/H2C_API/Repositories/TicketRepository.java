@@ -2,6 +2,7 @@ package H2C_Group.H2C_API.Repositories;
 
 
 import H2C_Group.H2C_API.Entities.TicketEntity;
+import H2C_Group.H2C_API.Enums.TicketStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

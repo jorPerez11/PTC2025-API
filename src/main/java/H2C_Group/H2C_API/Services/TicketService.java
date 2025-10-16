@@ -544,4 +544,8 @@ public class TicketService {
         return ticketRepository.countTicketsByUserId(userId);
     }
 
+    public Long countCompletedByTechId(Long techId) {
+        return ticketRepository.countCompletedTicketsByTechId(techId, TicketStatus.COMPLETADO.getId());
+
+    }
 }
