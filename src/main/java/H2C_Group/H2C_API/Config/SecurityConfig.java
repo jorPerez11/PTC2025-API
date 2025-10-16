@@ -62,6 +62,7 @@ public class SecurityConfig{
                         .requestMatchers("/api/client/PostTicket").permitAll()
                         .requestMatchers("/api/client/UpdateTicket/**").permitAll()
                         .requestMatchers("/api/client/DeleteTicket").permitAll()
+                        .requestMatchers("/api/client/DeleteTicket/**").permitAll()
                         .requestMatchers("/api/searchSolution").permitAll()
                         .requestMatchers("/api/GetSolutions").permitAll()
                         .requestMatchers("/api/request").permitAll()
