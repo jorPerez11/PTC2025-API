@@ -28,6 +28,8 @@ public interface TicketRepository extends JpaRepository<TicketEntity,Long> {
 
     List<TicketEntity> findByAssignedTechUser_UserId(Long assignedTechUserId);
 
+    Page<TicketEntity> findByAssignedTechUser_UserId(Long assignedTechUserId, Pageable pageable);
+
     long countByAssignedTechUser_UserIdAndTicketStatusIdIn(Long userId, List<Long> statusIds);
 
     @Query(value = "SELECT TS.STATUS, COUNT(T.TICKETID) FROM TBTICKETS T JOIN TBTICKETSTATUS TS ON T.TICKETSTATUSID = TS.TICKETSTATUSID GROUP BY TS.STATUS", nativeQuery = true)
@@ -51,7 +53,16 @@ public interface TicketRepository extends JpaRepository<TicketEntity,Long> {
     @Query("SELECT COUNT(t) FROM TicketEntity t WHERE t.userCreator.id = :userId")
     Long countTicketsByUserId(@Param("userId") Long userId);
 
-    @Query("SELECT COUNT(t) FROM TicketEntity t WHERE t.assignedTechUser.id = :techId AND t.ticketStatusId = :statusId")
-    Long countCompletedTicketsByTechId(@Param("techId") Long techId, @Param("statusId") Long statusId);
+    /**
+     * MÉTODO NATIVO: Busca tickets en estado :statusId (En Progreso) que no han sido actualizados en 2 días.
+     * Usa sintaxis nativa de Oracle (SYSDATE - 2) para evitar errores de interpretación de HQL/JPQL.
+     */
+    @Query(value = "SELECT * FROM TBTICKETS t " +
+            "WHERE t.TICKETSTATUSID = :statusId " +
+            "AND t.ASSIGNEDTECH IS NOT NULL " +
+            "AND t.CREATIONDATE < (SYSDATE - 2) " +
+            "ORDER BY t.CREATIONDATE ASC",
+            nativeQuery = true) // ⬅️ CRÍTICO: Indica que es SQL nativo
+    List<TicketEntity> findStaleTicketsForTechnicians(@Param("statusId") Long statusId);
 }
 

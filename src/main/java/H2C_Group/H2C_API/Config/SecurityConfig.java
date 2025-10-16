@@ -14,6 +14,7 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -33,6 +34,13 @@ import java.util.Arrays;
 public class SecurityConfig{
 
     @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) -> web.ignoring()
+                // Usamos el patrón wildcard para asegurar que coincida con cualquier ID: /api/notifications/pending/72
+                .requestMatchers(HttpMethod.GET, "/api/notifications/pending/**");
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtRequestFilter jwtRequestFilter) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -45,7 +53,10 @@ public class SecurityConfig{
                         .requestMatchers(HttpMethod.POST, "/api/companies").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/companies/**").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/users/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/users/request-password-reset").permitAll()
+                        .requestMatchers("/api/categories").permitAll()
                         .requestMatchers("/api/firstuse/**").permitAll()
+                        .requestMatchers("/api/check-company-existence").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/users/login", "/api/users/register", "api/users/registerTech").permitAll()
                         .requestMatchers("/api/client/PostTicket").permitAll()
@@ -60,13 +71,37 @@ public class SecurityConfig{
                         .requestMatchers("/api/GetUserByUsername/{username}").authenticated()
                         .requestMatchers("/api/image/upload-to-folder").authenticated()
 
+                        // ENDPOINTS DE NOTIFICACIONES (accesibles por CUALQUIER rol autenticado)
+                        // GET /api/notifications/pending/{userId}
+                        //.requestMatchers(HttpMethod.GET, "/api/notifications/pending/**").authenticated()
+                        // PUT /api/notifications/mark-as-seen/{notificationId}
+                        //.requestMatchers(HttpMethod.GET, "/api/notifications/pending/{userId}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_Técnico", "ROLE_ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.GET, "/api/notifications/pending/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/notifications/mark-as-seen/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_Técnico", "ROLE_ADMINISTRADOR")
+
+                        // REGLA PARA EL HANDSHAKE DE WEBSOCKETS (Necesita autenticación)
+                        .requestMatchers("/ws/**").authenticated() // Asegura que solo usuarios autenticados puedan conectarse
+
+                        // 1. REGLA ESPECÍFICA (La dejamos aquí para que tenga prioridad)
+                                .requestMatchers("/api/tech/getAssignedTicketsByTechnicianIdPage/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+                        // 2. REGLA GENERAL PARA EL RESTO DE ENDPOINTS /api/tech/
+                                .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+
+                                // 2. REGLA GENERAL PARA TODOS LOS ENDPOINTS DE /api/tech/ RESTANTES
+                        .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+                        //ENDPOINT OBTENER TICKETS ASIGNADOS (TECNICO)
+                        .requestMatchers("/api/GetAssignedTicketsByTech/**").hasAuthority("ROLE_TECNICO")
+                        //.requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+
                         // Endpoints autenticados
                         .requestMatchers("/api/users/change-password").authenticated()
 
-                        .requestMatchers("/api/client/GetRecentTicketsByUser/*").authenticated()
-
-                        // ✅ CORREGIDO: Endpoints para clientes
-                        .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
+                        // Endpoints para clientes
+                        .requestMatchers("/api/client/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
                                 //Logout
                                 .requestMatchers("/api/users/logoutWeb").authenticated()
@@ -105,6 +140,17 @@ public class SecurityConfig{
                                 //Endpoint para declinar un ticket
                                 .requestMatchers(HttpMethod.POST, "/api/tech/decline-ticket/**").hasAuthority("ROLE_TECNICO")
 
+                                //ENDPOINT OBTENER TICKETS ASIGNADOS (TECNICO)
+                                .requestMatchers("/api/GetAssignedTicketsByTech/**").hasAuthority("ROLE_TECNICO")
+                                .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+                                //  NUEVOS ENDPOINTS PARA MANEJAR PROGRESO Y FINALIZACIÓN
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/UpdateTicketProgress/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/FinalizeTicket/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+                                //  NUEVOS ENDPOINTS PARA MANEJAR PROGRESO Y FINALIZACIÓN
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/UpdateTicketProgress/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/FinalizeTicket/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
 
 
@@ -151,12 +197,16 @@ public class SecurityConfig{
                 "http://127.0.0.2:5501",
 
 
-                // Orígenes sin puerto (si accedes a la página directamente por localhost)
+                // Orígenes sin puerto (vercel y localhost)
                 "http://localhost",
-                "https://localhost",
-                "https://*.herokuapp.com",
-                "https://*.vercel.app",
+                "https://localhost/",
+                //"https://*.herokuapp.com",
+                //"https://*.vercel.app",
                 "https://ptc-2025-app-web.vercel.app",
+                "https://h2c-helpdesk-web.vercel.app/",
+                "https://h2c-helpdesk-web.vercel.app",
+                // Origen de Heroku (Aunque es la misma API, por si acaso)
+                "https://ptchelpdesk-a73934db2774.herokuapp.com",
                 "http://127.0.0.1",
 
                 // Tu IP local con puerto de desarrollo (192.168.0.183)

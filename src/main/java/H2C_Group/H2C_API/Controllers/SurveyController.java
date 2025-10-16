@@ -54,5 +54,15 @@ public class SurveyController {
         }
     }
 
+    @GetMapping("/surveys/exists/{ticketId}")
+    public ResponseEntity<Boolean> surveyExistsByTicket(@PathVariable Long ticketId) {
+        try {
+            boolean exists = acceso.existsByTicketId(ticketId);
+            return new ResponseEntity<>(exists, HttpStatus.OK); // Devuelve true o false
+        } catch (Exception e) {
+            // En caso de error, asumimos false o manejamos el error según la política
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(false);
+        }
+    }
 
 }
