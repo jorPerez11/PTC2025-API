@@ -63,4 +63,6 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>{
             "ORDER BY month_key",
             nativeQuery = true)
     List<Object[]> countUsersByRegistrationMonthNative();
+
+    Optional<UserEntity> findByEmail(String email);
 }

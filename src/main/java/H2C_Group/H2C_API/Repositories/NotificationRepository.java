@@ -15,8 +15,10 @@ import java.util.List;
 public interface NotificationRepository extends JpaRepository<NotificationEntity, Long> {
     // MÉTODO PARA OBTENER NOTIFICACIONES PENDIENTES
     // Busca todas las notificaciones por el ID del usuario y donde 'seen' sea el valor proporcionado (0 para no vistas)
-    List<NotificationEntity> findByUser_UserIdAndSeenOrderByNotificationDateDesc(Long userId, Integer seen);
 
-    //MÉTODO DE CONTEO
-    Long countByUser_UserIdAndSeen(Long userId, Integer seen);
+
+
+
+    List<NotificationEntity> findByUserIdOrderByNotificationDateDesc(Long userId);
+    void deleteByUserId(Long userId);
 }

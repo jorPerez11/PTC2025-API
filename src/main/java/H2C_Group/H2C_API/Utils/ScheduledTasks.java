@@ -52,11 +52,7 @@ public class ScheduledTasks {
                 );
 
                 // Envía la notificación (persiste en DB y envía por WS)
-                notificationService.createAndSendNotification(
-                        ticket.getAssignedTechUser(),
-                        ticket,
-                        message
-                );
+
             }
         }
         System.out.println("✅ Tarea programada completada.");

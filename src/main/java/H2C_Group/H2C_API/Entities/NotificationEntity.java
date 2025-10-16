@@ -20,22 +20,22 @@ import java.time.LocalDateTime;
 @Setter
 public class NotificationEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "solution_seq_generator")
-    @SequenceGenerator(name = "solution_seq_generator", sequenceName = "SEQ_NOTIFICATIONSID", allocationSize = 1)
-    @Column(name="NOTIFICATIONID")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "NOTIFICATIONID")
     private Long notificationId;
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "USERID", nullable = false)
-    private UserEntity user;
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "TICKETID", nullable = false)
-    private TicketEntity ticket;
-    @Column(name="MESSAGE")
-    private String message;
-    @Column(name="SEEN")
-    private Integer seen;
-    @CreationTimestamp
-    @Column(name="NOTIFICATIONDATE")
-    private LocalDateTime notificationDate;
 
+    @Column(name = "USERID", nullable = false)
+    private Long userId;
+
+    @Column(name = "TICKETID")
+    private Long ticketId;
+
+    @Column(name = "MESSAGE", nullable = false)
+    private String message;
+
+    @Column(name = "SEEN")
+    private Integer seen = 0;
+
+    @Column(name = "NOTIFICATIONDATE", insertable = false, updatable = false)
+    private LocalDateTime notificationDate;
 }
