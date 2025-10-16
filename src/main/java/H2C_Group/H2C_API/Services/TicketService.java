@@ -1,10 +1,7 @@
 package H2C_Group.H2C_API.Services;
 
 
-import H2C_Group.H2C_API.Entities.DeclinedTicketEntity;
-import H2C_Group.H2C_API.Entities.TicketEntity;
-import H2C_Group.H2C_API.Entities.TicketStatusEntity;
-import H2C_Group.H2C_API.Entities.UserEntity;
+import H2C_Group.H2C_API.Entities.*;
 import H2C_Group.H2C_API.Enums.*;
 import H2C_Group.H2C_API.Exceptions.ExceptionTicketNotFound;
 import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
@@ -145,7 +142,6 @@ public class TicketService {
 
         // 🔔 Notificación para el cliente: USANDO EL NUEVO SERVICE 🔔
         String notificationMessage = "Tu ticket #" + savedTicket.getTicketId() + " - " + savedTicket.getTitle() + " ha sido creado exitosamente.";
-        notificationService.createAndSendNotification(savedTicket.getUserCreator(), savedTicket, notificationMessage);
 
         // Conversión del ticket almacenado de vuelta a DTO para la respuesta del Frontend
         return  convertToTicketDTO(savedTicket);
@@ -172,7 +168,6 @@ public class TicketService {
 
                 // 🔔 Notificación para el cliente: USANDO EL NUEVO SERVICE 🔔
                 String clientMessage = "Tu ticket #" + existingTicket.getTicketId() + " ha sido marcado como completado.";
-                notificationService.createAndSendNotification(existingTicket.getUserCreator(), existingTicket, clientMessage);
 
             } else if (existingTicket.getCloseDate() != null) {
                 existingTicket.setCloseDate(null);
@@ -210,7 +205,6 @@ public class TicketService {
 
                 // 🔔 Notificación para el cliente: USANDO EL NUEVO SERVICE 🔔
                 String clientMessage = "Tu ticket #" + ticket.getTicketId() + " ha sido marcado como completado.";
-                notificationService.createAndSendNotification(ticket.getUserCreator(), ticket, clientMessage);
 
             } else {
                 // Si el estado no es "Completado", la fecha debe ser nula
@@ -250,25 +244,46 @@ public class TicketService {
         // --- Actualización de TÉCNICO ASIGNADO (assignedTechUser) ---
         // ticketDTO.getAssignedTech() en el DTO es el Long ID del técnico
         if (ticketDTO.getAssignedTech() != null) {
-            UserEntity userTech = userRepository.findById(ticketDTO.getAssignedTech().getId()).orElseThrow(() -> new IllegalArgumentException("El ID del técnico asignado " + ticketDTO.getAssignedTech() + " no existe."));
+            UserEntity userTech = userRepository.findById(ticketDTO.getAssignedTech().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("El ID del técnico asignado " + ticketDTO.getAssignedTech() + " no existe."));
 
             Long userRoleId = userTech.getRolId();
 
-            // Validar si el rol es ADMINISTRADOR o TECNICO
             if (userRoleId.equals(UserRole.ADMINISTRADOR.getId()) || userRoleId.equals(UserRole.TECNICO.getId())) {
-                //Notificación para el técnico
-                if (existingTicket.getAssignedTechUser() == null || !existingTicket.getAssignedTechUser().getUserId().equals(userTech.getUserId())) {
-                    //Solo se envía la notificación si el técnico es nuevo
-                    String notificationMessage = "Se te ha asignado el ticket #" + existingTicket.getTicketId() + " - " + existingTicket.getTitle();
 
-                    // 🔔 USANDO EL NUEVO SERVICE 🔔
-                    notificationService.createAndSendNotification(userTech, existingTicket, notificationMessage);
+                // Guardar técnico anterior (si existe)
+                Long tecnicoAnteriorId = existingTicket.getAssignedTechUser() != null
+                        ? existingTicket.getAssignedTechUser().getUserId()
+                        : null;
+
+                // Si el técnico es nuevo, enviar notificación
+                if (tecnicoAnteriorId == null || !tecnicoAnteriorId.equals(userTech.getUserId())) {
+                    String mensajeNuevoTecnico = "Se te ha asignado el ticket #" + existingTicket.getTicketId() + " - " + existingTicket.getTitle();
+
+                    NotificationEntity notiNuevo = new NotificationEntity();
+                    notiNuevo.setUserId(userTech.getUserId());
+                    notiNuevo.setTicketId(existingTicket.getTicketId());
+                    notiNuevo.setMessage(mensajeNuevoTecnico);
+                    notificationService.crear(notiNuevo);
+
+                    // (Opcional) Notificar al técnico anterior
+                    if (tecnicoAnteriorId != null) {
+                        String mensajeSalida = "Ya no estás asignado al ticket #" + existingTicket.getTicketId() + "-" + existingTicket.getTitle();
+
+                        NotificationEntity notiSalida = new NotificationEntity();
+                        notiSalida.setUserId(tecnicoAnteriorId);
+                        notiSalida.setTicketId(existingTicket.getTicketId());
+                        notiSalida.setMessage(mensajeSalida);
+                        notificationService.crear(notiSalida);
+                    }
                 }
+
                 existingTicket.setAssignedTechUser(userTech);
             } else {
-                throw new IllegalArgumentException("El usuario con ID " + userTech.getUserId() + " no tiene un rol válido para ser asignado como técnico (debe ser Administrador o Técnico).");
+                throw new IllegalArgumentException("El usuario con ID " + userTech.getUserId() + " no tiene un rol válido para ser asignado como técnico.");
             }
         }
+
 
         // --- Actualización de ESTADO (TicketStatus) ---
         if (ticketDTO.getStatus() != null) {
@@ -293,8 +308,14 @@ public class TicketService {
                 existingTicket.setCloseDate(LocalDateTime.now());
 
                 // 🔔 Notificación para el cliente: USANDO EL NUEVO SERVICE 🔔
-                String clientMessage = "Tu ticket #" + existingTicket.getTicketId() + " ha sido marcado como completado.";
-                notificationService.createAndSendNotification(existingTicket.getUserCreator(), existingTicket, clientMessage);
+                String clientMessage = "Tu ticket #" + existingTicket.getTicketId() + " ha cambiado a estado '" + statusEnum.getDisplayName() + "'.";
+
+                NotificationEntity noti = new NotificationEntity();
+                noti.setUserId(existingTicket.getUserCreator().getUserId()); // el cliente
+                noti.setTicketId(existingTicket.getTicketId());
+                noti.setMessage(clientMessage);
+                notificationService.crear(noti);
+
 
             } else if (existingTicket.getCloseDate() != null) {
                 // Si el estado cambia de "Cerrado" a otro, eliminar closeDate
@@ -501,7 +522,6 @@ public class TicketService {
 
             // 🔔 Notificación de asignación al técnico (ya que se autoasignó al aceptar)
             String techAssignMessage = "¡Se te ha asignado el ticket #" + ticket.getTicketId() + " - " + ticket.getTitle() + " al aceptarlo!";
-            notificationService.createAndSendNotification(ticket.getAssignedTechUser(), ticket, techAssignMessage);
 
         } else if(!ticket.getAssignedTechUser().getUserId().equals(technicianId)){
             //Si el ticket ya esta asignado a otro tecnico, deniega el acceso
@@ -520,11 +540,9 @@ public class TicketService {
 
         // Notificación para el técnico (de que fue aceptado/pasó a progreso)
         String notificationMessage = "Has aceptado el ticket #" + savedTicket.getTicketId() + " - " + savedTicket.getTitle();
-        notificationService.createAndSendNotification(savedTicket.getAssignedTechUser(), savedTicket, notificationMessage);
 
         // Notificación para el cliente
         String clientMessage = "Tu ticket #" + ticket.getTicketId() + " ha sido aceptado por un técnico y está en progreso.";
-        notificationService.createAndSendNotification(savedTicket.getUserCreator(), savedTicket, clientMessage);
 
         return convertToTicketDTO(savedTicket);
     }

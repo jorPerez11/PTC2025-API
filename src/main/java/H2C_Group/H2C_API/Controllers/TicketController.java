@@ -1,10 +1,12 @@
 package H2C_Group.H2C_API.Controllers;
 
+import H2C_Group.H2C_API.Entities.NotificationEntity;
 import H2C_Group.H2C_API.Exceptions.ExceptionTicketNotFound;
 import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
 import H2C_Group.H2C_API.Models.DTO.PagedResponseDTO;
 import H2C_Group.H2C_API.Models.DTO.TicketDTO;
 import H2C_Group.H2C_API.Models.DTO.TicketStatusDTO;
+import H2C_Group.H2C_API.Services.NotificationService;
 import H2C_Group.H2C_API.Services.TicketService;
 import H2C_Group.H2C_API.Services.UserService;
 import jakarta.validation.Valid;
@@ -32,6 +34,9 @@ public class TicketController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     // Nuevo endpoint para obtener el conteo de tickets por estado
     @GetMapping("/admin/GetTicketCounts")
@@ -182,6 +187,19 @@ public class TicketController {
     @PutMapping("/tech/accept/{ticketId}/{technicianId}")
     public ResponseEntity<TicketDTO> acceptTicket(@PathVariable Long ticketId, @PathVariable Long technicianId) {
         TicketDTO acceptedTicket = acceso.acceptTicket(ticketId, technicianId);
+        NotificationEntity noti = new NotificationEntity();
+        noti.setUserId(acceptedTicket.getUserId()); // el cliente
+        noti.setTicketId(acceptedTicket.getTicketId());
+        noti.setMessage("Tu ticket #" + acceptedTicket.getTicketId() + " fue aceptado por el técnico " + acceptedTicket.getAssignedTech().getName() + ".");
+        notificationService.crear(noti);
+
+        // 🔔 Notificación para el técnico
+        NotificationEntity notiTecnico = new NotificationEntity();
+        notiTecnico.setUserId(technicianId); // el técnico que aceptó
+        notiTecnico.setTicketId(acceptedTicket.getTicketId());
+        notiTecnico.setMessage("Has aceptado el ticket #" + acceptedTicket.getTicketId() + " - " + acceptedTicket.getTitle());
+        notificationService.crear(notiTecnico);
+
         return new ResponseEntity<>(acceptedTicket, HttpStatus.OK);
     }
 
@@ -190,6 +208,11 @@ public class TicketController {
     public ResponseEntity<?> postTicket(@Valid @RequestBody TicketDTO ticketDTO) {
         try {
             TicketDTO newTicket = acceso.createTicket(ticketDTO);
+            NotificationEntity noti = new NotificationEntity();
+            noti.setUserId(newTicket.getUserId()); // el cliente
+            noti.setTicketId(newTicket.getTicketId());
+            noti.setMessage("Tu ticket #" + newTicket.getTicketId() + "-" + newTicket.getTitle() + " fue creado exitosamente.");
+            notificationService.crear(noti);
             return new ResponseEntity<>(newTicket, HttpStatus.CREATED);
         }catch (IllegalArgumentException e) {
             //Validación de argumentos invalidos
