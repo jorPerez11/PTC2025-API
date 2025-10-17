@@ -9,7 +9,16 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface NotificationRepository extends JpaRepository<NotificationEntity, Long> {
+    // MÉTODO PARA OBTENER NOTIFICACIONES PENDIENTES
+    // Busca todas las notificaciones por el ID del usuario y donde 'seen' sea el valor proporcionado (0 para no vistas)
 
+
+
+
+    List<NotificationEntity> findByUserIdOrderByNotificationDateDesc(Long userId);
+    void deleteByUserId(Long userId);
 }

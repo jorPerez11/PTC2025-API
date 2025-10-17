@@ -1,16 +1,16 @@
 package H2C_Group.H2C_API.Services;
 
 
-import H2C_Group.H2C_API.Entities.DeclinedTicketEntity;
-import H2C_Group.H2C_API.Entities.TicketEntity;
-import H2C_Group.H2C_API.Entities.UserEntity;
+import H2C_Group.H2C_API.Entities.*;
 import H2C_Group.H2C_API.Enums.*;
 import H2C_Group.H2C_API.Exceptions.ExceptionTicketNotFound;
 import H2C_Group.H2C_API.Exceptions.ExceptionUserNotFound;
 import H2C_Group.H2C_API.Models.DTO.*;
 import H2C_Group.H2C_API.Repositories.DeclinedTicketRepository;
 import H2C_Group.H2C_API.Repositories.TicketRepository;
+import H2C_Group.H2C_API.Repositories.TicketStatusRepository;
 import H2C_Group.H2C_API.Repositories.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,18 +36,34 @@ public class TicketService {
     @Autowired
     private TicketRepository ticketRepository;
 
+    // ELIMINAMOS @Autowired private SimpMessagingTemplate messagingTemplate; de aquí
+    // El NotificationService se encargará del envío por WebSocket y la persistencia.
+
     @Autowired
-    private SimpMessagingTemplate messagingTemplate;
+    private TicketStatusRepository ticketStatusRepository;
 
     @Autowired
     private DeclinedTicketRepository declinedTicketRepository;
 
+    // 🔑 INYECCIÓN DEL SERVICIO DE NOTIFICACIONES 🔑
+    @Autowired
+    private NotificationService notificationService;
+
 
     public Page<TicketDTO> getAllTickets(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<TicketEntity> tickets = ticketRepository.findAll(pageable);
+        //Page<TicketEntity> tickets = ticketRepository.findAll(pageable);
+        Page<TicketEntity> tickets = ticketRepository.findAllWithUsers(pageable);
         return tickets.map(this::convertToTicketDTO);
     }
+
+//    public List<TicketDTO> getAllTicketsAsList(int page, int size) {
+//        // Reutiliza la lógica de tu servicio para obtener la página
+//        Page<TicketDTO> ticketPage = this.getAllTickets(page, size);
+//
+//        // Devuelve solo el contenido (la lista de DTOs)
+//        return ticketPage.getContent();
+//    }
 
     public List<TicketDTO> geTicketByUserId(Long userId){
         userRepository.findById(userId).orElseThrow(() -> new ExceptionUserNotFound("El id del usuario " + " no existe" ));
@@ -113,19 +130,18 @@ public class TicketService {
 
         ticketEntity.setTicketStatusId(TicketStatus.EN_ESPERA.getId());
 
-            ticketEntity.setAssignedTechUser(null);
-            ticketEntity.setCreationDate(ticketDTO.getCreationDate());
-            ticketEntity.setCloseDate(null);
+
+        ticketEntity.setAssignedTechUser(null);
+        ticketEntity.setCreationDate(ticketDTO.getCreationDate());
+        ticketEntity.setCloseDate(null);
+
 
 
         // Almacenamiento de ticket creado en la DB
         TicketEntity savedTicket = ticketRepository.save(ticketEntity);
 
-        // Notificación para el cliente
+        // 🔔 Notificación para el cliente: USANDO EL NUEVO SERVICE 🔔
         String notificationMessage = "Tu ticket #" + savedTicket.getTicketId() + " - " + savedTicket.getTitle() + " ha sido creado exitosamente.";
-        String userId = String.valueOf(savedTicket.getUserCreator().getUserId());
-
-        messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", notificationMessage);
 
         // Conversión del ticket almacenado de vuelta a DTO para la respuesta del Frontend
         return  convertToTicketDTO(savedTicket);
@@ -149,6 +165,10 @@ public class TicketService {
 
             if (statusEnum.equals(TicketStatus.COMPLETADO)) {
                 existingTicket.setCloseDate(LocalDateTime.now());
+
+                // 🔔 Notificación para el cliente: USANDO EL NUEVO SERVICE 🔔
+                String clientMessage = "Tu ticket #" + existingTicket.getTicketId() + " ha sido marcado como completado.";
+
             } else if (existingTicket.getCloseDate() != null) {
                 existingTicket.setCloseDate(null);
             }
@@ -159,8 +179,47 @@ public class TicketService {
         return convertToTicketDTO(savedTicket);
     }
 
+    @Transactional
+    public TicketDTO UpdateTicketStatus(Long ticketId, TicketDTO ticketDTO) {
+        // Usar el repositorio para encontrar el ticket.
+        Optional<TicketEntity> optionalTicket = ticketRepository.findById(ticketId);
 
+        if (optionalTicket.isPresent()) {
+            TicketEntity ticket = optionalTicket.get();
 
+            // Asegúrate de que el DTO contenga un estado válido
+            if (ticketDTO.getStatus() == null || ticketDTO.getStatus().getId() == null) {
+                throw new IllegalArgumentException("El estado del ticket no puede ser nulo.");
+            }
+
+            // Buscar el ID del estado en la tabla de estados
+            TicketStatusEntity status = ticketStatusRepository.findById(Math.toIntExact(ticketDTO.getStatus().getId()))
+                    .orElseThrow(() -> new IllegalArgumentException("ID de estado no válido: " + ticketDTO.getStatus().getId()));
+
+            // Actualizar el estado con el ID encontrado
+            ticket.setTicketStatusId(Long.valueOf(status.getTicketStatusId()));
+
+            // Manejar la fecha de cierre según el estado
+            if (ticket.getTicketStatusId().equals(TicketStatus.COMPLETADO.getId())) {
+                ticket.setCloseDate(java.time.LocalDateTime.now());
+
+                // 🔔 Notificación para el cliente: USANDO EL NUEVO SERVICE 🔔
+                String clientMessage = "Tu ticket #" + ticket.getTicketId() + " ha sido marcado como completado.";
+
+            } else {
+                // Si el estado no es "Completado", la fecha debe ser nula
+                ticket.setCloseDate(null);
+            }
+
+            // Guardar el ticket para persistir el cambio
+            ticketRepository.save(ticket);
+
+            // Retornar el DTO actualizado
+            return convertToTicketDTO(ticket);
+        } else {
+            throw new IllegalArgumentException("Ticket no encontrado con el ID: " + ticketId);
+        }
+    }
 
     public TicketDTO updateTicket(Long id, TicketDTO ticketDTO) {
 
@@ -185,24 +244,46 @@ public class TicketService {
         // --- Actualización de TÉCNICO ASIGNADO (assignedTechUser) ---
         // ticketDTO.getAssignedTech() en el DTO es el Long ID del técnico
         if (ticketDTO.getAssignedTech() != null) {
-            UserEntity userTech = userRepository.findById(ticketDTO.getAssignedTech().getId()).orElseThrow(() -> new IllegalArgumentException("El ID del técnico asignado " + ticketDTO.getAssignedTech() + " no existe."));
+            UserEntity userTech = userRepository.findById(ticketDTO.getAssignedTech().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("El ID del técnico asignado " + ticketDTO.getAssignedTech() + " no existe."));
 
             Long userRoleId = userTech.getRolId();
 
-            // Validar si el rol es ADMINISTRADOR o TECNICO
             if (userRoleId.equals(UserRole.ADMINISTRADOR.getId()) || userRoleId.equals(UserRole.TECNICO.getId())) {
-                //Notificación para el técnico
-                if (existingTicket.getAssignedTechUser() == null || !existingTicket.getAssignedTechUser().getUserId().equals(userTech.getUserId())) {
-                    //Solo se envía la notificación si el técnico es nuevo
-                    String notificationMessage = "Se te ha asignado el ticket #" + existingTicket.getTicketId() + " - " + existingTicket.getTitle();
-                    String techId = String.valueOf(userTech.getUserId());
-                    messagingTemplate.convertAndSendToUser(techId, "/queue/notifications", notificationMessage);
+
+                // Guardar técnico anterior (si existe)
+                Long tecnicoAnteriorId = existingTicket.getAssignedTechUser() != null
+                        ? existingTicket.getAssignedTechUser().getUserId()
+                        : null;
+
+                // Si el técnico es nuevo, enviar notificación
+                if (tecnicoAnteriorId == null || !tecnicoAnteriorId.equals(userTech.getUserId())) {
+                    String mensajeNuevoTecnico = "Se te ha asignado el ticket #" + existingTicket.getTicketId() + " - " + existingTicket.getTitle();
+
+                    NotificationEntity notiNuevo = new NotificationEntity();
+                    notiNuevo.setUserId(userTech.getUserId());
+                    notiNuevo.setTicketId(existingTicket.getTicketId());
+                    notiNuevo.setMessage(mensajeNuevoTecnico);
+                    notificationService.crear(notiNuevo);
+
+                    // (Opcional) Notificar al técnico anterior
+                    if (tecnicoAnteriorId != null) {
+                        String mensajeSalida = "Ya no estás asignado al ticket #" + existingTicket.getTicketId() + "-" + existingTicket.getTitle();
+
+                        NotificationEntity notiSalida = new NotificationEntity();
+                        notiSalida.setUserId(tecnicoAnteriorId);
+                        notiSalida.setTicketId(existingTicket.getTicketId());
+                        notiSalida.setMessage(mensajeSalida);
+                        notificationService.crear(notiSalida);
+                    }
                 }
+
                 existingTicket.setAssignedTechUser(userTech);
             } else {
-                throw new IllegalArgumentException("El usuario con ID " + userTech.getUserId() + " no tiene un rol válido para ser asignado como técnico (debe ser Administrador o Técnico).");
+                throw new IllegalArgumentException("El usuario con ID " + userTech.getUserId() + " no tiene un rol válido para ser asignado como técnico.");
             }
         }
+
 
         // --- Actualización de ESTADO (TicketStatus) ---
         if (ticketDTO.getStatus() != null) {
@@ -225,6 +306,17 @@ public class TicketService {
             // Validacion: Si el estado cambia a "Completado", establecer closeDate automáticamente
             if (statusEnum.equals(TicketStatus.COMPLETADO)) {
                 existingTicket.setCloseDate(LocalDateTime.now());
+
+                // 🔔 Notificación para el cliente: USANDO EL NUEVO SERVICE 🔔
+                String clientMessage = "Tu ticket #" + existingTicket.getTicketId() + " ha cambiado a estado '" + statusEnum.getDisplayName() + "'.";
+
+                NotificationEntity noti = new NotificationEntity();
+                noti.setUserId(existingTicket.getUserCreator().getUserId()); // el cliente
+                noti.setTicketId(existingTicket.getTicketId());
+                noti.setMessage(clientMessage);
+                notificationService.crear(noti);
+
+
             } else if (existingTicket.getCloseDate() != null) {
                 // Si el estado cambia de "Cerrado" a otro, eliminar closeDate
                 existingTicket.setCloseDate(null);
@@ -328,48 +420,63 @@ public class TicketService {
         TicketDTO dto = new TicketDTO();
         dto.setTicketId(ticket.getTicketId());
 
-        Category categoryEnum = Category.fromIdOptional(ticket.getCategoryId()).orElseThrow(() -> new IllegalArgumentException("ID de categoría inválido al convertir a DTO: " + ticket.getCategoryId()));
-        dto.setCategory(new CategoryDTO(categoryEnum.getId(), categoryEnum.getDisplayName())); // <-- Aquí se crea el CategoryDTO dto.setPriority((TicketPriority.fromId(ticket.getPriorityId())).orElseThrow(() -> new IllegalArgumentException("ID de prioridad inválido: " + ticket.getPriorityId())));
+        // --- ENUMS CORREGIDOS ---
 
-        TicketPriority priorityEnum = TicketPriority.fromIdOptional(ticket.getPriorityId()).orElseThrow(() -> new IllegalArgumentException("ID de prioridad invalido al convertir DTO: " + ticket.getPriorityId()));
-        dto.setPriority(new TicketPriorityDTO(priorityEnum.getId(), priorityEnum.getDisplayName()));
-
-        TicketStatus statusEnum = TicketStatus.fromIdOptional(ticket.getTicketStatusId()).orElseThrow(() -> new IllegalArgumentException("ID de estado invalido al convertir DTO:  " + ticket.getTicketStatusId()));
-        dto.setStatus(new TicketStatusDTO(statusEnum.getId(), statusEnum.getDisplayName()));
-
-        if (ticket.getUserCreator() != null) {
-
-            Long userCreatorId = ticket.getUserCreator().getUserId(); //Declaracion de variable para almacenamiento del id de tipo Long
-
-            dto.setUserId(userCreatorId); //Asignacion de ID del usuario creador del ticket
-
-
-            userRepository.findById(userCreatorId).ifPresent(user -> {dto.setUserName(user.getFullName());}); //Asignacion de nombre completo para campo userName en TicketDTO
+        // CATEGORY: Verificar si el Enum existe antes de usarlo.
+        Category categoryEnum = Category.fromIdOptional(ticket.getCategoryId()).orElse(null);
+        if (categoryEnum != null) {
+            dto.setCategory(new CategoryDTO(categoryEnum.getId(), categoryEnum.getDisplayName()));
         } else {
-            throw new IllegalArgumentException("El ID del usuario no puede ser nulo.");
+            // Asignar un valor por defecto o nulo si el ID es inválido/nulo en la DB.
+            dto.setCategory(null);
         }
 
+        // PRIORITY: Verificar si el Enum existe antes de usarlo.
+        TicketPriority priorityEnum = TicketPriority.fromIdOptional(ticket.getPriorityId()).orElse(null);
+        if (priorityEnum != null) {
+            dto.setPriority(new TicketPriorityDTO(priorityEnum.getId(), priorityEnum.getDisplayName()));
+        } else {
+            dto.setPriority(null);
+        }
 
-        dto.setTitle(ticket.getTitle());
-        dto.setDescription(ticket.getDescription());
+        // STATUS: Verificar si el Enum existe antes de usarlo.
+        TicketStatus statusEnum = TicketStatus.fromIdOptional(ticket.getTicketStatusId()).orElse(null);
+        if (statusEnum != null) {
+            dto.setStatus(new TicketStatusDTO(statusEnum.getId(), statusEnum.getDisplayName()));
+        } else {
+            dto.setStatus(null);
+        }
 
+        // --- USUARIO CREADOR (Ya está bien) ---
+        if (ticket.getUserCreator() != null) {
+            UserEntity user = ticket.getUserCreator();
+            dto.setUserId(user.getUserId());
+            dto.setUserName(user.getFullName());
+        } else {
+            dto.setUserId(null);
+            dto.setUserName("Usuario Desconocido");
+        }
+
+        // --- TÉCNICO ASIGNADO (Ya está bien) ---
         if (ticket.getAssignedTechUser() != null) {
+            UserEntity techUser = ticket.getAssignedTechUser();
             UserDTO techDTO = new UserDTO();
-            techDTO.setId(ticket.getAssignedTechUser().getUserId());
-            techDTO.setDisplayName(ticket.getAssignedTechUser().getFullName());
+            techDTO.setId(techUser.getUserId());
+            techDTO.setDisplayName(techUser.getFullName());
             dto.setAssignedTech(techDTO);
         } else {
-            dto.setAssignedTech(null); // Establece el ID del técnico a null en el DTO si no hay técnico asignado
+            dto.setAssignedTech(null);
         }
+
+        // --- Resto de campos (Ya está bien) ---
+        dto.setTitle(ticket.getTitle());
+        dto.setDescription(ticket.getDescription());
         dto.setCreationDate(ticket.getCreationDate());
-
         dto.setCloseDate(ticket.getCloseDate());
-
         dto.setPercentage(ticket.getPercentage());
-
         dto.setImageUrl(ticket.getImageUrl());
-        return dto;
 
+        return dto;
     }
 
     public Map<String, Long> getTicketCountsByStatus() {
@@ -394,6 +501,15 @@ public class TicketService {
                 .collect(Collectors.toList());
     }
 
+    public Page<TicketDTO> getAssignedTicketsByTechnicianIdPage(Long technicianId, int page, int size) {
+        Pageable pageable  = PageRequest.of(page, size);
+        Page<TicketEntity> tickets = ticketRepository.findByAssignedTechUser_UserId(technicianId, pageable);
+        userRepository.findById(technicianId).orElseThrow(() -> new ExceptionUserNotFound("El id del tecnico " + technicianId + " no existe"));
+
+        return tickets.map(this::convertToTicketDTO);
+    }
+
+
     public TicketDTO acceptTicket(Long ticketId, Long technicianId) {
         TicketEntity ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new IllegalArgumentException("Ticket con ID " + ticketId + " no encontrado."));
@@ -403,6 +519,10 @@ public class TicketService {
             UserEntity techinicia = userRepository.findById(technicianId)
                     .orElseThrow(() -> new UsernameNotFoundException("El tecnico con el id" + technicianId + "no existe"));
             ticket.setAssignedTechUser(techinicia);
+
+            // 🔔 Notificación de asignación al técnico (ya que se autoasignó al aceptar)
+            String techAssignMessage = "¡Se te ha asignado el ticket #" + ticket.getTicketId() + " - " + ticket.getTitle() + " al aceptarlo!";
+
         } else if(!ticket.getAssignedTechUser().getUserId().equals(technicianId)){
             //Si el ticket ya esta asignado a otro tecnico, deniega el acceso
             throw new IllegalArgumentException("El usuario no tiene permiso para aceptar el ticket");
@@ -418,10 +538,11 @@ public class TicketService {
 
         TicketEntity savedTicket = ticketRepository.save(ticket);
 
-        //Notificación para el técnico
+        // Notificación para el técnico (de que fue aceptado/pasó a progreso)
         String notificationMessage = "Has aceptado el ticket #" + savedTicket.getTicketId() + " - " + savedTicket.getTitle();
-        String techId = String.valueOf(technicianId);
-        messagingTemplate.convertAndSendToUser(techId, "/queue/notifications", notificationMessage);
+
+        // Notificación para el cliente
+        String clientMessage = "Tu ticket #" + ticket.getTicketId() + " ha sido aceptado por un técnico y está en progreso.";
 
         return convertToTicketDTO(savedTicket);
     }
@@ -435,5 +556,14 @@ public class TicketService {
         return tickets.stream()
                 .map(this::convertToTicketDTO)
                 .collect(Collectors.toList());
+    }
+
+    public Long countByUserId(Long userId) {
+        return ticketRepository.countTicketsByUserId(userId);
+    }
+
+    public Long countCompletedByTechId(Long techId) {
+        return ticketRepository.countCompletedTicketsByTechId(techId, TicketStatus.COMPLETADO.getId());
+
     }
 }

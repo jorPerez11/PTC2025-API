@@ -14,6 +14,7 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -33,6 +34,13 @@ import java.util.Arrays;
 public class SecurityConfig{
 
     @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) -> web.ignoring()
+                // Usamos el patrón wildcard para asegurar que coincida con cualquier ID: /api/notifications/pending/72
+                .requestMatchers(HttpMethod.GET, "/api/notifications/pending/**");
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtRequestFilter jwtRequestFilter) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -45,23 +53,93 @@ public class SecurityConfig{
                         .requestMatchers(HttpMethod.POST, "/api/companies").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/companies/**").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/users/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/users/request-password-reset").permitAll()
+                        .requestMatchers("/api/categories").permitAll()
                         .requestMatchers("/api/firstuse/**").permitAll()
+                        .requestMatchers("/api/check-company-existence").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/users/login", "/api/users/register", "api/users/registerTech").permitAll()
+                        .requestMatchers("/api/client/PostTicket").permitAll()
+                        .requestMatchers("/api/client/UpdateTicket/**").permitAll()
+                        .requestMatchers("/api/client/DeleteTicket").permitAll()
+                        .requestMatchers("/api/client/DeleteTicket/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/notificaciones/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/notificaciones").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/notificaciones").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/notificaciones/**").permitAll()
+                        .requestMatchers("/api/searchSolution").permitAll()
+                        .requestMatchers("/api/GetSolutions").permitAll()
+                        .requestMatchers("/api/request").permitAll()
+                        .requestMatchers("/api/verify").permitAll()
+                        .requestMatchers("/api/confirm").permitAll()
+                        .requestMatchers("api/GetSolutionsWeb/**").permitAll() //ENDPOINT PARA APP WEB
+                        .requestMatchers("/api/GetUserByUsername/{username}").authenticated()
+                        .requestMatchers("/api/image/upload-to-folder").authenticated()
 
-                                // Endpoints autenticados
-                                .requestMatchers("/api/users/change-password").authenticated()
+                        // ENDPOINTS DE NOTIFICACIONES (accesibles por CUALQUIER rol autenticado)
+                        // GET /api/notifications/pending/{userId}
+                        //.requestMatchers(HttpMethod.GET, "/api/notifications/pending/**").authenticated()
+                        // PUT /api/notifications/mark-as-seen/{notificationId}
+                        //.requestMatchers(HttpMethod.GET, "/api/notifications/pending/{userId}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_Técnico", "ROLE_ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.GET, "/api/notifications/pending/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/notifications/mark-as-seen/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_Técnico", "ROLE_ADMINISTRADOR")
 
-                                // ✅ CORREGIDO: Endpoints para clientes
-                                .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
+                        // REGLA PARA EL HANDSHAKE DE WEBSOCKETS (Necesita autenticación)
+                        .requestMatchers("/ws/**").authenticated() // Asegura que solo usuarios autenticados puedan conectarse
 
-                                // ✅ CORREGIDO: Endpoints para técnicos Y administradores
+                        // 1. REGLA ESPECÍFICA (La dejamos aquí para que tenga prioridad)
+                                .requestMatchers("/api/tech/getAssignedTicketsByTechnicianIdPage/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+                        // 2. REGLA GENERAL PARA EL RESTO DE ENDPOINTS /api/tech/
                                 .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
-                                // ✅ CORREGIDO: Endpoints solo para administradores
-                                .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMINISTRADOR")
 
-                                //Endpoints para acceder al listado de tecnicos
+                                // 2. REGLA GENERAL PARA TODOS LOS ENDPOINTS DE /api/tech/ RESTANTES
+                        .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+                        //ENDPOINT OBTENER TICKETS ASIGNADOS (TECNICO)
+                        .requestMatchers("/api/GetAssignedTicketsByTech/**").hasAuthority("ROLE_TECNICO")
+                        //.requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+
+                        // Endpoints autenticados
+                        .requestMatchers("/api/users/change-password").authenticated()
+
+                        // Endpoints para clientes
+                        .requestMatchers("/api/client/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+                                //Logout
+                                .requestMatchers("/api/users/logoutWeb").authenticated()
+
+                        .requestMatchers("/api/client/GetRecentTicketsByUser/*").authenticated()
+
+                        // ✅ CORREGIDO: Endpoints para clientes
+                        .requestMatchers("/api/client/**").hasAuthority("ROLE_CLIENTE")
+
+
+                        // ✅ CORREGIDO: Endpoints para técnicos Y administradores
+                                .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                // ENDPOINTS PARA TICKETS
+                                .requestMatchers("/api/admin/GetTicketCounts").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/admin/GetTickets").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                // ENDPOINTS PARA ACTIVIDADES
+                                .requestMatchers("/api/GetActivities").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/PostActivity").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/UpdateActivity/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/DeleteActivity/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                // ENDPOINTS PARA ANALITICA
+                                .requestMatchers("/api/users/counts-by-month").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                //ENDPOINTS PARA TECNICO VISTA ADMIN
+                                .requestMatchers("/api/UpdateUser/**").hasAuthority("ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/DeleteUser/**").hasAuthority("ROLE_ADMINISTRADOR")
+                                .requestMatchers("/api/PostUser").hasAuthority("ROLE_ADMINISTRADOR")
+
+                        // Endpoints para técnicos
+                        .requestMatchers(HttpMethod.GET, "/api/tech/count/completed-by-tech/*").permitAll()
+
+
+
+                        //Endpoints para acceder al listado de tecnicos
                                 .requestMatchers(HttpMethod.GET, "/api/GetTech").hasAnyAuthority("ROLE_CLIENTE", "ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
                                 //Enpoint para que los tecnicos puedan obtener los tickets en espera
@@ -72,6 +150,18 @@ public class SecurityConfig{
 
                                 //Endpoint para declinar un ticket
                                 .requestMatchers(HttpMethod.POST, "/api/tech/decline-ticket/**").hasAuthority("ROLE_TECNICO")
+
+                                //ENDPOINT OBTENER TICKETS ASIGNADOS (TECNICO)
+                                .requestMatchers("/api/GetAssignedTicketsByTech/**").hasAuthority("ROLE_TECNICO")
+                                .requestMatchers("/api/tech/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+                                //  NUEVOS ENDPOINTS PARA MANEJAR PROGRESO Y FINALIZACIÓN
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/UpdateTicketProgress/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/FinalizeTicket/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+
+                                //  NUEVOS ENDPOINTS PARA MANEJAR PROGRESO Y FINALIZACIÓN
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/UpdateTicketProgress/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
+                                .requestMatchers(HttpMethod.PATCH, "/api/tech/FinalizeTicket/**").hasAnyAuthority("ROLE_TECNICO", "ROLE_ADMINISTRADOR")
 
 
 
@@ -109,16 +199,32 @@ public class SecurityConfig{
         CorsConfiguration configuration = new CorsConfiguration();
         //Ip de origen que pueden ACCEDER A LA API AGREGAR TODAS LAS IP DEL EQUIPO (JORGE, DANIELA, FERNANDO, ASTRID, HERBERT)
         configuration.setAllowedOrigins(Arrays.asList(
-                "http://127.0.0.1:5501", //
-                "http://127.0.0.1:5500", //
-                "http://localhost:5501", //
-                "http://127.0.0.1",     //
-                "http://localhost:5500",     //
+                // Localhost y 127.0.0.1 con puertos comunes de desarrollo
+                "http://localhost:5500",
+                "http://localhost:5501",
+                "http://127.0.0.1:5500",
+                "http://127.0.0.1:5501",
+                "http://localhost:8080",
                 "http://127.0.0.2:5501",
-                "http://179.5.94.204:5501",
-                "http://192.168.1.42:5501",
-                "http://IPDANIELA:5501",
-                "http://IPHERBERT:5501"
+
+
+                // Orígenes sin puerto (vercel y localhost)
+                "http://localhost",
+                "https://localhost/",
+                //"https://*.herokuapp.com",
+                //"https://*.vercel.app",
+                "https://ptc-2025-app-web.vercel.app",
+                "https://h2c-helpdesk-web.vercel.app/",
+                "https://h2c-helpdesk-web.vercel.app",
+                // Origen de Heroku (Aunque es la misma API, por si acaso)
+                "https://ptchelpdesk-a73934db2774.herokuapp.com",
+                "http://127.0.0.1",
+
+                // Tu IP local con puerto de desarrollo (192.168.0.183)
+                "http://192.168.0.183:5500",
+                "http://192.168.0.183:5501"
+
+
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));

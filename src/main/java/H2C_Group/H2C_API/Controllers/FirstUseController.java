@@ -138,33 +138,88 @@ public class FirstUseController {
         }
     }
 
+    @PostMapping("/activate-pending-technicians")
+    @PermitAll
+    public ResponseEntity<?> activatePendingTechnicians(@RequestBody Map<String, Object> payload) {
+        try {
+            System.out.println("=== ENDPOINT ACTIVATE-PENDING-TECHNICIANS LLAMADO ===");
+
+            Long companyId = null;
+            Object companyIdObj = payload.get("companyId");
+
+            if (companyIdObj instanceof Number) {
+                companyId = ((Number) companyIdObj).longValue();
+            } else {
+                throw new IllegalArgumentException("companyId no es válido o está ausente.");
+            }
+
+            System.out.println("CompanyId recibido: " + companyId);
+
+            List<UserDTO> activatedTechnicians = userService.activatePendingTechnicians(companyId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Técnicos activados exitosamente");
+            response.put("activatedCount", activatedTechnicians.size());
+            response.put("technicians", activatedTechnicians);
+
+            System.out.println("✅ Respuesta del endpoint: " + response);
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+
+        } catch (Exception e) {
+            System.out.println("❌ Error en endpoint activate-pending-technicians: " + e.getMessage());
+            e.printStackTrace();
+
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Error al activar técnicos pendientes: " + e.getMessage());
+            return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     // Nuevo Endpoint para asignar categoría y activar a un técnico
     @PatchMapping("/tecnicos/{id}/asignar-categoria")
     @PermitAll
     public ResponseEntity<?> assignCategoryToTechnician(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
         try {
-            Long categoryId = ((Number) payload.get("categoryId")).longValue();
-            UserDTO updatedUser = userService.assignCategoryAndActivateTechnician(id, categoryId);
+            // 💡 Verificación y conversión segura del valor del payload.
+            Object categoryObj = payload.get("categoryId");
+            if (categoryObj == null) {
+                // Lanza una excepción si la categoría no está presente en el cuerpo
+                throw new IllegalArgumentException("El ID de la categoría (categoryId) es requerido en el cuerpo de la solicitud.");
+            }
+
+            // Conversión segura de Integer/Number a Long
+            Long categoryId = Long.valueOf(String.valueOf(categoryObj));
+
+
+            // El servicio SÓLO asigna la categoría y guarda el hash temporal
+            UserDTO updatedUser = userService.assignCategoryToTechnician(id, categoryId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("id", updatedUser.getId());
             response.put("Nombre", updatedUser.getName());
             response.put("Correo Electrónico", updatedUser.getEmail());
-            response.put("Categoría Asignada", updatedUser.getCategory().getDisplayName());
-            response.put("Mensaje", "Técnico activado y credenciales enviadas por correo electrónico.");
+
+            // Mensaje actualizado para reflejar sólo la asignación de categoría
+            response.put("Mensaje", "Categoría asignada y datos guardados exitosamente.");
 
             return new ResponseEntity<>(response, HttpStatus.OK);
+
         } catch (IllegalArgumentException e) {
+            // Manejo de errores de negocio (Ej: Técnico ya tiene categoría / ID faltante)
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
         } catch (ExceptionUserNotFound | ExceptionCategoryNotFound e) {
+            // Manejo de recursos no encontrados
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
         } catch (Exception e) {
+            // Manejo de cualquier otro error no esperado
             e.printStackTrace();
             Map<String, String> error = new HashMap<>();
+            // El frontend atrapa este mensaje para mostrar la alerta de error
             error.put("error", "Error interno al asignar categoría y activar técnico");
             return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
         }

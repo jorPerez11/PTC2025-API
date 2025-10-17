@@ -44,6 +44,32 @@ public class SolutionController {
         return new ResponseEntity<>(solutions, HttpStatus.OK);
     }
 
+    @GetMapping("/GetSolutionsWeb")
+    public ResponseEntity<Page<SolutionDTO>> getSolutions(
+            @PageableDefault(page = 0, size = 10)
+            Pageable pageable,
+            // Parámetro de Búsqueda
+            @RequestParam(required = false) String search,
+            // Parámetro de Categoría (asumo que se pasa el ID)
+            @RequestParam(required = false) Long category) { // Usamos Long para el ID de la categoría
+
+        String processedSearch = (search != null && !search.trim().isEmpty()) ? search : null;
+
+        Page<SolutionDTO> solutionsPage;
+
+        // Lógica Unificada para Búsqueda y Filtro de Categoría
+        if (search != null && !search.trim().isEmpty() || category != null) {
+            // Llama a un nuevo metodo en la capa de acceso que maneje ambos filtros
+            // Debes crear este metodo: acceso.findSolutionsBySearchAndCategory(search, category, pageable);
+            solutionsPage = acceso.findSolutionsBySearchAndCategory(processedSearch, category, pageable);
+        } else {
+            // Carga normal paginada (sin filtros)
+            solutionsPage = acceso.getAllSolutions(pageable);
+        }
+
+        return new ResponseEntity<>(solutionsPage, HttpStatus.OK);
+    }
+
 
     @PostMapping("/PostSolution")
     public ResponseEntity<?> createSolution(@RequestBody @Valid SolutionDTO solutionDTO) {
